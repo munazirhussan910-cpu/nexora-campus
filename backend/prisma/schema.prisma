@@ -1,0 +1,480 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  username      String    @unique
+  email         String    @unique
+  passwordHash  String
+  roleId        String
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  role          Role      @relation(fields: [roleId], references: [id])
+  student       Student?
+  staff         Staff?
+
+  createdRequests    Request[]               @relation("Requester")
+  assignedRequests   Request[]               @relation("AssignedStaff")
+  statusHistories    RequestStatusHistory[]  @relation("StatusChangedBy")
+  assignedByMe       RequestAssignment[]     @relation("AssignmentCreator")
+  assignedToMe       RequestAssignment[]     @relation("AssignedToStaff")
+  approvedGatePasses GatePass[]              @relation("GatePassApprover")
+  approvedLeaves     LeaveRequest[]          @relation("LeaveApprover")
+  gateEvents         GateEvent[]             @relation("SecurityVerifier")
+  issuedDocuments    Document[]              @relation("DocumentIssuer")
+  createdNotices     Notice[]                @relation("NoticeCreator")
+  noticeReads        NoticeRead[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]              @relation("AuditActor")
+
+  @@index([roleId])
+  @@index([email])
+  @@index([username])
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique // STUDENT, STAFF, WARDEN, SECURITY, ADMIN
+  description String?
+  createdAt   DateTime         @default(now())
+
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  code        String           @unique
+  description String?
+  createdAt   DateTime         @default(now())
+
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  roleId       String
+  permissionId String
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+model Branch {
+  id        String    @id @default(uuid())
+  code      String    @unique // CSE, ECE, MECH, CIVIL, EE
+  name      String
+  createdAt DateTime  @default(now())
+
+  students  Student[]
+}
+
+model HostelBlock {
+  id          String        @id @default(uuid())
+  name        String        @unique // Block A, Block B, etc.
+  gender      String        @default("COED") // MALE, FEMALE, COED
+  wardenName  String?
+  createdAt   DateTime      @default(now())
+
+  rooms       Room[]
+  issueAlerts IssueAlert[]
+}
+
+model Room {
+  id            String      @id @default(uuid())
+  hostelBlockId String
+  roomNumber    String
+  floor         Int         @default(1)
+  capacity      Int         @default(2)
+  createdAt     DateTime    @default(now())
+
+  hostelBlock   HostelBlock @relation(fields: [hostelBlockId], references: [id], onDelete: Cascade)
+  students      Student[]
+
+  @@unique([hostelBlockId, roomNumber])
+  @@index([hostelBlockId])
+}
+
+model Student {
+  id            String    @id @default(uuid())
+  userId        String    @unique
+  rollNumber    String    @unique
+  fullName      String
+  branchId      String
+  year          Int       @default(1) // 1, 2, 3, 4
+  phone         String?
+  parentPhone   String?
+  hostelRoomId  String?
+  admissionYear Int       @default(2024)
+  createdAt     DateTime  @default(now())
+
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch        Branch      @relation(fields: [branchId], references: [id])
+  hostelRoom    Room?       @relation(fields: [hostelRoomId], references: [id])
+
+  documents     Document[]
+
+  @@index([rollNumber])
+  @@index([branchId])
+  @@index([hostelRoomId])
+}
+
+model Staff {
+  id             String    @id @default(uuid())
+  userId         String    @unique
+  employeeId     String    @unique
+  fullName       String
+  department     String    // Maintenance, Security, Administration, Hostel
+  designation    String    // Plumber, Electrician, Warden, Head of Security, etc.
+  specialization String?   // PLUMBING, ELECTRICAL, CARPENTRY, MASONRY, IT, GENERAL
+  phone          String?
+  createdAt      DateTime  @default(now())
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([department])
+  @@index([specialization])
+}
+
+model RequestType {
+  id                 String    @id @default(uuid())
+  code               String    @unique // COMPLAINT, GATE_PASS, BONAFIDE, LEAVE
+  name               String
+  requiresApproval   Boolean   @default(false)
+  requiresAssignment Boolean   @default(false)
+  slaHours           Int       @default(24)
+  createdAt          DateTime  @default(now())
+
+  requests           Request[]
+  slaRules           SlaRule[]
+}
+
+model Request {
+  id             String       @id @default(uuid())
+  requestNumber  String       @unique // e.g. NX-10291
+  requesterId    String
+  requestTypeId  String
+  status         String       @default("SUBMITTED") // SUBMITTED, ROUTED, ASSIGNED, ACCEPTED, IN_PROGRESS, RESOLVED, CONFIRMED, CLOSED, PENDING_APPROVAL, APPROVED, REJECTED, DEPARTED, RETURNED, CANCELLED
+  priority       String       @default("NORMAL")    // LOW, NORMAL, HIGH, URGENT
+  title          String
+  description    String
+  location       String?      // e.g. Hostel B / Room 204
+  assignedTo     String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  dueAt          DateTime?
+  completedAt    DateTime?
+
+  requester      User         @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  requestType    RequestType  @relation(fields: [requestTypeId], references: [id])
+  assignedStaff  User?        @relation("AssignedStaff", fields: [assignedTo], references: [id])
+
+  statusHistory  RequestStatusHistory[]
+  assignments    RequestAssignment[]
+  complaint      Complaint?
+  gatePass       GatePass?
+  leaveRequest   LeaveRequest?
+  bonafide       BonafideRequest?
+
+  @@index([status])
+  @@index([priority])
+  @@index([assignedTo])
+  @@index([requesterId])
+  @@index([createdAt])
+  @@index([dueAt])
+}
+
+model RequestStatusHistory {
+  id         String   @id @default(uuid())
+  requestId  String
+  oldStatus  String?
+  newStatus  String
+  changedBy  String
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  request    Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  changer    User     @relation("StatusChangedBy", fields: [changedBy], references: [id])
+
+  @@index([requestId])
+  @@index([createdAt])
+}
+
+model RequestAssignment {
+  id          String    @id @default(uuid())
+  requestId   String
+  assignedTo  String
+  assignedBy  String
+  assignedAt  DateTime  @default(now())
+  acceptedAt  DateTime?
+  completedAt DateTime?
+
+  request     Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  assignee    User      @relation("AssignedToStaff", fields: [assignedTo], references: [id])
+  assigner    User      @relation("AssignmentCreator", fields: [assignedBy], references: [id])
+
+  @@index([requestId])
+  @@index([assignedTo])
+}
+
+model Complaint {
+  id              String   @id @default(uuid())
+  requestId       String   @unique
+  category        String   // Plumbing, Electrical, Carpentry, Masonry, Network, Cleanliness
+  subCategory     String?
+  issueType       String?
+  photoUrl        String?
+  resolutionNotes String?
+  studentRating   Int?     // 1 to 5
+  studentFeedback String?
+  createdAt       DateTime @default(now())
+
+  request         Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([category])
+}
+
+model RoutingRule {
+  id                   String   @id @default(uuid())
+  category             String   // Plumbing, Electrical, Carpentry, etc.
+  keywords             String   // Comma separated keywords: tap,pipe,leak,water
+  department           String   // Maintenance
+  targetSpecialization String   // PLUMBING
+  priority             String   @default("NORMAL")
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+}
+
+model GatePass {
+  id                 String      @id @default(uuid())
+  requestId          String      @unique
+  destination        String
+  reason             String
+  departureTime      DateTime
+  expectedReturnTime DateTime
+  approvedBy         String?
+  approvedAt         DateTime?
+  passPin            String      // e.g. 4821
+  qrTokenHash        String?     @unique
+  qrExpiresAt        DateTime?
+  gateStatus         String      @default("PENDING_APPROVAL") // PENDING_APPROVAL, APPROVED, REJECTED, DEPARTED, RETURNED, EXPIRED, CANCELLED
+  departedAt         DateTime?
+  returnedAt         DateTime?
+  createdAt          DateTime    @default(now())
+
+  request            Request     @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  approver           User?       @relation("GatePassApprover", fields: [approvedBy], references: [id])
+  events             GateEvent[]
+
+  @@index([gateStatus])
+  @@index([qrTokenHash])
+  @@index([passPin])
+}
+
+model GateEvent {
+  id                 String   @id @default(uuid())
+  gatePassId         String
+  eventType          String   // VERIFIED, DEPARTED, RETURNED
+  verifiedBy         String
+  eventTime          DateTime @default(now())
+  verificationMethod String   // QR, PIN
+  notes              String?
+
+  gatePass           GatePass @relation(fields: [gatePassId], references: [id], onDelete: Cascade)
+  verifier           User     @relation("SecurityVerifier", fields: [verifiedBy], references: [id])
+
+  @@index([gatePassId])
+  @@index([eventTime])
+}
+
+model LeaveRequest {
+  id               String    @id @default(uuid())
+  requestId        String    @unique
+  startDate        DateTime
+  endDate          DateTime
+  reason           String
+  emergencyContact String
+  parentConsent    Boolean   @default(false)
+  approvedBy       String?
+  approvedAt       DateTime?
+  status           String    @default("PENDING_APPROVAL") // PENDING_APPROVAL, APPROVED, REJECTED
+  createdAt        DateTime  @default(now())
+
+  request          Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  approver         User?     @relation("LeaveApprover", fields: [approvedBy], references: [id])
+
+  @@index([status])
+}
+
+model BonafideRequest {
+  id                String    @id @default(uuid())
+  requestId         String    @unique
+  purpose           String    // Scholarship, Bank, Internship, Education, Other
+  certificateId     String?   @unique // e.g. NX-BON-2026-00231
+  generatedAt       DateTime?
+  documentUrl       String?
+  verificationToken String?   @unique
+  createdAt         DateTime  @default(now())
+
+  request           Request   @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([certificateId])
+}
+
+model Document {
+  id                String    @id @default(uuid())
+  ownerId           String
+  documentType      String    // BONAFIDE, HOSTEL_CLEARANCE, ID_CARD
+  documentNumber    String    @unique // e.g. NX-BON-2026-00231
+  fileUrl           String
+  verificationToken String    @unique
+  issuedBy          String
+  issuedAt          DateTime  @default(now())
+  expiresAt         DateTime?
+  status            String    @default("VALID") // VALID, REVOKED, EXPIRED
+
+  owner             Student   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  issuer            User      @relation("DocumentIssuer", fields: [issuedBy], references: [id])
+
+  @@index([documentNumber])
+  @@index([verificationToken])
+  @@index([ownerId])
+}
+
+model Notice {
+  id          String         @id @default(uuid())
+  title       String
+  content     String
+  createdBy   String
+  priority    String         @default("NORMAL") // LOW, NORMAL, URGENT
+  publishedAt DateTime       @default(now())
+  expiresAt   DateTime?
+  status      String         @default("PUBLISHED") // DRAFT, PUBLISHED, ARCHIVED
+  createdAt   DateTime       @default(now())
+
+  author      User           @relation("NoticeCreator", fields: [createdBy], references: [id])
+  targets     NoticeTarget[]
+  reads       NoticeRead[]
+
+  @@index([publishedAt])
+  @@index([status])
+}
+
+model NoticeTarget {
+  id          String   @id @default(uuid())
+  noticeId    String
+  targetType  String   // ALL, BRANCH, YEAR, HOSTEL
+  targetValue String   // ALL, CSE, 2, Block B, etc.
+
+  notice      Notice   @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+
+  @@index([noticeId])
+}
+
+model NoticeRead {
+  id        String   @id @default(uuid())
+  noticeId  String
+  userId    String
+  readAt    DateTime @default(now())
+
+  notice    Notice   @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([noticeId, userId])
+  @@index([userId])
+}
+
+model Notification {
+  id            String    @id @default(uuid())
+  userId        String
+  title         String
+  message       String
+  type          String    // INFO, SUCCESS, WARNING, ALERT
+  referenceType String?   // COMPLAINT, GATE_PASS, BONAFIDE, LEAVE, NOTICE
+  referenceId   String?
+  isRead        Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  readAt        DateTime?
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  action     String   // GATE_PASS_APPROVED, COMPLAINT_RESOLVED, etc.
+  entityType String   // REQUEST, GATE_PASS, BONAFIDE, STAFF, etc.
+  entityId   String
+  oldValues  String?  // JSON string
+  newValues  String?  // JSON string
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([actorId])
+  @@index([action])
+  @@index([entityType])
+  @@index([createdAt])
+}
+
+model IntegrationEvent {
+  id        String   @id @default(uuid())
+  source    String   // SMS, WEBHOOK, KIOSK
+  payload   String   // JSON string or raw text
+  status    String   // PROCESSED, FAILED
+  response  String?
+  createdAt DateTime @default(now())
+
+  @@index([source])
+  @@index([status])
+}
+
+model SlaRule {
+  id            String      @id @default(uuid())
+  requestTypeId String
+  priority      String      @default("NORMAL")
+  category      String?
+  maxHours      Int         @default(24)
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+
+  requestType   RequestType @relation(fields: [requestTypeId], references: [id])
+
+  @@index([requestTypeId])
+}
+
+model IssueAlert {
+  id             String      @id @default(uuid())
+  hostelBlockId  String
+  category       String
+  complaintCount Int
+  windowDays     Int         @default(14)
+  status         String      @default("ACTIVE") // ACTIVE, RESOLVED, DISMISSED
+  detectedAt     DateTime    @default(now())
+  resolvedAt     DateTime?
+
+  hostelBlock    HostelBlock @relation(fields: [hostelBlockId], references: [id])
+
+  @@index([hostelBlockId])
+  @@index([status])
+}
