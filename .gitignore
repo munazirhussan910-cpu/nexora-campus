@@ -1,1 +1,38 @@
-node_modules
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment variables & secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# SQLite Database & local logs
+*.db
+*.db-journal
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js Build Output
+frontend/.next/
+.next/
+out/
+
+# TypeScript / Build output
+dist/
+backend/dist/
+*.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
+
+# Uploads & Temp storage
+backend/uploads/*.pdf
+uploads/
+
+# OS metadata
+.DS_Store
+Thumbs.db

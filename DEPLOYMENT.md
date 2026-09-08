@@ -34,18 +34,18 @@ To switch to PostgreSQL:
    ```
 3. Run migrations and seed:
    ```bash
-   npx prisma migrate deploy
+   npx prisma db push
    npm run prisma:seed
    ```
 
 ---
 
-## 3. Production Build & Execution
+## 3. Production Build & Execution (Self-Hosted / VPS)
 
 ### Backend
 ```bash
 cd backend
-npm install --omit=dev
+npm install
 npx prisma generate
 npm run build
 npm start # Launches dist/server.js on PORT (default: 5001)
@@ -54,7 +54,7 @@ npm start # Launches dist/server.js on PORT (default: 5001)
 ### Frontend
 ```bash
 cd frontend
-npm install --omit=dev
+npm install
 npm run build
 npm start # Launches Next.js production server on PORT (default: 3000)
 ```
@@ -104,3 +104,52 @@ server {
     }
 }
 ```
+
+---
+
+## 5. Free Cloud Deployment (Neon + Render + Vercel)
+
+### Architecture
+- **Database**: Neon Serverless PostgreSQL (0.5 GB Free Tier)
+- **Backend API**: Render Free Web Service (Node.js/Express)
+- **Frontend**: Vercel Hobby Tier (Next.js 14 App Router)
+- **Keep-Alive**: Cron-job.org free pinging service
+
+### Step 1: Database Setup (Neon)
+1. Sign up at [neon.tech](https://neon.tech) and create project `nexora-campus`.
+2. Copy the pooled connection string (`?sslmode=require`).
+3. In `backend/prisma/schema.prisma`, change datasource `provider = "sqlite"` to `provider = "postgresql"`.
+4. Run locally to push schema & seed:
+   ```bash
+   export DATABASE_URL="<your-neon-pooled-connection-string>"
+   cd backend
+   npx prisma generate
+   npx prisma db push
+   npm run prisma:seed
+   ```
+
+### Step 2: Backend Deployment (Render)
+1. Connect GitHub repo to Render as a **Web Service**.
+2. Root Directory: `backend`
+3. Build Command: `npm install && npx prisma generate && npm run build`
+4. Start Command: `npm start`
+5. Environment Variables:
+   - `NODE_ENV`: `production`
+   - `PORT`: `5001`
+   - `DATABASE_URL`: `<neon-pooled-url>`
+   - `JWT_SECRET`: `<random-32-char-string>`
+   - `APP_URL`: `https://<render-service-name>.onrender.com`
+   - `FRONTEND_URL`: `https://<vercel-project-name>.vercel.app`
+   - `STORAGE_DIR`: `/tmp/uploads`
+
+### Step 3: Frontend Deployment (Vercel)
+1. Import repository on Vercel.
+2. Root Directory: `frontend`
+3. Framework Preset: `Next.js`
+4. Environment Variable:
+   - `NEXT_PUBLIC_API_URL`: `https://<render-service-name>.onrender.com/api`
+5. Click **Deploy**.
+
+### Step 4: Health Check & Keep-Alive
+- Endpoint: `https://<render-service-name>.onrender.com/api/health`
+- Schedule a GET ping every 10–14 minutes on [cron-job.org](https://cron-job.org).
