@@ -50,11 +50,29 @@ router.get('/my', auth_middleware_1.authenticate, async (req, res, next) => {
         next(err);
     }
 });
-// GET /api/requests (All requests for Admin / Warden)
-router.get('/', auth_middleware_1.authenticate, (0, rbac_middleware_1.requirePermission)('requests.view.all'), async (req, res, next) => {
+// GET /api/requests (All requests for Admin / Warden, or Gate Passes for Security)
+router.get('/', auth_middleware_1.authenticate, async (req, res, next) => {
     try {
         const { status, priority, type, search, hostel, category } = req.query;
+        const hasViewAll = req.user.permissions.includes('requests.view.all') || req.user.role === 'ADMIN';
+        const isSecurityGatePassView = req.user.permissions.includes('gatepass.verify') && type === 'GATE_PASS';
+        if (!hasViewAll && !isSecurityGatePassView) {
+            res.status(403).json({
+                success: false,
+                error: {
+                    code: 'FORBIDDEN',
+                    message: 'Access denied. Missing required permissions: requests.view.all',
+                },
+            });
+            return;
+        }
         const whereClause = {};
+        if (!hasViewAll && isSecurityGatePassView) {
+            whereClause.requestType = { code: 'GATE_PASS' };
+        }
+        else if (type && type !== 'ALL') {
+            whereClause.requestType = { code: String(type) };
+        }
         if (status && status !== 'ALL') {
             whereClause.status = String(status);
         }
@@ -169,11 +187,12 @@ router.get('/:id', auth_middleware_1.authenticate, async (req, res, next) => {
             });
             return;
         }
-        // Check access: must be requester, assigned staff, or have requests.view.all
+        // Check access: must be requester, assigned staff, or have requests.view.all, or security viewing gate pass
         const isOwner = request.requesterId === req.user.id;
         const isAssigned = request.assignedTo === req.user.id;
         const canViewAll = req.user.permissions.includes('requests.view.all') || req.user.role === 'ADMIN';
-        if (!isOwner && !isAssigned && !canViewAll) {
+        const isSecurityViewingGatePass = req.user.permissions.includes('gatepass.verify') && request.requestType.code === 'GATE_PASS';
+        if (!isOwner && !isAssigned && !canViewAll && !isSecurityViewingGatePass) {
             res.status(403).json({
                 success: false,
                 error: { code: 'FORBIDDEN', message: 'Unauthorized to view this request' },

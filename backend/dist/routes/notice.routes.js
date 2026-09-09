@@ -43,7 +43,9 @@ router.get('/', auth_middleware_1.authenticate, async (req, res, next) => {
             return n.targets.some((t) => {
                 if (t.targetType === 'ALL')
                     return true;
-                if (t.targetType === 'BRANCH' && user.department === t.targetValue)
+                if (t.targetType === 'BRANCH' && (user.branch === t.targetValue || user.department === t.targetValue))
+                    return true;
+                if (t.targetType === 'YEAR' && String(user.year) === String(t.targetValue))
                     return true;
                 if (t.targetType === 'HOSTEL' && user.hostelBlock === t.targetValue)
                     return true;

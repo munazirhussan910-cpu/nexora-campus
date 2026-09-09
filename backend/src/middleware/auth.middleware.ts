@@ -43,6 +43,7 @@ export const authenticate = async (
         },
         student: {
           include: {
+            branch: true,
             hostelRoom: {
               include: {
                 hostelBlock: true,
@@ -79,6 +80,8 @@ export const authenticate = async (
       rollNumber: user.student?.rollNumber,
       fullName: user.student?.fullName || user.staff?.fullName,
       department: user.staff?.department,
+      branch: user.student?.branch?.code,
+      year: user.student?.year,
       hostelBlock: user.student?.hostelRoom?.hostelBlock.name,
       roomNumber: user.student?.hostelRoom?.roomNumber,
     };

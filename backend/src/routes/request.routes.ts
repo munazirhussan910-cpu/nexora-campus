@@ -55,16 +55,35 @@ router.get(
   }
 );
 
-// GET /api/requests (All requests for Admin / Warden)
+// GET /api/requests (All requests for Admin / Warden, or Gate Passes for Security)
 router.get(
   '/',
   authenticate,
-  requirePermission('requests.view.all'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { status, priority, type, search, hostel, category } = req.query;
 
+      const hasViewAll = req.user!.permissions.includes('requests.view.all') || req.user!.role === 'ADMIN';
+      const isSecurityGatePassView = req.user!.permissions.includes('gatepass.verify') && type === 'GATE_PASS';
+
+      if (!hasViewAll && !isSecurityGatePassView) {
+        res.status(403).json({
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: 'Access denied. Missing required permissions: requests.view.all',
+          },
+        });
+        return;
+      }
+
       const whereClause: any = {};
+
+      if (!hasViewAll && isSecurityGatePassView) {
+        whereClause.requestType = { code: 'GATE_PASS' };
+      } else if (type && type !== 'ALL') {
+        whereClause.requestType = { code: String(type) };
+      }
 
       if (status && status !== 'ALL') {
         whereClause.status = String(status);
@@ -189,12 +208,13 @@ router.get(
         return;
       }
 
-      // Check access: must be requester, assigned staff, or have requests.view.all
+      // Check access: must be requester, assigned staff, or have requests.view.all, or security viewing gate pass
       const isOwner = request.requesterId === req.user!.id;
       const isAssigned = request.assignedTo === req.user!.id;
       const canViewAll = req.user!.permissions.includes('requests.view.all') || req.user!.role === 'ADMIN';
+      const isSecurityViewingGatePass = req.user!.permissions.includes('gatepass.verify') && request.requestType.code === 'GATE_PASS';
 
-      if (!isOwner && !isAssigned && !canViewAll) {
+      if (!isOwner && !isAssigned && !canViewAll && !isSecurityViewingGatePass) {
         res.status(403).json({
           success: false,
           error: { code: 'FORBIDDEN', message: 'Unauthorized to view this request' },

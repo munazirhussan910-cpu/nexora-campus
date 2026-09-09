@@ -38,6 +38,7 @@ const authenticate = async (req, res, next) => {
                 },
                 student: {
                     include: {
+                        branch: true,
                         hostelRoom: {
                             include: {
                                 hostelBlock: true,
@@ -71,6 +72,8 @@ const authenticate = async (req, res, next) => {
             rollNumber: user.student?.rollNumber,
             fullName: user.student?.fullName || user.staff?.fullName,
             department: user.staff?.department,
+            branch: user.student?.branch?.code,
+            year: user.student?.year,
             hostelBlock: user.student?.hostelRoom?.hostelBlock.name,
             roomNumber: user.student?.hostelRoom?.roomNumber,
         };

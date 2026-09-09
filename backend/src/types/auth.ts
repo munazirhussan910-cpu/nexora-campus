@@ -12,6 +12,8 @@ export interface AuthUser {
   rollNumber?: string;
   fullName?: string;
   department?: string;
+  branch?: string;
+  year?: number;
   hostelBlock?: string;
   roomNumber?: string;
 }
