@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/lib/auth-context';
 import { Lock, User, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
 
@@ -35,9 +36,16 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#0f1118] text-white flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <Link href="/" className="inline-flex items-center gap-2 mb-4 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#8c7322] flex items-center justify-center font-bold text-black text-lg shadow-lg group-hover:scale-105 transition-transform">
-            NX
+        <Link href="/" className="inline-flex items-center gap-3 mb-4 group">
+          <div className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform border border-[#d4af37]/40 bg-[#141722] shrink-0 p-0.5">
+            <Image
+              src="/Logo.png"
+              alt="Nexora Logo"
+              width={48}
+              height={48}
+              className="w-full h-full object-contain"
+              priority
+            />
           </div>
           <div className="text-left">
             <div className="font-extrabold text-xl tracking-wider text-white">NEXORA CAMPUS</div>

@@ -9,11 +9,17 @@
   --border-color: #2e3447;
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Custom Scrollbar */
@@ -30,6 +36,15 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #474e64;
+}
+
+/* Hide scrollbar for clean touch horizontal scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Academic Card Border Effect */
@@ -59,4 +74,225 @@ body {
 }
 .bg-gold {
   background-color: #d4af37;
+}
+
+/* =========================================================
+   Smooth Section Scroll Reveal & Staggered Animations
+   ========================================================= */
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(22px) scale(0.99);
+  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.reveal-on-scroll.is-revealed {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Stagger delay classes for child cards */
+.stagger-1 { transition-delay: 50ms; }
+.stagger-2 { transition-delay: 100ms; }
+.stagger-3 { transition-delay: 150ms; }
+.stagger-4 { transition-delay: 200ms; }
+.stagger-5 { transition-delay: 250ms; }
+.stagger-6 { transition-delay: 300ms; }
+
+/* Enhanced Card Hover Elevation & Glow */
+.hover-card-elevate {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
+}
+.hover-card-elevate:hover {
+  transform: translateY(-3px);
+}
+
+/* Smooth Tab Transitions */
+@keyframes tabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-tab-fade {
+  animation: tabFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Mobile Drawer Slide Down / In Animation */
+@keyframes drawerSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-drawer {
+  animation: drawerSlideDown 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Subtle Shimmer for High-Priority Tags */
+@keyframes goldShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-gold {
+  background: linear-gradient(90deg, rgba(212, 175, 55, 0.1) 0%, rgba(212, 175, 55, 0.35) 50%, rgba(212, 175, 55, 0.1) 100%);
+  background-size: 200% 100%;
+  animation: goldShimmer 4s infinite linear;
+}
+
+/* Subtle Floating Animation */
+@keyframes subtleFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.animate-subtle-float {
+  animation: subtleFloat 5s ease-in-out infinite;
+}
+
+/* QR Code Sentry Scanner Beam */
+@keyframes scannerSweep {
+  0% {
+    top: 0%;
+    opacity: 0.8;
+  }
+  50% {
+    top: 95%;
+    opacity: 1;
+  }
+  100% {
+    top: 0%;
+    opacity: 0.8;
+  }
+}
+
+.animate-scan-beam {
+  animation: scannerSweep 2.8s ease-in-out infinite;
+}
+
+/* Ambient Pulse Glow */
+@keyframes ambientGlow {
+  0%, 100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}
+
+.animate-ambient-glow {
+  animation: ambientGlow 4s ease-in-out infinite;
+}
+
+/* Traveling Signal Pulse along Pipeline */
+@keyframes signalFlow {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(200%);
+    opacity: 0;
+  }
+}
+
+.animate-signal-flow {
+  animation: signalFlow 3s ease-in-out infinite;
+}
+
+/* SVG Line Dash Flow */
+@keyframes dashFlow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+.animate-dash-flow {
+  stroke-dasharray: 4, 4;
+  animation: dashFlow 1.5s linear infinite;
+}
+
+/* Slow Radar Pulse for Campus Nodes */
+@keyframes radarPulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.5);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(212, 175, 55, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+  }
+}
+
+.animate-radar-node {
+  animation: radarPulse 2.5s infinite;
+}
+
+/* =========================================================
+   Live Campus Operations Hero Background & Accessibility
+   ========================================================= */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+  .reveal-on-scroll {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .hover-card-elevate:hover {
+    transform: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .hero-animated-bg * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .hero-animated-bg animate,
+  .hero-animated-bg animateMotion,
+  .hero-animated-bg animateTransform {
+    display: none !important;
+  }
+  .animate-ambient-glow,
+  .animate-scan-beam,
+  .animate-dash-flow,
+  .animate-radar-node,
+  .animate-signal-flow,
+  .animate-subtle-float,
+  .shimmer-gold {
+    animation: none !important;
+  }
 }

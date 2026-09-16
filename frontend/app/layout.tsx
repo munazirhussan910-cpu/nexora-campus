@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   title: 'Nexora Campus — One Platform for Every Campus Request',
   description: 'Centralized Campus Operations Platform replacing registers, paper workflows, and manual approvals. BPUT Hackathon 2026.',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/Logo.png',
+    apple: '/Logo.png',
+  },
 };
 
 export default function RootLayout({

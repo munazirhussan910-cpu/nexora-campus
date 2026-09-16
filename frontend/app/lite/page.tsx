@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { apiRequest } from '@/lib/api';
 import {
   Wrench,
@@ -263,8 +264,15 @@ export default function NexoraLitePage() {
         {/* Header Bar */}
         <header className="bg-[#121622] border border-[#232a3d] rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#8c7322] flex items-center justify-center font-black text-black text-base shadow-md">
-              NX
+            <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shadow-md border border-[#d4af37]/40 bg-[#121622] p-0.5 shrink-0">
+              <Image
+                src="/Logo.png"
+                alt="Nexora Logo"
+                width={40}
+                height={40}
+                className="w-full h-full object-contain"
+                priority
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">

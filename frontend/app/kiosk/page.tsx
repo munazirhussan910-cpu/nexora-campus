@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { apiRequest } from '@/lib/api';
 import { StatusBadge } from '@/components/status/StatusBadge';
 import {
@@ -86,8 +87,15 @@ export default function KioskPage() {
         {/* Kiosk Header */}
         <header className="flex items-center justify-between border-b border-[#282f42] pb-4 mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-400 flex items-center justify-center">
-              <Monitor size={22} />
+            <div className="w-11 h-11 rounded-xl overflow-hidden flex items-center justify-center border border-cyan-500/40 bg-[#141722] p-0.5 shrink-0 shadow-md">
+              <Image
+                src="/Logo.png"
+                alt="Nexora Logo"
+                width={44}
+                height={44}
+                className="w-full h-full object-contain"
+                priority
+              />
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-gray-100 flex items-center gap-2">

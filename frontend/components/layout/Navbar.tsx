@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/lib/auth-context';
 import { NotificationBell } from './NotificationBell';
 import { LogOut, ShieldAlert, UserCheck, Layers } from 'lucide-react';
@@ -18,8 +19,15 @@ export function Navbar({ portalName }: NavbarProps) {
       <div className="flex items-center justify-between gap-4 max-w-7xl mx-auto">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#8c7322] flex items-center justify-center font-bold text-black text-sm shadow-md group-hover:scale-105 transition-transform">
-              NX
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shadow-md group-hover:scale-105 transition-transform border border-[#d4af37]/40 bg-[#141722] shrink-0">
+              <Image
+                src="/Logo.png"
+                alt="Nexora Logo"
+                width={32}
+                height={32}
+                className="w-full h-full object-contain"
+                priority
+              />
             </div>
             <div>
               <div className="font-bold tracking-wider text-sm sm:text-base flex items-center gap-1.5 text-white">

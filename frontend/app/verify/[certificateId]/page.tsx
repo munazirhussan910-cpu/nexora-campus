@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { apiRequest } from '@/lib/api';
 import { CheckCircle2, XCircle, ShieldCheck, Download, ArrowLeft, Building2 } from 'lucide-react';
 
@@ -31,11 +32,18 @@ export default function VerifyDocumentPage({ params }: { params: { certificateId
       <div className="max-w-xl mx-auto w-full">
         {/* Header Branding */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-gold text-black font-bold flex items-center justify-center text-sm shadow">
-              NX
+          <Link href="/" className="inline-flex items-center gap-2.5 mb-3 group">
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shadow border border-[#d4af37]/40 bg-[#141722] p-0.5 shrink-0 group-hover:scale-105 transition-transform">
+              <Image
+                src="/Logo.png"
+                alt="Nexora Logo"
+                width={32}
+                height={32}
+                className="w-full h-full object-contain"
+                priority
+              />
             </div>
-            <span className="font-extrabold text-base tracking-wider text-gray-100">
+            <span className="font-extrabold text-base tracking-wider text-gray-100 group-hover:text-gold transition">
               NEXORA CAMPUS REGISTRY
             </span>
           </Link>
