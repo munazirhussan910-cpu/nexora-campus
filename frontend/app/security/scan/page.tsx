@@ -15,6 +15,8 @@ import {
   ArrowRight,
   User,
   MapPin,
+  Shield,
+  Sparkles,
 } from 'lucide-react';
 
 function SecurityScanContent() {
@@ -74,7 +76,7 @@ function SecurityScanContent() {
     });
 
     if (res.success) {
-      setActionSuccess('Student DEPARTURE successfully registered! Gate cleared.');
+      setActionSuccess('Student DEPARTURE successfully registered! Turnstile cleared.');
       executeVerification(inputVal);
     } else {
       setErrorMsg(res.error?.message || 'Failed to register departure');
@@ -100,83 +102,92 @@ function SecurityScanContent() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6 sm:space-y-8">
+      {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-white tracking-tight">Main Gate Pass Verification</h1>
-        <p className="text-xs text-gray-400">
-          Verify encrypted QR codes or numeric 4-digit PINs. Mark departures and return arrivals.
+        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#1b2234] border border-cyan-500/35 text-cyan-400 text-[10px] font-mono font-bold uppercase tracking-wider mb-2 shadow-xs">
+          <Shield size={12} />
+          <span>Optical Turnstile &amp; Manual Verification</span>
+        </div>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
+          Main Gate Clearance Scanner
+        </h1>
+        <p className="text-xs sm:text-sm text-gray-400 mt-1">
+          Scan dynamic HMAC QR tokens or enter offline 4-digit student PINs to log departures and arrivals.
         </p>
       </div>
 
-      {/* Large Touch Mode Toggle */}
+      {/* Touch Mode Selector */}
       <div className="grid grid-cols-2 gap-3">
         <button
+          type="button"
           onClick={() => { setMethod('PIN'); setInputVal(''); }}
-          className={`py-4 rounded-2xl border text-center font-bold text-sm transition flex flex-col items-center justify-center gap-1.5 ${
+          className={`py-4 sm:py-5 px-3 rounded-2xl border text-center font-bold text-xs sm:text-sm transition-all duration-150 flex flex-col items-center justify-center gap-2 active:scale-95 ${
             method === 'PIN'
-              ? 'bg-cyan-950/60 border-cyan-400 text-cyan-300 shadow-xl'
-              : 'bg-[#141722] border-[#282f42] text-gray-400 hover:text-white'
+              ? 'bg-cyan-950/70 border-cyan-400 text-cyan-300 shadow-lg shadow-cyan-950/40 ring-1 ring-cyan-400/40'
+              : 'bg-[#121624] border-[#232b3f] text-gray-400 hover:text-white hover:bg-[#161c2d]'
           }`}
         >
           <Key size={22} className={method === 'PIN' ? 'text-cyan-400' : 'text-gray-500'} />
-          <span>ENTER 4-DIGIT PIN</span>
+          <span className="tracking-wide uppercase font-mono">Enter 4-Digit PIN</span>
         </button>
 
         <button
+          type="button"
           onClick={() => { setMethod('QR'); setInputVal(''); }}
-          className={`py-4 rounded-2xl border text-center font-bold text-sm transition flex flex-col items-center justify-center gap-1.5 ${
+          className={`py-4 sm:py-5 px-3 rounded-2xl border text-center font-bold text-xs sm:text-sm transition-all duration-150 flex flex-col items-center justify-center gap-2 active:scale-95 ${
             method === 'QR'
-              ? 'bg-cyan-950/60 border-cyan-400 text-cyan-300 shadow-xl'
-              : 'bg-[#141722] border-[#282f42] text-gray-400 hover:text-white'
+              ? 'bg-cyan-950/70 border-cyan-400 text-cyan-300 shadow-lg shadow-cyan-950/40 ring-1 ring-cyan-400/40'
+              : 'bg-[#121624] border-[#232b3f] text-gray-400 hover:text-white hover:bg-[#161c2d]'
           }`}
         >
           <QrCode size={22} className={method === 'QR' ? 'text-cyan-400' : 'text-gray-500'} />
-          <span>SCAN / PASTE QR TOKEN</span>
+          <span className="tracking-wide uppercase font-mono">Scan / Paste QR Token</span>
         </button>
       </div>
 
-      {/* Large Input Form */}
-      <div className="bg-[#141722] border border-[#282f42] rounded-2xl p-6 sm:p-8 shadow-2xl">
+      {/* Verification Form Card */}
+      <div className="bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xl shadow-black/20 space-y-4">
         <form onSubmit={handleVerify} className="space-y-4">
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-400">
+          <label className="block text-xs font-bold uppercase tracking-wider font-mono text-gray-300">
             {method === 'PIN' ? 'Enter Student 4-Digit Pass PIN' : 'Enter or Scan Cryptographic QR Token'}
           </label>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <input
               type={method === 'PIN' ? 'tel' : 'text'}
               required
               maxLength={method === 'PIN' ? 6 : 256}
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
-              placeholder={method === 'PIN' ? 'e.g. 4821 or 7392' : 'Paste scanned token payload...'}
-              className="flex-1 bg-[#1a2030] border-2 border-[#2e374d] rounded-xl px-4 py-3.5 text-center text-xl sm:text-2xl font-mono font-bold text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 tracking-widest"
+              placeholder={method === 'PIN' ? 'e.g. 7392' : 'Paste scanned token hash...'}
+              className="flex-1 bg-[#161a29] border-2 border-[#2b354d] rounded-xl px-4 py-3.5 text-center text-xl sm:text-2xl font-mono font-extrabold text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 tracking-widest transition"
               autoFocus
             />
 
             <button
               type="submit"
               disabled={verifying || !inputVal.trim()}
-              className="px-6 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-sm shadow-lg transition disabled:opacity-50"
+              className="py-3.5 px-6 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black text-sm shadow-md shadow-cyan-950/30 transition active:scale-95 disabled:opacity-50 shrink-0"
             >
-              {verifying ? 'Checking...' : 'VERIFY'}
+              {verifying ? 'CHECKING...' : 'VERIFY PASS'}
             </button>
           </div>
 
-          {/* Quick preset PIN buttons for judging demo */}
-          <div className="flex items-center gap-2 pt-1 text-xs text-gray-400">
-            <span className="text-gray-500">Quick Demo PINs:</span>
+          {/* Quick Preset Buttons for Demo */}
+          <div className="flex items-center gap-2 pt-1 text-xs text-gray-400 flex-wrap">
+            <span className="text-gray-500 text-[10px] font-mono uppercase">Quick Demo:</span>
             <button
               type="button"
               onClick={() => { setMethod('PIN'); setInputVal('7392'); executeVerification('7392'); }}
-              className="px-2.5 py-1 rounded bg-[#1c2233] hover:text-cyan-300 font-mono border border-[#28324a]"
+              className="px-2.5 py-1 rounded-lg bg-[#182030] hover:text-cyan-300 font-mono text-[11px] border border-[#26334a] transition"
             >
               PIN 7392 (Aryan - Ready)
             </button>
             <button
               type="button"
               onClick={() => { setMethod('PIN'); setInputVal('4821'); executeVerification('4821'); }}
-              className="px-2.5 py-1 rounded bg-[#1c2233] hover:text-cyan-300 font-mono border border-[#28324a]"
+              className="px-2.5 py-1 rounded-lg bg-[#182030] hover:text-cyan-300 font-mono text-[11px] border border-[#26334a] transition"
             >
               PIN 4821 (Pending Approval)
             </button>
@@ -184,76 +195,85 @@ function SecurityScanContent() {
         </form>
 
         {actionSuccess && (
-          <div className="mt-5 p-4 rounded-xl bg-emerald-950/70 border border-emerald-700 text-emerald-300 text-xs flex items-center gap-2">
-            <CheckCircle2 size={18} className="shrink-0" />
+          <div className="p-4 rounded-xl bg-emerald-950/70 border border-emerald-700 text-emerald-300 text-xs flex items-center gap-2.5 shadow-sm animate-tab-fade">
+            <CheckCircle2 size={18} className="shrink-0 text-emerald-400" />
             <span className="font-bold">{actionSuccess}</span>
+          </div>
+        )}
+
+        {errorMsg && (
+          <div className="p-4 rounded-xl bg-rose-950/70 border border-rose-700 text-rose-300 text-xs flex items-center gap-2.5 shadow-sm animate-tab-fade">
+            <AlertTriangle size={18} className="shrink-0 text-rose-400" />
+            <span>{errorMsg}</span>
           </div>
         )}
 
         {/* Verification Result Panel */}
         {verifyResult && (
-          <div className="mt-6 pt-6 border-t border-[#282f42] space-y-4">
+          <div className="mt-6 pt-6 border-t border-[#21273a] space-y-4 animate-tab-fade">
             {verifyResult.valid ? (
-              <div className="p-5 rounded-2xl bg-emerald-950/40 border border-emerald-600/70 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-emerald-400 font-extrabold text-sm">
+              <div className="p-5 sm:p-6 rounded-2xl bg-emerald-950/40 border border-emerald-600/70 space-y-4 shadow-xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-700/40 pb-3">
+                  <div className="flex items-center gap-2 text-emerald-400 font-extrabold text-sm tracking-tight">
                     <CheckCircle2 size={20} />
                     <span>GATE PASS IS VALID &amp; AUTHORIZED</span>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-900 text-emerald-200">
-                    STATUS: {verifyResult.gatePass?.gateStatus}
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-900 text-emerald-200 w-fit">
+                    GATE STATUS: {verifyResult.gatePass?.gateStatus}
                   </span>
                 </div>
 
-                <div className="bg-[#121622] p-4 rounded-xl border border-[#232c3f] space-y-2 text-xs">
-                  <div className="flex justify-between">
+                <div className="bg-[#121622] p-4 rounded-xl border border-[#232c3f] space-y-2.5 text-xs">
+                  <div className="flex justify-between items-center">
                     <span className="text-gray-400">Student Name:</span>
-                    <span className="font-bold text-gray-100">{verifyResult.student?.fullName}</span>
+                    <span className="font-bold text-white text-sm">{verifyResult.student?.fullName}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center font-mono">
                     <span className="text-gray-400">Roll Number:</span>
-                    <span className="font-mono font-bold text-cyan-300">{verifyResult.student?.rollNumber}</span>
+                    <span className="font-bold text-cyan-300">{verifyResult.student?.rollNumber}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="text-gray-400">Hostel Allocation:</span>
                     <span className="text-gray-200">
                       {verifyResult.student?.hostelRoom?.hostelBlock?.name || 'Block B'} / Room {verifyResult.student?.hostelRoom?.roomNumber || '204'}
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="text-gray-400">Destination:</span>
-                    <span className="font-bold text-gray-100">{verifyResult.gatePass?.destination}</span>
+                    <span className="font-bold text-white">{verifyResult.gatePass?.destination}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="text-gray-400">Reason:</span>
                     <span className="text-gray-300">{verifyResult.gatePass?.reason}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center font-mono">
                     <span className="text-gray-400">Return By:</span>
-                    <span className="font-mono text-gray-200 font-semibold">
+                    <span className="text-[#d4af37] font-bold text-sm">
                       {new Date(verifyResult.gatePass?.expectedReturnTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                 </div>
 
                 {/* Gate Action Buttons */}
-                <div className="pt-2 flex gap-3">
+                <div className="pt-2 flex flex-col sm:flex-row gap-3">
                   {verifyResult.gatePass?.gateStatus === 'APPROVED' && (
                     <button
+                      type="button"
                       onClick={handleDepart}
                       disabled={actionLoading}
-                      className="flex-1 py-3.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-sm shadow-xl transition flex items-center justify-center gap-2"
+                      className="flex-1 py-3.5 px-4 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black text-sm shadow-xl transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
                     >
                       <ArrowRight size={18} />
-                      <span>MARK STUDENT DEPARTED</span>
+                      <span>MARK STUDENT DEPARTED (CLEAR GATE)</span>
                     </button>
                   )}
 
                   {verifyResult.gatePass?.gateStatus === 'DEPARTED' && (
                     <button
+                      type="button"
                       onClick={handleReturn}
                       disabled={actionLoading}
-                      className="flex-1 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-sm shadow-xl transition flex items-center justify-center gap-2"
+                      className="flex-1 py-3.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black text-sm shadow-xl transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
                     >
                       <CheckCircle2 size={18} />
                       <span>MARK STUDENT RETURNED (CLOSE PASS)</span>
@@ -262,16 +282,16 @@ function SecurityScanContent() {
                 </div>
               </div>
             ) : (
-              <div className="p-5 rounded-2xl bg-rose-950/40 border border-rose-700 space-y-3">
+              <div className="p-5 rounded-2xl bg-rose-950/40 border border-rose-700/80 space-y-3">
                 <div className="flex items-center gap-2 text-rose-400 font-bold text-sm">
                   <XCircle size={20} />
-                  <span>PASS VERIFICATION FAILED: {verifyResult.status}</span>
+                  <span>PASS VERIFICATION FAILED: {verifyResult.status || 'INVALID'}</span>
                 </div>
                 <p className="text-xs text-rose-200 leading-relaxed">
-                  {verifyResult.message}
+                  {verifyResult.message || 'Pass credentials could not be verified against the active ledger.'}
                 </p>
                 {verifyResult.student && (
-                  <div className="text-[11px] text-gray-400">
+                  <div className="text-[11px] text-gray-400 font-mono pt-1 border-t border-rose-800/40">
                     Student on record: {verifyResult.student.fullName} ({verifyResult.student.rollNumber})
                   </div>
                 )}
@@ -286,7 +306,7 @@ function SecurityScanContent() {
 
 export default function SecurityScanPage() {
   return (
-    <Suspense fallback={<div className="text-center py-20 text-xs text-gray-500">Loading scanner...</div>}>
+    <Suspense fallback={<div className="text-center py-24 text-xs text-gray-500">Loading gate scanner...</div>}>
       <SecurityScanContent />
     </Suspense>
   );

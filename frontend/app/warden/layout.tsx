@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar, NavItem } from '@/components/layout/Sidebar';
 import { LayoutDashboard, Key, Calendar, Wrench, Users, Bell, User } from 'lucide-react';
@@ -16,12 +16,22 @@ const wardenNavItems: NavItem[] = [
 ];
 
 export default function WardenLayout({ children }: { children: React.ReactNode }) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-[#0f1118] flex flex-col">
-      <Navbar portalName="HOSTEL WARDEN DESK" />
+    <div className="min-h-screen bg-[#0a0d14] flex flex-col overflow-x-hidden text-[#edeef2]">
+      <Navbar
+        portalName="HOSTEL WARDEN DESK"
+        onMenuClick={() => setIsMobileMenuOpen((prev) => !prev)}
+        isMobileMenuOpen={isMobileMenuOpen}
+      />
       <div className="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto">
-        <Sidebar items={wardenNavItems} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        <Sidebar
+          items={wardenNavItems}
+          isOpen={isMobileMenuOpen}
+          onClose={() => setIsMobileMenuOpen(false)}
+        />
+        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 overflow-y-auto min-w-0">
           {children}
         </main>
       </div>
