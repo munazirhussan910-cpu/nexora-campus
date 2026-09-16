@@ -14,13 +14,9 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  ArrowRight,
-  Shield,
   LogOut,
-  Sparkles,
   MapPin,
   ExternalLink,
-  ChevronRight,
   Send,
   Smartphone,
 } from 'lucide-react';

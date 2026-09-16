@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import {
   User,
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 
 export function PersonaSwitcher() {
+  const pathname = usePathname();
   const { user, switchPersona } = useAuth();
   const [collapsed, setCollapsed] = useState(true);
 
@@ -26,6 +28,11 @@ export function PersonaSwitcher() {
       setCollapsed(window.innerWidth < 768);
     }
   }, []);
+
+  // Do not render floating switcher on Lite route to prevent UI overlap and reduce DOM complexity
+  if (pathname === '/lite' || pathname?.startsWith('/lite/')) {
+    return null;
+  }
 
   const personas = [
     { key: 'aryan', label: 'Aryan', roleDesc: 'Student', role: 'STUDENT', icon: User, color: 'hover:border-blue-500/80 hover:text-blue-400' },

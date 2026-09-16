@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
+const compression_1 = __importDefault(require("compression"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const fs_1 = __importDefault(require("fs"));
 const env_1 = require("./config/env");
@@ -28,6 +29,7 @@ const app = (0, express_1.default)();
 app.use((0, helmet_1.default)({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
+app.use((0, compression_1.default)());
 app.use((0, cors_1.default)({
     origin: [env_1.config.frontendUrl, 'http://localhost:3000', 'http://127.0.0.1:3000'],
     credentials: true,
