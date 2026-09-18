@@ -30,33 +30,90 @@ router.get(
     try {
       const user = req.user!;
       const isStaffOrAdmin = ['ADMIN', 'STAFF', 'WARDEN', 'SECURITY'].includes(user.role);
+      const isLite = req.query.lite === 'true';
+      const limit = req.query.limit
+        ? Math.min(Math.max(parseInt(String(req.query.limit), 10) || 10, 1), 50)
+        : undefined;
 
-      // Fetch all published notices
-      const allNotices = await prisma.notice.findMany({
-        where: { status: 'PUBLISHED' },
+      // Push notice targeting down to the SQLite database level
+      const whereClause: any = {
+        status: 'PUBLISHED',
+      };
+
+      if (!isStaffOrAdmin) {
+        const targetConditions: any[] = [{ targetType: 'ALL' }];
+        if (user.branch) {
+          targetConditions.push({ targetType: 'BRANCH', targetValue: user.branch });
+        }
+        if (user.department) {
+          targetConditions.push({ targetType: 'BRANCH', targetValue: user.department });
+        }
+        if (user.year) {
+          targetConditions.push({ targetType: 'YEAR', targetValue: String(user.year) });
+        }
+        if (user.hostelBlock) {
+          targetConditions.push({ targetType: 'HOSTEL', targetValue: user.hostelBlock });
+        }
+
+        whereClause.targets = {
+          some: {
+            OR: targetConditions,
+          },
+        };
+      }
+
+      // Lite Mode: Tailored light payload, excludes read-status checks and target trees
+      if (isLite) {
+        const liteNotices = await prisma.notice.findMany({
+          where: whereClause,
+          select: {
+            id: true,
+            title: true,
+            content: true,
+            priority: true,
+            publishedAt: true,
+            author: {
+              select: {
+                username: true,
+                staff: { select: { fullName: true, designation: true } },
+              },
+            },
+          },
+          orderBy: { publishedAt: 'desc' },
+          take: limit || 10,
+        });
+
+        const formatted = liteNotices.map((n) => ({
+          id: n.id,
+          title: n.title,
+          content: n.content,
+          priority: n.priority,
+          publishedAt: n.publishedAt,
+          authorName: n.author.staff?.fullName || n.author.username,
+          authorRole: n.author.staff?.designation || 'Administration',
+          isRead: false,
+        }));
+
+        res.json({
+          success: true,
+          data: formatted,
+        });
+        return;
+      }
+
+      // Standard Portal Mode: With read tracking and full targets list
+      const notices = await prisma.notice.findMany({
+        where: whereClause,
         include: {
           targets: true,
           author: { select: { username: true, staff: { select: { fullName: true, designation: true } } } },
           reads: { where: { userId: user.id } },
         },
         orderBy: { publishedAt: 'desc' },
+        ...(limit ? { take: limit } : {}),
       });
 
-      // Filter notices according to targeting logic
-      const filtered = allNotices.filter((n) => {
-        if (isStaffOrAdmin) return true; // Staff/Admin view all notices
-
-        // Check student targeting criteria
-        return n.targets.some((t) => {
-          if (t.targetType === 'ALL') return true;
-          if (t.targetType === 'BRANCH' && (user.branch === t.targetValue || user.department === t.targetValue)) return true;
-          if (t.targetType === 'YEAR' && String(user.year) === String(t.targetValue)) return true;
-          if (t.targetType === 'HOSTEL' && user.hostelBlock === t.targetValue) return true;
-          return false;
-        });
-      });
-
-      const formatted = filtered.map((n) => ({
+      const formatted = notices.map((n) => ({
         id: n.id,
         title: n.title,
         content: n.content,

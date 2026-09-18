@@ -19,6 +19,7 @@ import noticeRoutes from './routes/notice.routes';
 import notificationRoutes from './routes/notification.routes';
 import verifyRoutes from './routes/verify.routes';
 import adminRoutes from './routes/admin.routes';
+import academicRoutes from './routes/academic.routes';
 import kioskRoutes from './routes/kiosk.routes';
 import integrationRoutes from './routes/integration.routes';
 
@@ -70,6 +71,7 @@ app.use('/api/notices', noticeRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/verify', verifyRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/academic', academicRoutes);
 app.use('/api/kiosk', kioskRoutes);
 app.use('/api/integrations', integrationRoutes);
 

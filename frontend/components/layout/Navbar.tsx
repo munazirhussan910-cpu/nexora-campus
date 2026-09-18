@@ -27,7 +27,11 @@ export function Navbar({ portalName, onMenuClick, isMobileMenuOpen }: NavbarProp
   };
 
   // Determine profile route based on user role
-  const profileHref = user?.role === 'STUDENT' ? '/student/profile' : `/${user?.role?.toLowerCase() || 'student'}/profile`;
+  const profileHref = user?.role === 'STUDENT'
+    ? '/student/profile'
+    : user?.role === 'ACADEMIC_OFFICER'
+    ? '/academic/profile'
+    : `/${user?.role?.toLowerCase() || 'student'}/profile`;
 
   return (
     <header className="sticky top-0 z-40 w-full bg-[#0d101a]/92 backdrop-blur-md border-b border-[#21273a] shadow-sm shadow-black/30 transition-colors">

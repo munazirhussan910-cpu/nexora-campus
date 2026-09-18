@@ -22,6 +22,7 @@ const notice_routes_1 = __importDefault(require("./routes/notice.routes"));
 const notification_routes_1 = __importDefault(require("./routes/notification.routes"));
 const verify_routes_1 = __importDefault(require("./routes/verify.routes"));
 const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
+const academic_routes_1 = __importDefault(require("./routes/academic.routes"));
 const kiosk_routes_1 = __importDefault(require("./routes/kiosk.routes"));
 const integration_routes_1 = __importDefault(require("./routes/integration.routes"));
 const app = (0, express_1.default)();
@@ -61,6 +62,7 @@ app.use('/api/notices', notice_routes_1.default);
 app.use('/api/notifications', notification_routes_1.default);
 app.use('/api/verify', verify_routes_1.default);
 app.use('/api/admin', admin_routes_1.default);
+app.use('/api/academic', academic_routes_1.default);
 app.use('/api/kiosk', kiosk_routes_1.default);
 app.use('/api/integrations', integration_routes_1.default);
 // Centralized Error Handling

@@ -15,6 +15,7 @@ import {
   ChevronUp,
   ChevronDown,
   Sparkles,
+  GraduationCap,
 } from 'lucide-react';
 
 export function PersonaSwitcher() {
@@ -39,6 +40,7 @@ export function PersonaSwitcher() {
     { key: 'ramesh', label: 'Ramesh', roleDesc: 'Staff / Tech', role: 'STAFF', icon: Wrench, color: 'hover:border-amber-500/80 hover:text-amber-400' },
     { key: 'warden', label: 'Warden', roleDesc: 'Hostel B', role: 'WARDEN', icon: Shield, color: 'hover:border-emerald-500/80 hover:text-emerald-400' },
     { key: 'security', label: 'Security', roleDesc: 'Main Gate', role: 'SECURITY', icon: Key, color: 'hover:border-cyan-500/80 hover:text-cyan-400' },
+    { key: 'academic', label: 'Academic Officer', roleDesc: 'Academic / Certificates', role: 'ACADEMIC_OFFICER', icon: GraduationCap, color: 'hover:border-teal-500/80 hover:text-teal-400' },
     { key: 'admin', label: 'Chief Admin', roleDesc: 'Director', role: 'ADMIN', icon: Shield, color: 'hover:border-purple-500/80 hover:text-purple-400' },
   ];
 
@@ -101,6 +103,8 @@ export function PersonaSwitcher() {
                   ? user.username === 'warden_b'
                   : p.key === 'security'
                   ? user.username === 'security_gate1'
+                  : p.key === 'academic'
+                  ? user.username === 'academic'
                   : p.key === 'admin'
                   ? user.username === 'admin'
                   : false);

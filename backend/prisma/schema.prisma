@@ -29,6 +29,8 @@ model User {
   assignedToMe       RequestAssignment[]     @relation("AssignedToStaff")
   approvedGatePasses GatePass[]              @relation("GatePassApprover")
   approvedLeaves     LeaveRequest[]          @relation("LeaveApprover")
+  approvedRequests   Request[]               @relation("RequestApprover")
+  rejectedRequests   Request[]               @relation("RequestRejecter")
   gateEvents         GateEvent[]             @relation("SecurityVerifier")
   issuedDocuments    Document[]              @relation("DocumentIssuer")
   createdNotices     Notice[]                @relation("NoticeCreator")
@@ -178,10 +180,17 @@ model Request {
   updatedAt      DateTime     @updatedAt
   dueAt          DateTime?
   completedAt    DateTime?
+  rejectionReason String?
+  rejectedBy     String?
+  rejectedAt     DateTime?
+  approvedBy     String?
+  approvedAt     DateTime?
 
   requester      User         @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
   requestType    RequestType  @relation(fields: [requestTypeId], references: [id])
   assignedStaff  User?        @relation("AssignedStaff", fields: [assignedTo], references: [id])
+  approver       User?        @relation("RequestApprover", fields: [approvedBy], references: [id])
+  rejecter       User?        @relation("RequestRejecter", fields: [rejectedBy], references: [id])
 
   statusHistory  RequestStatusHistory[]
   assignments    RequestAssignment[]
@@ -196,6 +205,9 @@ model Request {
   @@index([requesterId])
   @@index([createdAt])
   @@index([dueAt])
+  @@index([requesterId, createdAt])
+  @@index([rejectedBy])
+  @@index([approvedBy])
 }
 
 model RequestStatusHistory {
@@ -372,6 +384,7 @@ model Notice {
 
   @@index([publishedAt])
   @@index([status])
+  @@index([status, publishedAt])
 }
 
 model NoticeTarget {

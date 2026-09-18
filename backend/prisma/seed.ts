@@ -13,6 +13,7 @@ async function main() {
     { name: 'WARDEN', description: 'Hostel Block Warden with approval authority' },
     { name: 'SECURITY', description: 'Campus Gate Security & Pass Verification' },
     { name: 'ADMIN', description: 'Campus Command Center & System Operations' },
+    { name: 'ACADEMIC_OFFICER', description: 'Academic Cell & Certificate Certification Officer' },
   ];
 
   const roleMap: Record<string, string> = {};
@@ -42,6 +43,8 @@ async function main() {
     { code: 'leave.reject', description: 'Reject leave application' },
     { code: 'bonafide.create', description: 'Request bonafide certificate' },
     { code: 'bonafide.approve', description: 'Approve bonafide certificate' },
+    { code: 'bonafide.reject', description: 'Reject bonafide certificate request' },
+    { code: 'academic.dashboard', description: 'View Academic Officer dashboard & analytics' },
     { code: 'notices.view', description: 'View targeted campus notices' },
     { code: 'notices.create', description: 'Publish targeted campus notices' },
     { code: 'analytics.view', description: 'View command center analytics' },
@@ -76,6 +79,9 @@ async function main() {
     ],
     SECURITY: [
       'gatepass.verify', 'notices.view',
+    ],
+    ACADEMIC_OFFICER: [
+      'bonafide.approve', 'bonafide.reject', 'academic.dashboard', 'notices.view',
     ],
     ADMIN: Object.keys(permMap),
   };
@@ -424,6 +430,39 @@ async function main() {
       designation: 'Campus Operations Director',
       specialization: 'ADMINISTRATION',
       phone: '+91 9876543250',
+    },
+  });
+
+  // DEMO PERSONA 6: Academic Officer (ACADEMIC_OFFICER)
+  const academicUser = await prisma.user.upsert({
+    where: { email: 'academic@nexora.edu' },
+    update: { passwordHash, isActive: true, roleId: roleMap['ACADEMIC_OFFICER'] },
+    create: {
+      username: 'academic',
+      email: 'academic@nexora.edu',
+      passwordHash,
+      roleId: roleMap['ACADEMIC_OFFICER'],
+      isActive: true,
+    },
+  });
+
+  await prisma.staff.upsert({
+    where: { userId: academicUser.id },
+    update: {
+      fullName: 'Prof. Sanjeev Mohanty',
+      department: 'Academics',
+      designation: 'Academic Officer',
+      specialization: 'ACADEMIC_AFFAIRS',
+      phone: '+91 9876543260',
+    },
+    create: {
+      userId: academicUser.id,
+      employeeId: 'ACAD-OFF-01',
+      fullName: 'Prof. Sanjeev Mohanty',
+      department: 'Academics',
+      designation: 'Academic Officer',
+      specialization: 'ACADEMIC_AFFAIRS',
+      phone: '+91 9876543260',
     },
   });
 

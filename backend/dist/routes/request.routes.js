@@ -16,12 +16,79 @@ const router = (0, express_1.Router)();
 router.get('/my', auth_middleware_1.authenticate, async (req, res, next) => {
     try {
         const { status, type } = req.query;
+        const isLite = req.query.lite === 'true';
+        const whereClause = {
+            requesterId: req.user.id,
+            ...(status ? { status: String(status) } : {}),
+            ...(type ? { requestType: { code: String(type) } } : {}),
+        };
+        // Lite Mode: Tailored low-bandwidth projection, paginated, zero redundant joins/SLA overhead
+        if (isLite) {
+            const limit = req.query.limit
+                ? Math.min(Math.max(parseInt(String(req.query.limit), 10) || 15, 1), 100)
+                : 15;
+            const offset = req.query.offset
+                ? Math.max(parseInt(String(req.query.offset), 10) || 0, 0)
+                : 0;
+            const [total, requests] = await Promise.all([
+                prisma_1.default.request.count({ where: whereClause }),
+                prisma_1.default.request.findMany({
+                    where: whereClause,
+                    select: {
+                        id: true,
+                        requestNumber: true,
+                        status: true,
+                        priority: true,
+                        title: true,
+                        location: true,
+                        createdAt: true,
+                        requestType: {
+                            select: {
+                                code: true,
+                                name: true,
+                            },
+                        },
+                        assignedStaff: {
+                            select: {
+                                staff: {
+                                    select: {
+                                        fullName: true,
+                                        designation: true,
+                                    },
+                                },
+                            },
+                        },
+                        gatePass: {
+                            select: {
+                                passPin: true,
+                                qrTokenHash: true,
+                                gateStatus: true,
+                                destination: true,
+                                departureTime: true,
+                                expectedReturnTime: true,
+                            },
+                        },
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    take: limit,
+                    skip: offset,
+                }),
+            ]);
+            res.json({
+                success: true,
+                data: requests,
+                pagination: {
+                    total,
+                    limit,
+                    offset,
+                    hasMore: offset + requests.length < total,
+                },
+            });
+            return;
+        }
+        // Standard Portal Mode: Complete relation tree and computed SLAs for backward compatibility
         const requests = await prisma_1.default.request.findMany({
-            where: {
-                requesterId: req.user.id,
-                ...(status ? { status: String(status) } : {}),
-                ...(type ? { requestType: { code: String(type) } } : {}),
-            },
+            where: whereClause,
             include: {
                 requestType: true,
                 assignedStaff: {
@@ -56,7 +123,9 @@ router.get('/', auth_middleware_1.authenticate, async (req, res, next) => {
         const { status, priority, type, search, hostel, category } = req.query;
         const hasViewAll = req.user.permissions.includes('requests.view.all') || req.user.role === 'ADMIN';
         const isSecurityGatePassView = req.user.permissions.includes('gatepass.verify') && type === 'GATE_PASS';
-        if (!hasViewAll && !isSecurityGatePassView) {
+        const isAcademicView = (req.user.role === 'ACADEMIC_OFFICER' || req.user.permissions.includes('bonafide.approve')) &&
+            (!type || type === 'BONAFIDE' || type === 'ALL');
+        if (!hasViewAll && !isSecurityGatePassView && !isAcademicView) {
             res.status(403).json({
                 success: false,
                 error: {
@@ -69,6 +138,9 @@ router.get('/', auth_middleware_1.authenticate, async (req, res, next) => {
         const whereClause = {};
         if (!hasViewAll && isSecurityGatePassView) {
             whereClause.requestType = { code: 'GATE_PASS' };
+        }
+        else if (!hasViewAll && isAcademicView) {
+            whereClause.requestType = { code: 'BONAFIDE' };
         }
         else if (type && type !== 'ALL') {
             whereClause.requestType = { code: String(type) };
@@ -187,12 +259,14 @@ router.get('/:id', auth_middleware_1.authenticate, async (req, res, next) => {
             });
             return;
         }
-        // Check access: must be requester, assigned staff, or have requests.view.all, or security viewing gate pass
+        // Check access: must be requester, assigned staff, or have requests.view.all, or security viewing gate pass, or academic viewing bonafide
         const isOwner = request.requesterId === req.user.id;
         const isAssigned = request.assignedTo === req.user.id;
         const canViewAll = req.user.permissions.includes('requests.view.all') || req.user.role === 'ADMIN';
         const isSecurityViewingGatePass = req.user.permissions.includes('gatepass.verify') && request.requestType.code === 'GATE_PASS';
-        if (!isOwner && !isAssigned && !canViewAll && !isSecurityViewingGatePass) {
+        const isAcademicViewingAcademic = (req.user.role === 'ACADEMIC_OFFICER' || req.user.permissions.includes('bonafide.approve')) &&
+            request.requestType.code === 'BONAFIDE';
+        if (!isOwner && !isAssigned && !canViewAll && !isSecurityViewingGatePass && !isAcademicViewingAcademic) {
             res.status(403).json({
                 success: false,
                 error: { code: 'FORBIDDEN', message: 'Unauthorized to view this request' },

@@ -8,7 +8,7 @@ export interface UserProfile {
   id: string;
   username: string;
   email: string;
-  role: 'STUDENT' | 'STAFF' | 'WARDEN' | 'SECURITY' | 'ADMIN';
+  role: 'STUDENT' | 'STAFF' | 'WARDEN' | 'SECURITY' | 'ADMIN' | 'ACADEMIC_OFFICER';
   permissions: string[];
   fullName?: string;
   rollNumber?: string;
@@ -45,6 +45,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return '/warden/dashboard';
       case 'SECURITY':
         return '/security/dashboard';
+      case 'ACADEMIC_OFFICER':
+        return '/academic/dashboard';
       case 'ADMIN':
         return '/admin/dashboard';
       default:

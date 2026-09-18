@@ -21,6 +21,14 @@ const createBonafideSchema = z.object({
   purpose: z.string().min(2, 'Purpose is required'),
 });
 
+const rejectBonafideSchema = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(1, 'Rejection reason is required')
+    .max(500, 'Rejection reason cannot exceed 500 characters'),
+});
+
 // POST /api/bonafide - Student requests bonafide certificate
 router.post(
   '/',
@@ -91,7 +99,10 @@ router.get(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const pending = await prisma.bonafideRequest.findMany({
-        where: { certificateId: null },
+        where: {
+          certificateId: null,
+          request: { status: 'PENDING_APPROVAL' },
+        },
         include: {
           request: {
             include: {
@@ -236,6 +247,8 @@ router.post(
           data: {
             status: 'APPROVED',
             completedAt: issueDate,
+            approvedBy: req.user!.id,
+            approvedAt: issueDate,
           },
         });
 
@@ -279,6 +292,117 @@ router.post(
         success: true,
         message: 'Bonafide certificate generated successfully',
         data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// POST /api/bonafide/:id/reject - Authority rejects certificate request
+router.post(
+  '/:id/reject',
+  authenticate,
+  requirePermission('bonafide.reject'),
+  validateBody(rejectBonafideSchema),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const { reason } = req.body;
+
+      const bonafide = await prisma.bonafideRequest.findUnique({
+        where: { id },
+        include: {
+          request: {
+            include: {
+              requestType: true,
+              requester: true,
+            },
+          },
+        },
+      });
+
+      if (!bonafide) {
+        throw new AppError('Bonafide request not found', 404);
+      }
+
+      if (bonafide.request.requestType.code !== 'BONAFIDE') {
+        throw new AppError('Request does not belong to an academic certificate workflow', 400);
+      }
+
+      if (bonafide.request.status !== 'PENDING_APPROVAL') {
+        throw new AppError(
+          `Cannot reject certificate request with status: ${bonafide.request.status}`,
+          422
+        );
+      }
+
+      if (bonafide.certificateId) {
+        throw new AppError('Cannot reject an already issued certificate', 409);
+      }
+
+      const now = new Date();
+      const trimmedReason = reason.trim();
+
+      const updated = await prisma.$transaction(async (tx) => {
+        // 1. Update Request status to REJECTED with rejection fields
+        const updatedRequest = await tx.request.update({
+          where: { id: bonafide.requestId },
+          data: {
+            status: 'REJECTED',
+            rejectionReason: trimmedReason,
+            rejectedBy: req.user!.id,
+            rejectedAt: now,
+            completedAt: now,
+          },
+        });
+
+        // 2. Add Status History
+        await tx.requestStatusHistory.create({
+          data: {
+            requestId: bonafide.requestId,
+            oldStatus: 'PENDING_APPROVAL',
+            newStatus: 'REJECTED',
+            changedBy: req.user!.id,
+            comment: `Rejected by Academic Officer: ${trimmedReason}`,
+          },
+        });
+
+        return updatedRequest;
+      });
+
+      // 3. Notify Student
+      await NotificationService.send({
+        userId: bonafide.request.requesterId,
+        title: 'Bonafide Certificate Request Rejected',
+        message: `Your Bonafide Certificate request (${bonafide.request.requestNumber}) was rejected. Reason: ${trimmedReason}`,
+        type: 'ALERT',
+        referenceType: 'BONAFIDE',
+        referenceId: bonafide.requestId,
+      });
+
+      // 4. Audit Log
+      await AuditService.log({
+        actorId: req.user!.id,
+        action: 'BONAFIDE_REJECTED',
+        entityType: 'BONAFIDE',
+        entityId: bonafide.id,
+        newValues: {
+          requestNumber: bonafide.request.requestNumber,
+          reason: trimmedReason,
+        },
+      });
+
+      res.json({
+        success: true,
+        message: 'Bonafide certificate request rejected',
+        data: {
+          id: bonafide.id,
+          requestId: bonafide.requestId,
+          status: 'REJECTED',
+          rejectionReason: trimmedReason,
+          rejectedAt: now,
+        },
       });
     } catch (err) {
       next(err);

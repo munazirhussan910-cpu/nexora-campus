@@ -192,6 +192,10 @@ export default function StudentDocumentsPage() {
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-700/80 inline-flex items-center gap-1">
                           <CheckCircle2 size={11} /> ISSUED • VALID
                         </span>
+                      ) : b.request?.status === 'REJECTED' ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-950/80 text-rose-300 border border-rose-700/80 inline-flex items-center gap-1">
+                          <AlertCircle size={11} /> REJECTED
+                        </span>
                       ) : (
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-950/80 text-amber-300 border border-amber-700/80 inline-flex items-center gap-1">
                           <Clock size={11} /> PENDING APPROVAL
@@ -226,6 +230,10 @@ export default function StudentDocumentsPage() {
                         <ExternalLink size={13} />
                         <span>Verify Online</span>
                       </Link>
+                    </div>
+                  ) : b.request?.status === 'REJECTED' ? (
+                    <div className="text-rose-300 font-mono text-[11px] bg-rose-950/40 px-3 py-1.5 rounded-lg border border-rose-800/40 max-w-sm">
+                      Declined: {b.request?.rejectionReason || 'Application rejected by Academic Officer'}
                     </div>
                   ) : (
                     <div className="text-amber-400/90 font-mono text-[11px] bg-amber-950/30 px-3 py-1.5 rounded-lg border border-amber-800/40 w-fit">

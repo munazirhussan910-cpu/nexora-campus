@@ -17,7 +17,7 @@ const loginSchema = zod_1.z.object({
     password: zod_1.z.string().min(1, 'Password is required'),
 });
 const switchPersonaSchema = zod_1.z.object({
-    persona: zod_1.z.enum(['aryan', 'ramesh', 'suresh', 'warden', 'security', 'admin']),
+    persona: zod_1.z.enum(['aryan', 'ramesh', 'suresh', 'warden', 'security', 'academic', 'admin']),
 });
 // POST /api/auth/login
 router.post('/login', (0, validate_middleware_1.validateBody)(loginSchema), async (req, res, next) => {
@@ -124,6 +124,7 @@ router.get('/me', auth_middleware_1.authenticate, async (req, res) => {
 // POST /api/auth/logout
 router.post('/logout', (req, res) => {
     res.clearCookie('token');
+    (0, auth_middleware_1.clearAuthSessionCache)();
     res.json({
         success: true,
         message: 'Logged out successfully',
@@ -170,6 +171,13 @@ router.get('/personas', (req, res) => {
                 email: 'security.gate1@nexora.edu',
             },
             {
+                key: 'academic',
+                name: 'Prof. Sanjeev Mohanty',
+                role: 'ACADEMIC_OFFICER',
+                description: 'Academic Officer & Certificates',
+                email: 'academic@nexora.edu',
+            },
+            {
                 key: 'admin',
                 name: 'Dr. Ananya Ray',
                 role: 'ADMIN',
@@ -188,6 +196,7 @@ router.post('/switch-persona', (0, validate_middleware_1.validateBody)(switchPer
             suresh: 'suresh@nexora.edu',
             warden: 'warden.b@nexora.edu',
             security: 'security.gate1@nexora.edu',
+            academic: 'academic@nexora.edu',
             admin: 'admin@nexora.edu',
         };
         const targetEmail = emailMap[req.body.persona];

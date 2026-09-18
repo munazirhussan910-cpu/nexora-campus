@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import prisma from '../config/prisma';
 import { config } from '../config/env';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticate, clearAuthSessionCache } from '../middleware/auth.middleware';
 import { validateBody } from '../middleware/validate.middleware';
 import { AuthenticatedRequest } from '../types/auth';
 
@@ -16,7 +16,7 @@ const loginSchema = z.object({
 });
 
 const switchPersonaSchema = z.object({
-  persona: z.enum(['aryan', 'ramesh', 'suresh', 'warden', 'security', 'admin']),
+  persona: z.enum(['aryan', 'ramesh', 'suresh', 'warden', 'security', 'academic', 'admin']),
 });
 
 // POST /api/auth/login
@@ -138,6 +138,7 @@ router.get('/me', authenticate, async (req: AuthenticatedRequest, res: Response)
 // POST /api/auth/logout
 router.post('/logout', (req: Request, res: Response): void => {
   res.clearCookie('token');
+  clearAuthSessionCache();
   res.json({
     success: true,
     message: 'Logged out successfully',
@@ -185,6 +186,13 @@ router.get('/personas', (req: Request, res: Response): void => {
         email: 'security.gate1@nexora.edu',
       },
       {
+        key: 'academic',
+        name: 'Prof. Sanjeev Mohanty',
+        role: 'ACADEMIC_OFFICER',
+        description: 'Academic Officer & Certificates',
+        email: 'academic@nexora.edu',
+      },
+      {
         key: 'admin',
         name: 'Dr. Ananya Ray',
         role: 'ADMIN',
@@ -207,6 +215,7 @@ router.post(
         suresh: 'suresh@nexora.edu',
         warden: 'warden.b@nexora.edu',
         security: 'security.gate1@nexora.edu',
+        academic: 'academic@nexora.edu',
         admin: 'admin@nexora.edu',
       };
 

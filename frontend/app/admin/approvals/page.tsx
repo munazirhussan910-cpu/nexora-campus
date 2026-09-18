@@ -4,7 +4,19 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
 import { StatusBadge } from '@/components/status/StatusBadge';
-import { FileCheck, Key, Calendar, Check, X, ExternalLink, Download, Clock } from 'lucide-react';
+import {
+  FileCheck,
+  Key,
+  Calendar,
+  Check,
+  X,
+  ExternalLink,
+  Download,
+  Clock,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+} from 'lucide-react';
 
 export default function AdminApprovalsPage() {
   const [bonafides, setBonafides] = useState<any[]>([]);
@@ -12,9 +24,18 @@ export default function AdminApprovalsPage() {
   const [leaves, setLeaves] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionMsg, setActionMsg] = useState('');
+  const [actionError, setActionError] = useState('');
+
+  // Rejection Modal State
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [selectedBonafide, setSelectedBonafide] = useState<any>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectValidationErr, setRejectValidationErr] = useState('');
+  const [submittingReject, setSubmittingReject] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
+    setActionError('');
     const [bonRes, gpRes, leaveRes] = await Promise.all([
       apiRequest('/bonafide/pending'),
       apiRequest('/gate-passes/pending'),
@@ -32,11 +53,63 @@ export default function AdminApprovalsPage() {
   }, []);
 
   const handleApproveBonafide = async (id: string) => {
+    setActionMsg('');
+    setActionError('');
     const res = await apiRequest(`/bonafide/${id}/approve`, { method: 'POST' });
     if (res.success) {
       setActionMsg(`Bonafide Certificate (${res.data.certificateId}) officially generated & certified!`);
       loadData();
+    } else {
+      setActionError(res.error?.message || 'Failed to approve certificate.');
     }
+  };
+
+  const handleOpenRejectModal = (b: any) => {
+    setSelectedBonafide(b);
+    setRejectionReason('');
+    setRejectValidationErr('');
+    setRejectModalOpen(true);
+  };
+
+  const handleCloseRejectModal = () => {
+    setRejectModalOpen(false);
+    setSelectedBonafide(null);
+    setRejectionReason('');
+    setRejectValidationErr('');
+  };
+
+  const handleConfirmReject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = rejectionReason.trim();
+
+    if (!trimmed) {
+      setRejectValidationErr('Please enter a rejection reason.');
+      return;
+    }
+
+    if (trimmed.length > 500) {
+      setRejectValidationErr('Rejection reason must not exceed 500 characters.');
+      return;
+    }
+
+    setSubmittingReject(true);
+    setRejectValidationErr('');
+
+    const res = await apiRequest(`/bonafide/${selectedBonafide.id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason: trimmed }),
+    });
+
+    if (res.success) {
+      setActionMsg(
+        `Request ${selectedBonafide.request?.requestNumber} rejected. Student has been notified with the reason.`
+      );
+      handleCloseRejectModal();
+      loadData();
+    } else {
+      setRejectValidationErr(res.error?.message || 'Failed to reject certificate.');
+    }
+    setSubmittingReject(false);
   };
 
   const handleApproveGatePass = async (id: string) => {
@@ -65,8 +138,26 @@ export default function AdminApprovalsPage() {
       </div>
 
       {actionMsg && (
-        <div className="p-3 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-xs">
-          {actionMsg}
+        <div className="p-3 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
+            <span>{actionMsg}</span>
+          </div>
+          <button onClick={() => setActionMsg('')} className="p-1 hover:bg-emerald-900/50 rounded">
+            <X size={13} />
+          </button>
+        </div>
+      )}
+
+      {actionError && (
+        <div className="p-3 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-300 text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={15} className="text-rose-400 shrink-0" />
+            <span>{actionError}</span>
+          </div>
+          <button onClick={() => setActionError('')} className="p-1 hover:bg-rose-900/50 rounded">
+            <X size={13} />
+          </button>
         </div>
       )}
 
@@ -110,9 +201,16 @@ export default function AdminApprovalsPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleApproveBonafide(b.id)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs shadow transition"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs shadow transition active:scale-95"
                   >
-                    <Check size={14} /> Approve &amp; Generate PDF
+                    <Check size={14} className="stroke-[3]" /> Approve &amp; Generate PDF
+                  </button>
+
+                  <button
+                    onClick={() => handleOpenRejectModal(b)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-rose-950/50 hover:bg-rose-900/80 border border-rose-800 text-rose-300 font-bold text-xs shadow transition active:scale-95"
+                  >
+                    <X size={14} className="stroke-[2.5]" /> Reject
                   </button>
                 </div>
               </div>
@@ -196,6 +294,99 @@ export default function AdminApprovalsPage() {
           </div>
         )}
       </div>
+
+      {/* REJECTION MODAL */}
+      {rejectModalOpen && selectedBonafide && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="bg-[#121624] border border-[#2b354d] rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[#212739] pb-3">
+              <div className="flex items-center gap-2 text-rose-400">
+                <XCircle size={20} />
+                <h3 className="text-base font-bold text-white">Reject Certificate Request</h3>
+              </div>
+              <button
+                onClick={handleCloseRejectModal}
+                className="p-1 rounded-lg hover:bg-[#1b2234] text-gray-400 hover:text-white transition"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="bg-[#0e111a] border border-[#212739] rounded-xl p-3.5 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-400 font-medium">Request Number:</span>
+                <span className="font-mono font-bold text-gold">
+                  {selectedBonafide.request?.requestNumber}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400 font-medium">Student:</span>
+                <span className="font-bold text-white">
+                  {selectedBonafide.request?.requester?.student?.fullName ||
+                    selectedBonafide.request?.requester?.username}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400 font-medium">Purpose:</span>
+                <span className="text-gray-200">{selectedBonafide.purpose}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleConfirmReject} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-gray-300 font-semibold mb-1">
+                  Reason for rejection: <span className="text-rose-400">*</span>
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => {
+                    setRejectionReason(e.target.value);
+                    if (rejectValidationErr) setRejectValidationErr('');
+                  }}
+                  rows={4}
+                  maxLength={500}
+                  placeholder="Enter specific reason for rejection..."
+                  className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 transition resize-none"
+                  autoFocus
+                />
+                <div className="flex justify-between text-[11px] text-gray-500 mt-1 font-mono">
+                  <span>Student will be notified of this reason.</span>
+                  <span>{rejectionReason.length}/500</span>
+                </div>
+              </div>
+
+              {rejectValidationErr && (
+                <div className="p-2.5 rounded-lg bg-rose-950/70 border border-rose-800 text-rose-300 text-[11px] flex items-center gap-2">
+                  <AlertCircle size={14} className="shrink-0" />
+                  <span>{rejectValidationErr}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#212739]">
+                <button
+                  type="button"
+                  onClick={handleCloseRejectModal}
+                  disabled={submittingReject}
+                  className="px-4 py-2 rounded-xl bg-[#171c2a] hover:bg-[#20273a] text-gray-300 hover:text-white border border-[#273248] font-semibold text-xs transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReject || !rejectionReason.trim()}
+                  className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow transition active:scale-95 disabled:opacity-50"
+                >
+                  {submittingReject ? 'Rejecting...' : 'Reject Request'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
