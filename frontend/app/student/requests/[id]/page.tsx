@@ -23,6 +23,7 @@ import {
   Circle,
   XCircle,
 } from 'lucide-react';
+import { CancelRequestModal } from '@/components/modals/CancelRequestModal';
 
 export default function StudentRequestDetailPage() {
   const params = useParams();
@@ -31,6 +32,8 @@ export default function StudentRequestDetailPage() {
   const [request, setRequest] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelSuccess, setCancelSuccess] = useState('');
 
   // Confirmation & Rating states
   const [rating, setRating] = useState(5);
@@ -59,6 +62,19 @@ export default function StudentRequestDetailPage() {
     });
     if (res.success) {
       fetchRequest();
+    }
+  };
+
+  const handleCancelRequest = async (reason?: string) => {
+    const res = await apiRequest(`/requests/${requestId}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+    if (res.success) {
+      setCancelSuccess('Request has been cancelled successfully.');
+      fetchRequest();
+    } else {
+      throw new Error(res.error?.message || 'Failed to cancel request');
     }
   };
 
@@ -105,6 +121,13 @@ export default function StudentRequestDetailPage() {
   const isComplaint = request.requestType?.code === 'COMPLAINT';
   const isResolvedOrConfirmed = request.status === 'RESOLVED' || request.status === 'CONFIRMED';
   const hasRated = !!request.complaint?.studentRating;
+
+  const isCancellable =
+    ['PENDING_APPROVAL', 'SUBMITTED', 'ROUTED', 'ASSIGNED'].includes(request.status) &&
+    !['APPROVED', 'REJECTED', 'RESOLVED', 'CONFIRMED', 'CLOSED', 'CANCELLED', 'DEPARTED', 'RETURNED', 'EXPIRED'].includes(request.status) &&
+    !request.bonafide?.certificateId &&
+    (!request.gatePass || request.gatePass.gateStatus === 'PENDING_APPROVAL') &&
+    (!request.leaveRequest || request.leaveRequest.status === 'PENDING_APPROVAL');
 
   // Lifecycle mapping based on real backend status:
   // SUBMITTED → ROUTED → ASSIGNED → IN PROGRESS → RESOLVED → CLOSED
@@ -173,11 +196,23 @@ export default function StudentRequestDetailPage() {
             </h1>
           </div>
 
-          <div className="text-left sm:text-right text-xs text-gray-400 font-mono shrink-0">
+          <div className="text-left sm:text-right text-xs text-gray-400 font-mono shrink-0 space-y-2">
             <div>Logged: {new Date(request.createdAt).toLocaleDateString()}</div>
             {request.completedAt && (
               <div className="text-emerald-400 font-bold mt-0.5">
                 Completed: {new Date(request.completedAt).toLocaleDateString()}
+              </div>
+            )}
+            {isCancellable && (
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowCancelModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-950/50 hover:bg-rose-900/70 border border-rose-800/70 text-rose-300 font-bold text-xs transition active:scale-95 shadow-xs"
+                >
+                  <XCircle size={14} className="text-rose-400" />
+                  <span>Cancel Request</span>
+                </button>
               </div>
             )}
           </div>
@@ -423,6 +458,15 @@ export default function StudentRequestDetailPage() {
 
         <Timeline history={request.timeline || []} />
       </div>
+
+      <CancelRequestModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={handleCancelRequest}
+        requestNumber={request.requestNumber}
+        title={request.title}
+        requestType={request.requestType?.name}
+      />
     </div>
   );
 }

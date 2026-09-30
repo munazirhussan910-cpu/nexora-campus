@@ -444,6 +444,12 @@ export default function HomePage() {
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
             {/* Desktop / Tablet Quick Actions */}
             <Link
+              href="/register"
+              className="hidden md:flex px-3 py-1.5 rounded-lg border border-[#d4af37]/40 bg-[#1c2233] hover:bg-[#222a3f] text-[#d4af37] text-xs font-semibold transition items-center gap-1.5 active:scale-95 whitespace-nowrap"
+            >
+              <span>Student Sign Up</span>
+            </Link>
+            <Link
               href="/login"
               className="hidden sm:flex px-3 py-1.5 rounded-lg border border-[#2e3447] bg-[#141722] hover:bg-[#1c2130] text-gray-200 hover:text-white text-xs font-medium transition items-center gap-1.5 active:scale-95 whitespace-nowrap"
             >
@@ -656,6 +662,14 @@ export default function HomePage() {
 
               {/* Feature Section 4: Auth & Action Buttons */}
               <div className="pt-3 border-t border-[#1f2434] flex flex-col sm:flex-row gap-2">
+                <Link
+                  href="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full py-2.5 rounded-xl border border-[#d4af37]/40 bg-[#1c2233] hover:bg-[#222a3f] text-[#d4af37] text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95"
+                >
+                  <Users size={13} />
+                  <span>Create Student Account</span>
+                </Link>
                 <Link
                   href="/login"
                   onClick={() => setMobileMenuOpen(false)}
@@ -1405,13 +1419,20 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
                 </p>
               </div>
 
-              <div className="self-start sm:self-auto">
+              <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                <Link
+                  href="/register"
+                  className="px-3.5 py-2 rounded-xl bg-[#202738] border border-[#d4af37]/45 hover:border-[#d4af37] text-xs font-semibold text-[#d4af37] hover:text-[#e4c257] transition flex items-center gap-1.5 active:scale-95 shadow-xs"
+                >
+                  <Users size={13} />
+                  <span>Student Sign Up</span>
+                </Link>
                 <Link
                   href="/login"
                   className="px-3.5 py-2 rounded-xl bg-[#1c2130] border border-[#2e3447] hover:border-[#d4af37]/60 text-xs font-medium text-gray-200 hover:text-white transition flex items-center gap-1.5 active:scale-95"
                 >
                   <Lock size={13} className="text-[#d4af37]" />
-                  <span>Manual Login Form</span>
+                  <span>Portal Login</span>
                 </Link>
               </div>
             </div>

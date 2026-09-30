@@ -188,6 +188,13 @@ router.post(
         throw new AppError('This certificate has already been issued', 409);
       }
 
+      if (bonafide.request.status !== 'PENDING_APPROVAL') {
+        throw new AppError(
+          `Cannot approve certificate request with status: ${bonafide.request.status}`,
+          422
+        );
+      }
+
       const student = bonafide.request.requester.student;
       if (!student) {
         throw new AppError('Requester does not have an active student profile', 400);
@@ -433,6 +440,38 @@ router.get(
       }
 
       res.download(filePath, `Bonafide-${bonafide.certificateId}.pdf`);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// POST /api/bonafide/:id/cancel - Student cancels their bonafide certificate request
+router.post(
+  '/:id/cancel',
+  authenticate,
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const bonafide = await prisma.bonafideRequest.findFirst({
+        where: { OR: [{ id }, { requestId: id }] },
+      });
+
+      if (!bonafide) {
+        throw new AppError('Bonafide request not found', 404);
+      }
+
+      const updated = await RequestService.cancelRequest(
+        bonafide.requestId,
+        req.user!.id,
+        req.body?.reason
+      );
+
+      res.json({
+        success: true,
+        message: 'Bonafide certificate request cancelled successfully',
+        data: updated,
+      });
     } catch (err) {
       next(err);
     }

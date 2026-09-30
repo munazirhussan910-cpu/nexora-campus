@@ -331,6 +331,269 @@ export class RequestService {
   }
 
   /**
+   * Student self-cancellation of requests
+   */
+  static async cancelRequest(
+    requestId: string,
+    actorId: string,
+    reason?: string
+  ) {
+    let request = await prisma.request.findUnique({
+      where: { id: requestId },
+      include: {
+        requester: true,
+        assignedStaff: true,
+        requestType: true,
+        complaint: true,
+        gatePass: true,
+        leaveRequest: true,
+        bonafide: true,
+      },
+    });
+
+    if (!request) {
+      // Check if requestId was actually a child entity ID
+      const [gp, lr, bf, cp] = await Promise.all([
+        prisma.gatePass.findUnique({ where: { id: requestId }, select: { requestId: true } }),
+        prisma.leaveRequest.findUnique({ where: { id: requestId }, select: { requestId: true } }),
+        prisma.bonafideRequest.findUnique({ where: { id: requestId }, select: { requestId: true } }),
+        prisma.complaint.findUnique({ where: { id: requestId }, select: { requestId: true } }),
+      ]);
+      const matchedRequestId = gp?.requestId || lr?.requestId || bf?.requestId || cp?.requestId;
+      if (matchedRequestId) {
+        request = await prisma.request.findUnique({
+          where: { id: matchedRequestId },
+          include: {
+            requester: true,
+            assignedStaff: true,
+            requestType: true,
+            complaint: true,
+            gatePass: true,
+            leaveRequest: true,
+            bonafide: true,
+          },
+        });
+      }
+    }
+
+    if (!request) {
+      throw new AppError('Request not found', 404, 'NOT_FOUND');
+    }
+
+    // 1. Authorization: Only the request owner can cancel it
+    if (request.requesterId !== actorId) {
+      throw new AppError('You can only cancel your own requests', 403, 'FORBIDDEN');
+    }
+
+    // 2. Already cancelled
+    if (request.status === 'CANCELLED') {
+      throw new AppError('Request is already cancelled', 422, 'ALREADY_CANCELLED');
+    }
+
+    // 3. Final / Non-cancellable states
+    const finalStates = [
+      'APPROVED',
+      'REJECTED',
+      'RESOLVED',
+      'CONFIRMED',
+      'CLOSED',
+      'DEPARTED',
+      'RETURNED',
+      'EXPIRED',
+    ];
+    if (finalStates.includes(request.status)) {
+      throw new AppError(
+        `Cannot cancel a request that has already reached state: ${request.status}`,
+        422,
+        'CANNOT_CANCEL_FINAL_STATE'
+      );
+    }
+
+    if (request.status === 'IN_PROGRESS') {
+      throw new AppError(
+        'Cannot cancel request while maintenance work is already in progress',
+        422,
+        'WORK_IN_PROGRESS'
+      );
+    }
+
+    // 4. Specific child checks
+    if (request.gatePass && request.gatePass.gateStatus !== 'PENDING_APPROVAL') {
+      throw new AppError(
+        `Cannot cancel gate pass with status: ${request.gatePass.gateStatus}`,
+        422,
+        'CANNOT_CANCEL_GATE_PASS'
+      );
+    }
+
+    if (request.leaveRequest && request.leaveRequest.status !== 'PENDING_APPROVAL') {
+      throw new AppError(
+        `Cannot cancel leave request with status: ${request.leaveRequest.status}`,
+        422,
+        'CANNOT_CANCEL_LEAVE'
+      );
+    }
+
+    if (request.bonafide && request.bonafide.certificateId) {
+      throw new AppError(
+        'Cannot cancel an already issued certificate',
+        409,
+        'CERTIFICATE_ALREADY_ISSUED'
+      );
+    }
+
+    // Verify valid status transition
+    if (!this.isValidTransition(request.status, 'CANCELLED')) {
+      throw new AppError(
+        `Invalid status transition from '${request.status}' to 'CANCELLED'`,
+        422,
+        'INVALID_STATUS_TRANSITION'
+      );
+    }
+
+    const cancelComment = reason ? `Cancelled by student: ${reason}` : 'Cancelled by student';
+
+    const updated = await prisma.$transaction(
+      async (tx) => {
+        // 1. Update Request
+        const u = await tx.request.update({
+          where: { id: request.id },
+          data: {
+            status: 'CANCELLED',
+            completedAt: new Date(),
+          },
+          include: {
+            requestType: true,
+            requester: true,
+            assignedStaff: true,
+            complaint: true,
+            gatePass: true,
+            leaveRequest: true,
+            bonafide: true,
+          },
+        });
+
+        // 2. Update child records if applicable
+        if (request.gatePass) {
+          await tx.gatePass.update({
+            where: { id: request.gatePass.id },
+            data: { gateStatus: 'CANCELLED' },
+          });
+        }
+
+        if (request.leaveRequest) {
+          await tx.leaveRequest.update({
+            where: { id: request.leaveRequest.id },
+            data: { status: 'CANCELLED' },
+          });
+        }
+
+        // 3. Status History Entry
+        await tx.requestStatusHistory.create({
+          data: {
+            requestId: request.id,
+            oldStatus: request.status,
+            newStatus: 'CANCELLED',
+            changedBy: actorId,
+            comment: cancelComment,
+          },
+        });
+
+        // 4. Audit Log Entries
+        await AuditService.log({
+          actorId,
+          action: 'REQUEST_CANCELLED',
+          entityType: 'REQUEST',
+          entityId: request.id,
+          oldValues: { status: request.status },
+          newValues: { status: 'CANCELLED', reason },
+          tx,
+        });
+
+        await AuditService.log({
+          actorId,
+          action: 'REQUEST_STATUS_CANCELLED',
+          entityType: 'REQUEST',
+          entityId: request.id,
+          oldValues: { status: request.status },
+          newValues: { status: 'CANCELLED', reason },
+          tx,
+        });
+
+        if (request.gatePass) {
+          await AuditService.log({
+            actorId,
+            action: 'GATE_PASS_CANCELLED',
+            entityType: 'GATE_PASS',
+            entityId: request.gatePass.id,
+            oldValues: { gateStatus: request.gatePass.gateStatus },
+            newValues: { gateStatus: 'CANCELLED' },
+            tx,
+          });
+        }
+
+        if (request.leaveRequest) {
+          await AuditService.log({
+            actorId,
+            action: 'LEAVE_CANCELLED',
+            entityType: 'LEAVE',
+            entityId: request.leaveRequest.id,
+            oldValues: { status: request.leaveRequest.status },
+            newValues: { status: 'CANCELLED' },
+            tx,
+          });
+        }
+
+        if (request.bonafide) {
+          await AuditService.log({
+            actorId,
+            action: 'BONAFIDE_CANCELLED',
+            entityType: 'BONAFIDE',
+            entityId: request.bonafide.id,
+            tx,
+          });
+        }
+
+        if (request.complaint) {
+          await AuditService.log({
+            actorId,
+            action: 'COMPLAINT_CANCELLED',
+            entityType: 'COMPLAINT',
+            entityId: request.complaint.id,
+            tx,
+          });
+        }
+
+        return u;
+      },
+      { maxWait: 15000, timeout: 30000 }
+    );
+
+    // Notifications post-transaction
+    if (request.assignedTo) {
+      await NotificationService.send({
+        userId: request.assignedTo,
+        title: `Task ${request.requestNumber} Cancelled`,
+        message: `Task "${request.title}" was cancelled by the requester.`,
+        type: 'INFO',
+        referenceType: request.requestType.code,
+        referenceId: request.id,
+      });
+    }
+
+    await NotificationService.send({
+      userId: actorId,
+      title: `Request ${request.requestNumber} Cancelled`,
+      message: `Your request "${request.title}" has been successfully cancelled.`,
+      type: 'INFO',
+      referenceType: request.requestType.code,
+      referenceId: request.id,
+    });
+
+    return updated;
+  }
+
+  /**
    * Fetches full timeline for a request
    */
   static async getRequestTimeline(requestId: string) {

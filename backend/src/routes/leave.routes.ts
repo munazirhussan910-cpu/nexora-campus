@@ -177,6 +177,10 @@ router.post(
         throw new AppError('Leave application not found', 404);
       }
 
+      if (leave.status !== 'PENDING_APPROVAL' || leave.request.status !== 'PENDING_APPROVAL') {
+        throw new AppError(`Cannot approve leave request with status: ${leave.status}`, 422);
+      }
+
       const updated = await prisma.leaveRequest.update({
         where: { id: leave.id },
         data: {
@@ -274,6 +278,38 @@ router.post(
       res.json({
         success: true,
         message: 'Leave rejected',
+        data: updated,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// POST /api/leaves/:id/cancel - Student cancels their leave request
+router.post(
+  '/:id/cancel',
+  authenticate,
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const leave = await prisma.leaveRequest.findFirst({
+        where: { OR: [{ id }, { requestId: id }] },
+      });
+
+      if (!leave) {
+        throw new AppError('Leave application not found', 404);
+      }
+
+      const updated = await RequestService.cancelRequest(
+        leave.requestId,
+        req.user!.id,
+        req.body?.reason
+      );
+
+      res.json({
+        success: true,
+        message: 'Leave request cancelled successfully',
         data: updated,
       });
     } catch (err) {

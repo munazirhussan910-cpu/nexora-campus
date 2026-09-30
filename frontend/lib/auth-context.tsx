@@ -15,14 +15,32 @@ export interface UserProfile {
   employeeId?: string;
   department?: string;
   specialization?: string;
+  branch?: string;
+  year?: number;
   hostelBlock?: string;
   roomNumber?: string;
+}
+
+export interface RegisterStudentData {
+  fullName: string;
+  email: string;
+  rollNumber: string;
+  department: string;
+  year: number | string;
+  hostel?: string;
+  roomNumber?: string;
+  phone?: string;
+  password: string;
+  confirmPassword: string;
+  role?: string;
 }
 
 interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
   login: (usernameOrEmail: string, password: string) => Promise<boolean>;
+  loginWithFeedback: (usernameOrEmail: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (data: RegisterStudentData) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   switchPersona: (persona: string) => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -73,7 +91,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshUser();
   }, []);
 
-  const login = async (usernameOrEmail: string, password: string): Promise<boolean> => {
+  const loginWithFeedback = async (
+    usernameOrEmail: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> => {
     setLoading(true);
     const res = await apiRequest<{ token: string; user: UserProfile }>('/auth/login', {
       method: 'POST',
@@ -87,11 +108,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(res.data.user);
       setLoading(false);
       router.push(getRoleDashboard(res.data.user.role));
-      return true;
+      return { success: true };
     }
 
     setLoading(false);
-    return false;
+    return {
+      success: false,
+      error: res.error?.message || 'Invalid username/email or password.',
+    };
+  };
+
+  const login = async (usernameOrEmail: string, password: string): Promise<boolean> => {
+    const result = await loginWithFeedback(usernameOrEmail, password);
+    return result.success;
+  };
+
+  const register = async (
+    data: RegisterStudentData
+  ): Promise<{ success: boolean; error?: string }> => {
+    setLoading(true);
+    const res = await apiRequest<{ token: string; user: UserProfile }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+
+    if (res.success && res.data) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('nexora_token', res.data.token);
+      }
+      setUser(res.data.user);
+      setLoading(false);
+      router.push(getRoleDashboard(res.data.user.role));
+      return { success: true };
+    }
+
+    setLoading(false);
+    return {
+      success: false,
+      error: res.error?.message || 'Registration failed. Please verify your details.',
+    };
   };
 
   const logout = async () => {
@@ -128,6 +183,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         loading,
         login,
+        loginWithFeedback,
+        register,
         logout,
         switchPersona,
         refreshUser,

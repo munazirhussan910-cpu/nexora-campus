@@ -32,6 +32,7 @@ export default function StudentRequestsPage() {
     if (filter === 'IN_PROGRESS' && !['ACCEPTED', 'IN_PROGRESS', 'ROUTED', 'ASSIGNED'].includes(r.status)) return false;
     if (filter === 'COMPLETED' && !['RESOLVED', 'CONFIRMED', 'CLOSED'].includes(r.status)) return false;
     if (filter === 'REJECTED' && r.status !== 'REJECTED') return false;
+    if (filter === 'CANCELLED' && r.status !== 'CANCELLED') return false;
 
     // Search query
     if (search.trim()) {
@@ -64,7 +65,7 @@ export default function StudentRequestsPage() {
       {/* Filter and Search Bar */}
       <div className="bg-[#141722] border border-[#282f42] rounded-2xl p-3.5 flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 text-xs">
-          {['ALL', 'OPEN', 'IN_PROGRESS', 'COMPLETED', 'REJECTED'].map((f) => (
+          {['ALL', 'OPEN', 'IN_PROGRESS', 'COMPLETED', 'REJECTED', 'CANCELLED'].map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}

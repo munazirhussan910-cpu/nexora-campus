@@ -14,12 +14,15 @@ import {
   Award,
   FileText,
   Building,
+  X,
 } from 'lucide-react';
+import { CancelRequestModal } from '@/components/modals/CancelRequestModal';
 
 export default function StudentDocumentsPage() {
   const [bonafideRequests, setBonafideRequests] = useState<any[]>([]);
   const [purpose, setPurpose] = useState('Scholarship');
   const [loading, setLoading] = useState(true);
+  const [cancellingBonafide, setCancellingBonafide] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -196,6 +199,10 @@ export default function StudentDocumentsPage() {
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-950/80 text-rose-300 border border-rose-700/80 inline-flex items-center gap-1">
                           <AlertCircle size={11} /> REJECTED
                         </span>
+                      ) : b.request?.status === 'CANCELLED' ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-rose-950/80 text-rose-300 border border-rose-700/80 inline-flex items-center gap-1">
+                          <X size={11} /> CANCELLED
+                        </span>
                       ) : (
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-950/80 text-amber-300 border border-amber-700/80 inline-flex items-center gap-1">
                           <Clock size={11} /> PENDING APPROVAL
@@ -235,9 +242,23 @@ export default function StudentDocumentsPage() {
                     <div className="text-rose-300 font-mono text-[11px] bg-rose-950/40 px-3 py-1.5 rounded-lg border border-rose-800/40 max-w-sm">
                       Declined: {b.request?.rejectionReason || 'Application rejected by Academic Officer'}
                     </div>
+                  ) : b.request?.status === 'CANCELLED' ? (
+                    <div className="text-rose-400 font-mono text-[11px] bg-rose-950/30 px-3 py-1.5 rounded-lg border border-rose-800/40 w-fit">
+                      Request Cancelled
+                    </div>
                   ) : (
-                    <div className="text-amber-400/90 font-mono text-[11px] bg-amber-950/30 px-3 py-1.5 rounded-lg border border-amber-800/40 w-fit">
-                      Awaiting Academic Office signature
+                    <div className="flex items-center gap-3">
+                      <div className="text-amber-400/90 font-mono text-[11px] bg-amber-950/30 px-3 py-1.5 rounded-lg border border-amber-800/40 w-fit">
+                        Awaiting Academic Office signature
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCancellingBonafide(b)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-950/50 hover:bg-rose-900/70 border border-rose-800/70 text-rose-300 font-bold text-[11px] transition active:scale-95 shadow-xs"
+                      >
+                        <X size={12} className="text-rose-400" />
+                        <span>Cancel Request</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -246,6 +267,27 @@ export default function StudentDocumentsPage() {
           </div>
         )}
       </div>
+
+      <CancelRequestModal
+        isOpen={!!cancellingBonafide}
+        onClose={() => setCancellingBonafide(null)}
+        onConfirm={async (reason) => {
+          if (!cancellingBonafide) return;
+          const targetId = cancellingBonafide.requestId || cancellingBonafide.id;
+          const res = await apiRequest(`/bonafide/${targetId}/cancel`, {
+            method: 'POST',
+            body: JSON.stringify({ reason }),
+          });
+          if (res.success) {
+            setSuccess('Bonafide certificate request cancelled successfully.');
+            fetchBonafides();
+          } else {
+            throw new Error(res.error?.message || 'Failed to cancel bonafide request');
+          }
+        }}
+        requestNumber={cancellingBonafide?.request?.requestNumber}
+        title={cancellingBonafide ? `Bonafide Certificate: ${cancellingBonafide.purpose}` : undefined}
+      />
     </div>
   );
 }

@@ -176,6 +176,10 @@ router.post(
         throw new AppError('Complaint not found', 404);
       }
 
+      if (request.status === 'CANCELLED') {
+        throw new AppError('Cannot accept a cancelled complaint', 422);
+      }
+
       if (request.assignedTo !== req.user!.id && req.user!.role !== 'ADMIN') {
         throw new AppError('You are not assigned to this complaint', 403);
       }
@@ -220,6 +224,10 @@ router.post(
         throw new AppError('Complaint not found', 404);
       }
 
+      if (request.status === 'CANCELLED') {
+        throw new AppError('Cannot start work on a cancelled complaint', 422);
+      }
+
       if (request.assignedTo !== req.user!.id && req.user!.role !== 'ADMIN') {
         throw new AppError('You are not assigned to this complaint', 403);
       }
@@ -259,6 +267,10 @@ router.post(
 
       if (!request) {
         throw new AppError('Complaint not found', 404);
+      }
+
+      if (request.status === 'CANCELLED') {
+        throw new AppError('Cannot resolve a cancelled complaint', 422);
       }
 
       if (request.assignedTo !== req.user!.id && req.user!.role !== 'ADMIN') {
@@ -379,6 +391,35 @@ router.post(
         success: true,
         message: 'Rating and feedback submitted successfully',
         data: updatedComplaint,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// POST /api/complaints/:id/cancel - Student cancels their complaint
+router.post(
+  '/:id/cancel',
+  authenticate,
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const complaint = await prisma.complaint.findFirst({
+        where: { OR: [{ id }, { requestId: id }] },
+      });
+      const targetRequestId = complaint ? complaint.requestId : id;
+
+      const updated = await RequestService.cancelRequest(
+        targetRequestId,
+        req.user!.id,
+        req.body?.reason
+      );
+
+      res.json({
+        success: true,
+        message: 'Complaint cancelled successfully',
+        data: updated,
       });
     } catch (err) {
       next(err);

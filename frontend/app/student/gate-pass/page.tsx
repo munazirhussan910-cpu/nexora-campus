@@ -16,13 +16,16 @@ import {
   QrCode,
   Calendar,
   MapPin,
+  X,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { CancelRequestModal } from '@/components/modals/CancelRequestModal';
 
 export default function StudentGatePassPage() {
   const [passes, setPasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedPin, setCopiedPin] = useState(false);
+  const [cancellingPass, setCancellingPass] = useState<any>(null);
 
   // Form states
   const [destination, setDestination] = useState('');
@@ -370,12 +373,45 @@ export default function StudentGatePassPage() {
                       Returned: {new Date(p.returnedAt).toLocaleTimeString()}
                     </div>
                   )}
+                  {p.gateStatus === 'PENDING_APPROVAL' && (
+                    <div className="pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setCancellingPass(p)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-950/50 hover:bg-rose-900/70 border border-rose-800/70 text-rose-300 font-bold text-[11px] transition active:scale-95 shadow-xs"
+                      >
+                        <X size={12} className="text-rose-400" />
+                        <span>Cancel Request</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      <CancelRequestModal
+        isOpen={!!cancellingPass}
+        onClose={() => setCancellingPass(null)}
+        onConfirm={async (reason) => {
+          if (!cancellingPass) return;
+          const targetId = cancellingPass.requestId || cancellingPass.id;
+          const res = await apiRequest(`/gate-passes/${targetId}/cancel`, {
+            method: 'POST',
+            body: JSON.stringify({ reason }),
+          });
+          if (res.success) {
+            setSuccess('Gate pass request cancelled successfully.');
+            fetchPasses();
+          } else {
+            throw new Error(res.error?.message || 'Failed to cancel gate pass');
+          }
+        }}
+        requestNumber={cancellingPass?.request?.requestNumber}
+        title={cancellingPass ? `Gate Pass to ${cancellingPass.destination}` : undefined}
+      />
     </div>
   );
 }

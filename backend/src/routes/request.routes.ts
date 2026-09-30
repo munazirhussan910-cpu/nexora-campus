@@ -331,6 +331,20 @@ router.patch(
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { status, comment } = req.body;
+      if (status === 'CANCELLED') {
+        const updated = await RequestService.cancelRequest(
+          String(req.params.id),
+          req.user!.id,
+          comment
+        );
+        res.json({
+          success: true,
+          message: 'Request cancelled successfully',
+          data: updated,
+        });
+        return;
+      }
+
       const updated = await RequestService.transitionStatus(
         String(req.params.id),
         status,
@@ -341,6 +355,35 @@ router.patch(
       res.json({
         success: true,
         message: `Request status transitioned to ${status}`,
+        data: updated,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// POST /api/requests/:id/cancel - Student self-cancellation of requests
+const cancelRequestSchema = z.object({
+  reason: z.string().optional(),
+});
+
+router.post(
+  '/:id/cancel',
+  authenticate,
+  validateBody(cancelRequestSchema),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { reason } = req.body;
+      const updated = await RequestService.cancelRequest(
+        String(req.params.id),
+        req.user!.id,
+        reason
+      );
+
+      res.json({
+        success: true,
+        message: 'Request cancelled successfully',
         data: updated,
       });
     } catch (err) {

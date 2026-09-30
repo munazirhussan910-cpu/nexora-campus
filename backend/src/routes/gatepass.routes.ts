@@ -320,6 +320,38 @@ router.post(
   }
 );
 
+// POST /api/gate-passes/:id/cancel - Student cancels their gate pass
+router.post(
+  '/:id/cancel',
+  authenticate,
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const gatePass = await prisma.gatePass.findFirst({
+        where: { OR: [{ id }, { requestId: id }] },
+      });
+
+      if (!gatePass) {
+        throw new AppError('Gate pass not found', 404);
+      }
+
+      const updated = await RequestService.cancelRequest(
+        gatePass.requestId,
+        req.user!.id,
+        req.body?.reason
+      );
+
+      res.json({
+        success: true,
+        message: 'Gate pass cancelled successfully',
+        data: updated,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 // POST /api/gate-passes/verify - Security officer verifies QR or PIN
 router.post(
   '/verify',

@@ -12,11 +12,14 @@ import {
   Phone,
   UserCheck,
   Check,
+  X,
 } from 'lucide-react';
+import { CancelRequestModal } from '@/components/modals/CancelRequestModal';
 
 export default function StudentLeavePage() {
   const [leaves, setLeaves] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancellingLeave, setCancellingLeave] = useState<any>(null);
 
   // Form states
   const [startDate, setStartDate] = useState('');
@@ -268,7 +271,7 @@ export default function StudentLeavePage() {
                   </div>
                 </div>
 
-                <div className="text-left sm:text-right text-[11px] text-gray-400 font-mono space-y-1 shrink-0">
+                <div className="text-left sm:text-right text-[11px] text-gray-400 font-mono space-y-1.5 shrink-0">
                   {l.approvedBy && (
                     <div className="text-emerald-400 font-medium">
                       Reviewed by {l.approver?.staff?.fullName || 'Hostel Warden'}
@@ -277,12 +280,45 @@ export default function StudentLeavePage() {
                   <div className="text-gray-500">
                     Applied: {new Date(l.createdAt).toLocaleDateString()}
                   </div>
+                  {l.status === 'PENDING_APPROVAL' && (
+                    <div className="pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setCancellingLeave(l)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-950/50 hover:bg-rose-900/70 border border-rose-800/70 text-rose-300 font-bold text-[11px] transition active:scale-95 shadow-xs"
+                      >
+                        <X size={12} className="text-rose-400" />
+                        <span>Cancel Request</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      <CancelRequestModal
+        isOpen={!!cancellingLeave}
+        onClose={() => setCancellingLeave(null)}
+        onConfirm={async (reason) => {
+          if (!cancellingLeave) return;
+          const targetId = cancellingLeave.requestId || cancellingLeave.id;
+          const res = await apiRequest(`/leaves/${targetId}/cancel`, {
+            method: 'POST',
+            body: JSON.stringify({ reason }),
+          });
+          if (res.success) {
+            setSuccess('Leave request cancelled successfully.');
+            fetchLeaves();
+          } else {
+            throw new Error(res.error?.message || 'Failed to cancel leave request');
+          }
+        }}
+        requestNumber={cancellingLeave?.request?.requestNumber}
+        title={cancellingLeave ? `Hostel Leave: ${cancellingLeave.reason}` : undefined}
+      />
     </div>
   );
 }

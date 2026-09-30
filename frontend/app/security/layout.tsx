@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar, NavItem } from '@/components/layout/Sidebar';
+import { PortalGuard } from '@/components/layout/PortalGuard';
 import { LayoutDashboard, QrCode, Activity, User } from 'lucide-react';
 
 const securityNavItems: NavItem[] = [
@@ -16,22 +17,24 @@ export default function SecurityLayout({ children }: { children: React.ReactNode
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#0a0d14] flex flex-col overflow-x-hidden text-[#edeef2]">
-      <Navbar
-        portalName="MAIN GATE SECURITY"
-        onMenuClick={() => setIsMobileMenuOpen((prev) => !prev)}
-        isMobileMenuOpen={isMobileMenuOpen}
-      />
-      <div className="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto">
-        <Sidebar
-          items={securityNavItems}
-          isOpen={isMobileMenuOpen}
-          onClose={() => setIsMobileMenuOpen(false)}
+    <PortalGuard allowedRoles={['SECURITY', 'ADMIN']} portalTitle="Main Gate Security">
+      <div className="min-h-screen bg-[#0a0d14] flex flex-col overflow-x-hidden text-[#edeef2]">
+        <Navbar
+          portalName="MAIN GATE SECURITY"
+          onMenuClick={() => setIsMobileMenuOpen((prev) => !prev)}
+          isMobileMenuOpen={isMobileMenuOpen}
         />
-        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 overflow-y-auto min-w-0">
-          {children}
-        </main>
+        <div className="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto">
+          <Sidebar
+            items={securityNavItems}
+            isOpen={isMobileMenuOpen}
+            onClose={() => setIsMobileMenuOpen(false)}
+          />
+          <main className="flex-1 p-3.5 sm:p-6 lg:p-8 overflow-y-auto min-w-0">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </PortalGuard>
   );
 }
