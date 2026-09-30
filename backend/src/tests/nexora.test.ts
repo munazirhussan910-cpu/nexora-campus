@@ -14,6 +14,7 @@ describe('Nexora Campus Backend Test Suite', () => {
   let createdComplaintRequestId = '';
   let createdGatePassId = '';
   let gatePassPin = '';
+  let gatePassQrToken = '';
   let createdBonafideId = '';
   let generatedCertId = '';
   let createdLeaveId = '';
@@ -194,13 +195,14 @@ describe('Nexora Campus Backend Test Suite', () => {
       expect(res.status).toBe(200);
       expect(res.body.data.gateStatus).toBe('APPROVED');
       expect(res.body.data.qrTokenHash).toBeTruthy();
+      gatePassQrToken = res.body.data.qrTokenHash;
     });
 
-    test('Security Officer verifies Gate Pass by PIN', async () => {
+    test('Security Officer verifies Gate Pass by HMAC QR Token (Camera QR Scan)', async () => {
       const res = await request(server)
         .post('/api/gate-passes/verify')
         .set('Authorization', `Bearer ${securityToken}`)
-        .send({ tokenOrPin: gatePassPin });
+        .send({ tokenOrPin: gatePassQrToken, verificationMethod: 'QR_SCAN' });
 
       expect(res.status).toBe(200);
       expect(res.body.data.valid).toBe(true);
@@ -208,24 +210,101 @@ describe('Nexora Campus Backend Test Suite', () => {
       expect(res.body.data.student.rollNumber).toBe('220101048');
     });
 
-    test('Security Officer marks Student as DEPARTED', async () => {
+    test('Security Officer rejects tampered/counterfeit QR Token with invalid signature', async () => {
+      const tamperedQrToken = gatePassQrToken.slice(0, -4) + 'abcd';
+      const res = await request(server)
+        .post('/api/gate-passes/verify')
+        .set('Authorization', `Bearer ${securityToken}`)
+        .send({ tokenOrPin: tamperedQrToken, verificationMethod: 'QR_SCAN' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.valid).toBe(false);
+      expect(res.body.data.status).toBe('INVALID');
+      expect(res.body.data.message).toContain('signature');
+    });
+
+    test('Security Officer rejects unknown or malformed QR Token', async () => {
+      const res = await request(server)
+        .post('/api/gate-passes/verify')
+        .set('Authorization', `Bearer ${securityToken}`)
+        .send({ tokenOrPin: 'NX-GP-invalidtoken', verificationMethod: 'QR_SCAN' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.valid).toBe(false);
+      expect(res.body.data.status).toBe('INVALID');
+    });
+
+    test('Security Officer verifies Gate Pass by PIN (Manual PIN Fallback)', async () => {
+      const res = await request(server)
+        .post('/api/gate-passes/verify')
+        .set('Authorization', `Bearer ${securityToken}`)
+        .send({ tokenOrPin: gatePassPin, verificationMethod: 'PIN' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.valid).toBe(true);
+      expect(res.body.data.status).toBe('VALID');
+      expect(res.body.data.student.rollNumber).toBe('220101048');
+    });
+
+    test('Security Officer marks Student as DEPARTED using QR_SCAN verification', async () => {
       const res = await request(server)
         .post(`/api/gate-passes/${createdGatePassId}/depart`)
         .set('Authorization', `Bearer ${securityToken}`)
-        .send({ verificationMethod: 'PIN', notes: 'Departed on foot' });
+        .send({ verificationMethod: 'QR_SCAN', notes: 'Departed on foot via QR scan' });
 
       expect(res.status).toBe(200);
       expect(res.body.data.gateStatus).toBe('DEPARTED');
     });
 
-    test('Security Officer marks Student as RETURNED', async () => {
+    test('Security Officer marks Student as RETURNED using QR_SCAN verification', async () => {
       const res = await request(server)
         .post(`/api/gate-passes/${createdGatePassId}/return`)
         .set('Authorization', `Bearer ${securityToken}`)
-        .send({ verificationMethod: 'PIN', notes: 'Returned safely' });
+        .send({ verificationMethod: 'QR_SCAN', notes: 'Returned safely via QR scan' });
 
       expect(res.status).toBe(200);
       expect(res.body.data.gateStatus).toBe('RETURNED');
+    });
+
+    test('Enforces one-time use: Returned Gate Pass is rejected when re-scanned', async () => {
+      const res = await request(server)
+        .post('/api/gate-passes/verify')
+        .set('Authorization', `Bearer ${securityToken}`)
+        .send({ tokenOrPin: gatePassQrToken, verificationMethod: 'QR_SCAN' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.valid).toBe(false);
+      expect(res.body.data.status).toBe('ALREADY_USED');
+    });
+
+    test('Cancelled Gate Pass is rejected when scanned by Security', async () => {
+      const dep = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      const ret = new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString();
+      const createRes = await request(server)
+        .post('/api/gate-passes')
+        .set('Authorization', `Bearer ${aryanToken}`)
+        .send({
+          destination: 'Library',
+          reason: 'Exam preparation study',
+          departureTime: dep,
+          expectedReturnTime: ret,
+        });
+      const passId = createRes.body.data.gatePass.id;
+      const passPin = createRes.body.data.gatePass.passPin;
+
+      const cancelRes = await request(server)
+        .post(`/api/gate-passes/${passId}/cancel`)
+        .set('Authorization', `Bearer ${aryanToken}`)
+        .send({ reason: 'Changed mind' });
+      expect(cancelRes.status).toBe(200);
+
+      const verifyRes = await request(server)
+        .post('/api/gate-passes/verify')
+        .set('Authorization', `Bearer ${securityToken}`)
+        .send({ tokenOrPin: passPin });
+      expect(verifyRes.status).toBe(200);
+      expect(verifyRes.body.data.valid).toBe(false);
+      expect(verifyRes.body.data.status).toBe('INVALID');
     });
   });
 

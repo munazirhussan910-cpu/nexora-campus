@@ -53,6 +53,47 @@ export class QrService {
   static async verifyGatePass(tokenOrPin: string): Promise<VerifyResult> {
     const cleanedInput = tokenOrPin.trim();
 
+    // Cryptographic HMAC Verification if input is an HMAC-signed QR token
+    if (cleanedInput.startsWith('NX-GP-')) {
+      const tokenBody = cleanedInput.slice(6);
+      const dotIndex = tokenBody.lastIndexOf('.');
+      if (dotIndex === -1) {
+        return {
+          valid: false,
+          status: 'INVALID',
+          message: 'Malformed QR token format.',
+        };
+      }
+
+      const b64Payload = tokenBody.slice(0, dotIndex);
+      const signature = tokenBody.slice(dotIndex + 1);
+
+      let payload = '';
+      try {
+        payload = Buffer.from(b64Payload, 'base64').toString('utf-8');
+      } catch {
+        return {
+          valid: false,
+          status: 'INVALID',
+          message: 'Invalid base64 encoding in QR token.',
+        };
+      }
+
+      const expectedSignature = crypto
+        .createHmac('sha256', config.jwtSecret)
+        .update(payload)
+        .digest('hex')
+        .slice(0, 16);
+
+      if (signature !== expectedSignature) {
+        return {
+          valid: false,
+          status: 'INVALID',
+          message: 'Invalid cryptographic signature. QR code is counterfeit or tampered.',
+        };
+      }
+    }
+
     // 1. Try finding by PIN (numeric 4-digit)
     let gatePass = await prisma.gatePass.findFirst({
       where: { passPin: cleanedInput },

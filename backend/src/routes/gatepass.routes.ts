@@ -22,11 +22,12 @@ const createGatePassSchema = z.object({
 
 const verifySchema = z.object({
   tokenOrPin: z.string().min(1, 'QR Token or PIN is required'),
+  verificationMethod: z.string().optional(),
 });
 
 const actionNoteSchema = z.object({
   notes: z.string().optional(),
-  verificationMethod: z.enum(['QR', 'PIN']).default('QR'),
+  verificationMethod: z.enum(['QR', 'PIN', 'QR_SCAN']).default('QR_SCAN'),
 });
 
 // POST /api/gate-passes - Student creates gate pass
@@ -360,16 +361,26 @@ router.post(
   validateBody(verifySchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { tokenOrPin } = req.body;
+      const { tokenOrPin, verificationMethod } = req.body;
       const result = await QrService.verifyGatePass(tokenOrPin);
 
       if (result.gatePass) {
+        const method =
+          verificationMethod ||
+          (tokenOrPin.trim().startsWith('NX-GP-') ? 'QR_SCAN' : 'PIN');
+
         await AuditService.log({
           actorId: req.user!.id,
           action: 'GATE_PASS_VERIFIED',
           entityType: 'GATE_PASS',
           entityId: result.gatePass.id,
-          newValues: { result: result.status, message: result.message },
+          newValues: {
+            result: result.status,
+            message: result.message,
+            verificationMethod: method,
+            studentName: result.student?.fullName,
+            rollNumber: result.student?.rollNumber,
+          },
         });
       }
 
