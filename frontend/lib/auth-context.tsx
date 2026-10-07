@@ -8,7 +8,7 @@ export interface UserProfile {
   id: string;
   username: string;
   email: string;
-  role: 'STUDENT' | 'STAFF' | 'WARDEN' | 'SECURITY' | 'ADMIN' | 'ACADEMIC_OFFICER';
+  role: 'STUDENT' | 'STAFF' | 'WARDEN' | 'SECURITY' | 'ADMIN' | 'ACADEMIC_OFFICER' | 'FACULTY';
   permissions: string[];
   fullName?: string;
   rollNumber?: string;
@@ -53,8 +53,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const getRoleDashboard = (role: string) => {
-    switch (role) {
+  const getRoleDashboard = (userProfile: UserProfile | { role: string; email?: string; specialization?: string; department?: string; username?: string }) => {
+    if (
+      userProfile.role === 'FACULTY' ||
+      (userProfile.role === 'STAFF' && (
+        userProfile.email === 'faculty@nexora.edu' ||
+        userProfile.username === 'faculty' ||
+        userProfile.specialization?.includes('FACULTY') ||
+        userProfile.department?.toLowerCase().includes('computer science')
+      ))
+    ) {
+      return '/faculty/dashboard';
+    }
+    switch (userProfile.role) {
       case 'STUDENT':
         return '/student/dashboard';
       case 'STAFF':
@@ -107,7 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setUser(res.data.user);
       setLoading(false);
-      router.push(getRoleDashboard(res.data.user.role));
+      router.push(getRoleDashboard(res.data.user));
       return { success: true };
     }
 
@@ -138,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setUser(res.data.user);
       setLoading(false);
-      router.push(getRoleDashboard(res.data.user.role));
+      router.push(getRoleDashboard(res.data.user));
       return { success: true };
     }
 
@@ -171,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setUser(res.data.user);
       setLoading(false);
-      router.push(getRoleDashboard(res.data.user.role));
+      router.push(getRoleDashboard(res.data.user));
     } else {
       setLoading(false);
     }

@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -37,6 +37,7 @@ model User {
   noticeReads        NoticeRead[]
   notifications      Notification[]
   auditLogs          AuditLog[]              @relation("AuditActor")
+  attendanceSessions AttendanceSession[]     @relation("TeacherAttendanceSessions")
 
   @@index([roleId])
   @@index([email])
@@ -81,7 +82,10 @@ model Branch {
   name      String
   createdAt DateTime  @default(now())
 
-  students  Student[]
+  students         Student[]
+  subjects         Subject[]
+  timetableEntries TimetableEntry[]
+  attendanceSessions AttendanceSession[]
 }
 
 model HostelBlock {
@@ -128,6 +132,8 @@ model Student {
   hostelRoom    Room?       @relation(fields: [hostelRoomId], references: [id])
 
   documents     Document[]
+  attendances   Attendance[]
+  attendanceRecords AttendanceRecord[]
 
   @@index([rollNumber])
   @@index([branchId])
@@ -491,3 +497,106 @@ model IssueAlert {
   @@index([hostelBlockId])
   @@index([status])
 }
+
+model Subject {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  branchId  String
+  year      Int      @default(1)
+  semester  Int?
+  section   String?
+  faculty   String?
+  createdAt DateTime @default(now())
+
+  branch           Branch           @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  attendances      Attendance[]
+  timetableEntries TimetableEntry[]
+  attendanceSessions AttendanceSession[]
+
+  @@index([branchId])
+  @@index([branchId, year])
+}
+
+model Attendance {
+  id        String   @id @default(uuid())
+  studentId String
+  subjectId String
+  present   Int      @default(0)
+  total     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subjectId])
+  @@index([studentId])
+  @@index([subjectId])
+}
+
+model TimetableEntry {
+  id        String   @id @default(uuid())
+  subjectId String
+  branchId  String
+  year      Int
+  semester  Int?
+  section   String?
+  day       String   // MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY
+  startTime String   // "09:00"
+  endTime   String   // "10:00"
+  room      String   // "CSE-204"
+  faculty   String?  // "Dr. P. K. Tripathy"
+  createdAt DateTime @default(now())
+
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@index([branchId, year, day])
+  @@index([subjectId])
+}
+
+model AttendanceSession {
+  id          String             @id @default(uuid())
+  teacherId   String
+  subjectId   String
+  branchId    String
+  year        Int
+  semester    Int?
+  section     String?
+  date        DateTime
+  period      Int                @default(1)
+  topic       String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  teacher     User               @relation("TeacherAttendanceSessions", fields: [teacherId], references: [id], onDelete: Cascade)
+  subject     Subject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  branch      Branch             @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  records     AttendanceRecord[]
+
+  @@unique([subjectId, branchId, year, section, date, period])
+  @@index([teacherId])
+  @@index([subjectId])
+  @@index([date])
+  @@index([branchId, year])
+}
+
+model AttendanceRecord {
+  id                  String            @id @default(uuid())
+  attendanceSessionId String
+  studentId           String
+  status              String            @default("PRESENT") // PRESENT, ABSENT, LATE, EXCUSED
+  remarks             String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  session             AttendanceSession @relation(fields: [attendanceSessionId], references: [id], onDelete: Cascade)
+  student             Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([attendanceSessionId, studentId])
+  @@index([attendanceSessionId])
+  @@index([studentId])
+  @@index([status])
+}
+

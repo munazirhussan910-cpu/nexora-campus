@@ -145,6 +145,9 @@ router.post('/:id/approve', auth_middleware_1.authenticate, (0, rbac_middleware_
         if (!leave) {
             throw new error_middleware_1.AppError('Leave application not found', 404);
         }
+        if (leave.status !== 'PENDING_APPROVAL' || leave.request.status !== 'PENDING_APPROVAL') {
+            throw new error_middleware_1.AppError(`Cannot approve leave request with status: ${leave.status}`, 422);
+        }
         const updated = await prisma_1.default.leaveRequest.update({
             where: { id: leave.id },
             data: {
@@ -217,6 +220,27 @@ router.post('/:id/reject', auth_middleware_1.authenticate, (0, rbac_middleware_1
         res.json({
             success: true,
             message: 'Leave rejected',
+            data: updated,
+        });
+    }
+    catch (err) {
+        next(err);
+    }
+});
+// POST /api/leaves/:id/cancel - Student cancels their leave request
+router.post('/:id/cancel', auth_middleware_1.authenticate, async (req, res, next) => {
+    try {
+        const id = String(req.params.id);
+        const leave = await prisma_1.default.leaveRequest.findFirst({
+            where: { OR: [{ id }, { requestId: id }] },
+        });
+        if (!leave) {
+            throw new error_middleware_1.AppError('Leave application not found', 404);
+        }
+        const updated = await request_service_1.RequestService.cancelRequest(leave.requestId, req.user.id, req.body?.reason);
+        res.json({
+            success: true,
+            message: 'Leave request cancelled successfully',
             data: updated,
         });
     }

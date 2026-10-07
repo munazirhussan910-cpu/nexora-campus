@@ -41,6 +41,7 @@ export function PersonaSwitcher() {
     { key: 'warden', label: 'Warden', roleDesc: 'Hostel B', role: 'WARDEN', icon: Shield, color: 'hover:border-emerald-500/80 hover:text-emerald-400' },
     { key: 'security', label: 'Security', roleDesc: 'Main Gate', role: 'SECURITY', icon: Key, color: 'hover:border-cyan-500/80 hover:text-cyan-400' },
     { key: 'academic', label: 'Academic Officer', roleDesc: 'Academic / Certificates', role: 'ACADEMIC_OFFICER', icon: GraduationCap, color: 'hover:border-teal-500/80 hover:text-teal-400' },
+    { key: 'faculty', label: 'Dr. Tripathy', roleDesc: 'Faculty / Attendance', role: 'STAFF', icon: GraduationCap, color: 'hover:border-indigo-500/80 hover:text-indigo-400' },
     { key: 'admin', label: 'Chief Admin', roleDesc: 'Director', role: 'ADMIN', icon: Shield, color: 'hover:border-purple-500/80 hover:text-purple-400' },
   ];
 
@@ -105,6 +106,8 @@ export function PersonaSwitcher() {
                   ? user.username === 'security_gate1'
                   : p.key === 'academic'
                   ? user.username === 'academic'
+                  : p.key === 'faculty'
+                  ? user.username === 'faculty'
                   : p.key === 'admin'
                   ? user.username === 'admin'
                   : false);

@@ -23,8 +23,10 @@ const notification_routes_1 = __importDefault(require("./routes/notification.rou
 const verify_routes_1 = __importDefault(require("./routes/verify.routes"));
 const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
 const academic_routes_1 = __importDefault(require("./routes/academic.routes"));
+const student_routes_1 = __importDefault(require("./routes/student.routes"));
 const kiosk_routes_1 = __importDefault(require("./routes/kiosk.routes"));
 const integration_routes_1 = __importDefault(require("./routes/integration.routes"));
+const faculty_routes_1 = __importDefault(require("./routes/faculty.routes"));
 const app = (0, express_1.default)();
 // Security & Parsing Middlewares
 app.use((0, helmet_1.default)({
@@ -63,6 +65,8 @@ app.use('/api/notifications', notification_routes_1.default);
 app.use('/api/verify', verify_routes_1.default);
 app.use('/api/admin', admin_routes_1.default);
 app.use('/api/academic', academic_routes_1.default);
+app.use('/api/student', student_routes_1.default);
+app.use('/api/faculty', faculty_routes_1.default);
 app.use('/api/kiosk', kiosk_routes_1.default);
 app.use('/api/integrations', integration_routes_1.default);
 // Centralized Error Handling

@@ -146,6 +146,9 @@ router.post('/:id/accept', auth_middleware_1.authenticate, async (req, res, next
         if (!request) {
             throw new error_middleware_1.AppError('Complaint not found', 404);
         }
+        if (request.status === 'CANCELLED') {
+            throw new error_middleware_1.AppError('Cannot accept a cancelled complaint', 422);
+        }
         if (request.assignedTo !== req.user.id && req.user.role !== 'ADMIN') {
             throw new error_middleware_1.AppError('You are not assigned to this complaint', 403);
         }
@@ -176,6 +179,9 @@ router.post('/:id/start', auth_middleware_1.authenticate, async (req, res, next)
         if (!request) {
             throw new error_middleware_1.AppError('Complaint not found', 404);
         }
+        if (request.status === 'CANCELLED') {
+            throw new error_middleware_1.AppError('Cannot start work on a cancelled complaint', 422);
+        }
         if (request.assignedTo !== req.user.id && req.user.role !== 'ADMIN') {
             throw new error_middleware_1.AppError('You are not assigned to this complaint', 403);
         }
@@ -201,6 +207,9 @@ router.post('/:id/resolve', auth_middleware_1.authenticate, (0, validate_middlew
         });
         if (!request) {
             throw new error_middleware_1.AppError('Complaint not found', 404);
+        }
+        if (request.status === 'CANCELLED') {
+            throw new error_middleware_1.AppError('Cannot resolve a cancelled complaint', 422);
         }
         if (request.assignedTo !== req.user.id && req.user.role !== 'ADMIN') {
             throw new error_middleware_1.AppError('You are not assigned to this complaint', 403);
@@ -282,6 +291,25 @@ router.post('/:id/rating', auth_middleware_1.authenticate, (0, validate_middlewa
             success: true,
             message: 'Rating and feedback submitted successfully',
             data: updatedComplaint,
+        });
+    }
+    catch (err) {
+        next(err);
+    }
+});
+// POST /api/complaints/:id/cancel - Student cancels their complaint
+router.post('/:id/cancel', auth_middleware_1.authenticate, async (req, res, next) => {
+    try {
+        const id = String(req.params.id);
+        const complaint = await prisma_1.default.complaint.findFirst({
+            where: { OR: [{ id }, { requestId: id }] },
+        });
+        const targetRequestId = complaint ? complaint.requestId : id;
+        const updated = await request_service_1.RequestService.cancelRequest(targetRequestId, req.user.id, req.body?.reason);
+        res.json({
+            success: true,
+            message: 'Complaint cancelled successfully',
+            data: updated,
         });
     }
     catch (err) {

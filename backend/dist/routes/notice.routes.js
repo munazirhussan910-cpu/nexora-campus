@@ -16,7 +16,7 @@ const createNoticeSchema = zod_1.z.object({
     content: zod_1.z.string().min(10, 'Content must be at least 10 characters'),
     priority: zod_1.z.enum(['LOW', 'NORMAL', 'URGENT']).default('NORMAL'),
     targets: zod_1.z.array(zod_1.z.object({
-        targetType: zod_1.z.enum(['ALL', 'BRANCH', 'YEAR', 'HOSTEL']),
+        targetType: zod_1.z.enum(['ALL', 'BRANCH', 'YEAR', 'HOSTEL', 'SEMESTER', 'SECTION', 'SUBJECT']),
         targetValue: zod_1.z.string().min(1),
     })).min(1, 'At least one target filter is required'),
 });

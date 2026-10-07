@@ -7,7 +7,7 @@ interface StatCardProps {
   subtitle?: string;
   icon: LucideIcon;
   color?: 'gold' | 'blue' | 'rose' | 'amber' | 'emerald' | 'purple' | 'cyan';
-  trend?: string;
+  trend?: string | { label: string; direction?: string };
 }
 
 export function StatCard({
@@ -85,7 +85,7 @@ export function StatCard({
           </div>
           {trend && (
             <span className="text-[11px] text-gray-400 font-medium font-mono">
-              {trend}
+              {typeof trend === 'object' && trend !== null ? trend.label : trend}
             </span>
           )}
         </div>

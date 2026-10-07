@@ -17,7 +17,7 @@ const loginSchema = zod_1.z.object({
     password: zod_1.z.string().min(1, 'Password is required'),
 });
 const switchPersonaSchema = zod_1.z.object({
-    persona: zod_1.z.enum(['aryan', 'ramesh', 'suresh', 'warden', 'security', 'academic', 'admin']),
+    persona: zod_1.z.enum(['aryan', 'ramesh', 'suresh', 'warden', 'security', 'academic', 'admin', 'faculty']),
 });
 const registerStudentSchema = zod_1.z
     .object({
@@ -464,8 +464,15 @@ router.get('/personas', (req, res) => {
                 key: 'academic',
                 name: 'Prof. Sanjeev Mohanty',
                 role: 'ACADEMIC_OFFICER',
-                description: 'Academic Officer & Certificates',
+                description: 'Academic Officer & Course Administration',
                 email: 'academic@nexora.edu',
+            },
+            {
+                key: 'faculty',
+                name: 'Dr. P. K. Tripathy',
+                role: 'STAFF',
+                description: 'Professor & Faculty (CSE)',
+                email: 'faculty@nexora.edu',
             },
             {
                 key: 'admin',
@@ -488,6 +495,7 @@ router.post('/switch-persona', (0, validate_middleware_1.validateBody)(switchPer
             security: 'security.gate1@nexora.edu',
             academic: 'academic@nexora.edu',
             admin: 'admin@nexora.edu',
+            faculty: 'faculty@nexora.edu',
         };
         const targetEmail = emailMap[req.body.persona];
         const user = await prisma_1.default.user.findUnique({

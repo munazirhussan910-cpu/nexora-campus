@@ -40,8 +40,18 @@ export function PortalGuard({
   }
 
   if (!allowedRoles.includes(user.role)) {
+    const isFacultyUser =
+      user.role === 'FACULTY' ||
+      (user.role === 'STAFF' && (
+        user.email === 'faculty@nexora.edu' ||
+        user.username === 'faculty' ||
+        user.specialization?.includes('FACULTY')
+      ));
+
     const roleDashboard =
-      user.role === 'STUDENT'
+      isFacultyUser
+        ? '/faculty/dashboard'
+        : user.role === 'STUDENT'
         ? '/student/dashboard'
         : user.role === 'STAFF'
         ? '/staff/dashboard'

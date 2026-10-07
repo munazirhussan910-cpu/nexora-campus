@@ -99,6 +99,15 @@ export default function LoginPage() {
       color: 'text-teal-400 border-teal-500/30 hover:border-teal-400',
     },
     {
+      key: 'faculty',
+      label: 'Dr. P. K. Tripathy',
+      role: 'FACULTY',
+      desc: 'Professor (CSE) • Attendance Officer',
+      email: 'faculty@nexora.edu',
+      icon: GraduationCap,
+      color: 'text-indigo-400 border-indigo-500/30 hover:border-indigo-400',
+    },
+    {
       key: 'admin',
       label: 'Dr. Ananya Ray',
       role: 'ADMIN',

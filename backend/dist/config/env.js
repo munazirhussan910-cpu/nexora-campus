@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.config = void 0;
 const dotenv_1 = __importDefault(require("dotenv"));
 const path_1 = __importDefault(require("path"));
-dotenv_1.default.config({ path: path_1.default.resolve(__dirname, '../../.env') });
+dotenv_1.default.config({ path: path_1.default.resolve(__dirname, '../../.env'), override: true });
 exports.config = {
     port: parseInt(process.env.PORT || '5001', 10),
     jwtSecret: process.env.JWT_SECRET || 'nexora-campus-secret-key-2026-bput-hackathon',

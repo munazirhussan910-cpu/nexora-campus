@@ -28,6 +28,7 @@ async function main() {
 
   // 2. Permissions
   const permissions = [
+    { code: 'academic.view', description: 'View student academic hub (attendance, timetable, class updates)' },
     { code: 'requests.create', description: 'Create any campus request' },
     { code: 'requests.view.own', description: 'View own requests' },
     { code: 'requests.view.all', description: 'View all requests across campus' },
@@ -52,6 +53,25 @@ async function main() {
     { code: 'staff.manage', description: 'Manage campus staff directory' },
     { code: 'students.manage', description: 'Manage student directory' },
     { code: 'configuration.manage', description: 'Manage system settings and rules' },
+    { code: 'academic.subject.read', description: 'View academic subjects' },
+    { code: 'academic.subject.create', description: 'Create academic subjects' },
+    { code: 'academic.subject.update', description: 'Update academic subjects' },
+    { code: 'academic.subject.delete', description: 'Delete academic subjects' },
+    { code: 'academic.timetable.read', description: 'View class timetables' },
+    { code: 'academic.timetable.create', description: 'Create timetable entries' },
+    { code: 'academic.timetable.update', description: 'Update timetable entries' },
+    { code: 'academic.timetable.delete', description: 'Delete timetable entries' },
+    { code: 'academic.update.read', description: 'Read academic class updates' },
+    { code: 'academic.update.create', description: 'Publish academic class updates' },
+    { code: 'academic.update.update', description: 'Update academic class updates' },
+    { code: 'academic.update.delete', description: 'Delete academic class updates' },
+    { code: 'academic.attendance.read', description: 'View attendance records' },
+    { code: 'attendance.read', description: 'View class attendance' },
+    { code: 'attendance.create', description: 'Record student attendance' },
+    { code: 'attendance.update', description: 'Update student attendance' },
+    { code: 'attendance.read.own', description: 'View own attendance records' },
+    { code: 'timetable.read.own', description: 'View own timetable' },
+    { code: 'class-update.read', description: 'View own class updates' },
   ];
 
   const permMap: Record<string, string> = {};
@@ -67,21 +87,59 @@ async function main() {
   // Assign Permissions to Roles
   const rolePermMappings: Record<string, string[]> = {
     STUDENT: [
-      'requests.create', 'requests.view.own', 'gatepass.create', 'leave.create',
-      'bonafide.create', 'notices.view',
+      'academic.view',
+      'attendance.read.own',
+      'timetable.read.own',
+      'class-update.read',
+      'requests.create',
+      'requests.view.own',
+      'gatepass.create',
+      'leave.create',
+      'bonafide.create',
+      'notices.view',
     ],
     STAFF: [
-      'requests.view.own', 'requests.resolve', 'notices.view',
+      'requests.view.own',
+      'requests.resolve',
+      'notices.view',
+      'attendance.read',
+      'attendance.create',
+      'attendance.update',
+      'academic.update.create',
+      'academic.view',
     ],
     WARDEN: [
-      'requests.view.all', 'gatepass.approve', 'gatepass.reject', 'leave.approve',
-      'leave.reject', 'notices.view', 'notices.create', 'students.manage',
+      'requests.view.all',
+      'gatepass.approve',
+      'gatepass.reject',
+      'leave.approve',
+      'leave.reject',
+      'notices.view',
+      'notices.create',
+      'students.manage',
     ],
     SECURITY: [
-      'gatepass.verify', 'notices.view',
+      'gatepass.verify',
+      'notices.view',
     ],
     ACADEMIC_OFFICER: [
-      'bonafide.approve', 'bonafide.reject', 'academic.dashboard', 'notices.view',
+      'academic.view',
+      'academic.dashboard',
+      'academic.subject.read',
+      'academic.subject.create',
+      'academic.subject.update',
+      'academic.subject.delete',
+      'academic.timetable.read',
+      'academic.timetable.create',
+      'academic.timetable.update',
+      'academic.timetable.delete',
+      'academic.update.read',
+      'academic.update.create',
+      'academic.update.update',
+      'academic.update.delete',
+      'academic.attendance.read',
+      'notices.view',
+      'notices.create',
     ],
     ADMIN: Object.keys(permMap),
   };
@@ -216,10 +274,8 @@ async function main() {
 
   // 8. Password Hash
   const passwordHash = await bcrypt.hash('Password123!', 10);
-
-  // 9. Demo Users
-
-  // DEMO PERSONA 1: Aryan (STUDENT)
+ // 9. Demo Users
+ // DEMO PERSONA 1: Aryan (STUDENT)
   const aryanUser = await prisma.user.upsert({
     where: { email: 'aryan@nexora.edu' },
     update: { passwordHash, isActive: true },
@@ -463,6 +519,39 @@ async function main() {
       designation: 'Academic Officer',
       specialization: 'ACADEMIC_AFFAIRS',
       phone: '+91 9876543260',
+    },
+  });
+
+  // DEMO PERSONA 7: Faculty (STAFF - Dr. P. K. Tripathy)
+  const facultyUser = await prisma.user.upsert({
+    where: { email: 'faculty@nexora.edu' },
+    update: { passwordHash, isActive: true, roleId: roleMap['STAFF'] },
+    create: {
+      username: 'faculty',
+      email: 'faculty@nexora.edu',
+      passwordHash,
+      roleId: roleMap['STAFF'],
+      isActive: true,
+    },
+  });
+
+  await prisma.staff.upsert({
+    where: { userId: facultyUser.id },
+    update: {
+      fullName: 'Dr. P. K. Tripathy',
+      department: 'Computer Science & Engineering',
+      designation: 'Professor (Faculty)',
+      specialization: 'CSE_FACULTY',
+      phone: '+91 9876543270',
+    },
+    create: {
+      userId: facultyUser.id,
+      employeeId: 'FAC-CSE-01',
+      fullName: 'Dr. P. K. Tripathy',
+      department: 'Computer Science & Engineering',
+      designation: 'Professor (Faculty)',
+      specialization: 'CSE_FACULTY',
+      phone: '+91 9876543270',
     },
   });
 
@@ -864,6 +953,213 @@ async function main() {
 
   for (const al of auditLogs) {
     await prisma.auditLog.create({ data: al });
+  }
+
+  // 15. Academic Hub: Subjects, Attendance & Timetable for CSE Year 2
+  console.log('📚 Seeding Academic Hub (Subjects, Attendance, Timetable & Class Updates)...');
+  const cseBranchId = branchMap['CSE'];
+
+  const academicSubjects = [
+    { code: 'CS201', name: 'Data Structures', branchId: cseBranchId, year: 2, semester: 3, section: 'A', faculty: 'Dr. P. K. Tripathy' },
+    { code: 'CS202', name: 'DBMS', branchId: cseBranchId, year: 2, semester: 3, section: 'A', faculty: 'Prof. Sanjeev Mohanty' },
+    { code: 'CS203', name: 'Computer Organization', branchId: cseBranchId, year: 2, semester: 3, section: 'A', faculty: 'Dr. A. Behera' },
+    { code: 'CS204', name: 'Operating Systems', branchId: cseBranchId, year: 2, semester: 3, section: 'A', faculty: 'Prof. N. Pattnaik' },
+    { code: 'MA201', name: 'Mathematics', branchId: cseBranchId, year: 2, semester: 3, section: 'A', faculty: 'Dr. M. R. Dash' },
+  ];
+
+  const subjectMap: Record<string, string> = {};
+  for (const s of academicSubjects) {
+    const sub = await prisma.subject.upsert({
+      where: { code: s.code },
+      update: {
+        name: s.name,
+        branchId: s.branchId,
+        year: s.year,
+        semester: s.semester,
+        section: s.section,
+        faculty: s.faculty,
+      },
+      create: s,
+    });
+    subjectMap[s.code] = sub.id;
+  }
+
+  // Attendance for Aryan (matches prompt example: 18/22, 20/24, 16/20, 21/23, 19/21 -> 94/110 = 85.5%)
+  const aryanAttendanceRecords = [
+    { code: 'CS201', present: 18, total: 22 },
+    { code: 'CS202', present: 20, total: 24 },
+    { code: 'CS203', present: 16, total: 20 },
+    { code: 'CS204', present: 21, total: 23 },
+    { code: 'MA201', present: 19, total: 21 },
+  ];
+
+  for (const att of aryanAttendanceRecords) {
+    const subjectId = subjectMap[att.code];
+    if (subjectId) {
+      await prisma.attendance.upsert({
+        where: {
+          studentId_subjectId: {
+            studentId: aryanStudent.id,
+            subjectId,
+          },
+        },
+        update: {
+          present: att.present,
+          total: att.total,
+        },
+        create: {
+          studentId: aryanStudent.id,
+          subjectId,
+          present: att.present,
+          total: att.total,
+        },
+      });
+    }
+  }
+
+  // Attendance for Rohit (demo student)
+  const rohitStudent = await prisma.student.findFirst({
+    where: { rollNumber: '220101012' },
+  });
+  if (rohitStudent) {
+    const rohitAttendance = [
+      { code: 'CS201', present: 15, total: 22 },
+      { code: 'CS202', present: 14, total: 24 },
+      { code: 'CS203', present: 13, total: 20 },
+      { code: 'CS204', present: 16, total: 23 },
+      { code: 'MA201', present: 14, total: 21 },
+    ];
+    for (const att of rohitAttendance) {
+      const subjectId = subjectMap[att.code];
+      if (subjectId) {
+        await prisma.attendance.upsert({
+          where: {
+            studentId_subjectId: {
+              studentId: rohitStudent.id,
+              subjectId,
+            },
+          },
+          update: { present: att.present, total: att.total },
+          create: {
+            studentId: rohitStudent.id,
+            subjectId,
+            present: att.present,
+            total: att.total,
+          },
+        });
+      }
+    }
+  }
+
+  // Timetable Entries for CSE Year 2 (Monday to Friday)
+  await prisma.timetableEntry.deleteMany({
+    where: { branchId: cseBranchId, year: 2 },
+  });
+
+  const timetableData = [
+    // MONDAY
+    { day: 'MONDAY', startTime: '09:00', endTime: '10:00', code: 'CS201', room: 'CSE-204', faculty: 'Dr. P. K. Tripathy' },
+    { day: 'MONDAY', startTime: '10:00', endTime: '11:00', code: 'CS202', room: 'CSE-201', faculty: 'Prof. Sanjeev Mohanty' },
+    { day: 'MONDAY', startTime: '11:15', endTime: '12:15', code: 'CS203', room: 'ECE Lab-2', faculty: 'Dr. A. Behera' },
+    { day: 'MONDAY', startTime: '14:00', endTime: '15:00', code: 'MA201', room: 'LH-1', faculty: 'Dr. M. R. Dash' },
+
+    // TUESDAY
+    { day: 'TUESDAY', startTime: '09:00', endTime: '10:00', code: 'CS204', room: 'CSE-204', faculty: 'Prof. N. Pattnaik' },
+    { day: 'TUESDAY', startTime: '10:00', endTime: '11:00', code: 'CS201', room: 'CSE-204', faculty: 'Dr. P. K. Tripathy' },
+    { day: 'TUESDAY', startTime: '11:15', endTime: '12:15', code: 'CS202', room: 'CSE-201', faculty: 'Prof. Sanjeev Mohanty' },
+    { day: 'TUESDAY', startTime: '14:00', endTime: '16:00', code: 'CS202', room: 'DBMS Lab-3', faculty: 'Prof. Sanjeev Mohanty' },
+
+    // WEDNESDAY
+    { day: 'WEDNESDAY', startTime: '09:00', endTime: '10:00', code: 'MA201', room: 'LH-1', faculty: 'Dr. M. R. Dash' },
+    { day: 'WEDNESDAY', startTime: '10:00', endTime: '11:00', code: 'CS204', room: 'CSE-204', faculty: 'Prof. N. Pattnaik' },
+    { day: 'WEDNESDAY', startTime: '11:15', endTime: '12:15', code: 'CS203', room: 'CSE-102', faculty: 'Dr. A. Behera' },
+    { day: 'WEDNESDAY', startTime: '14:00', endTime: '16:00', code: 'CS201', room: 'Computing Center 1', faculty: 'Dr. P. K. Tripathy' },
+
+    // THURSDAY
+    { day: 'THURSDAY', startTime: '09:00', endTime: '10:00', code: 'CS201', room: 'CSE-204', faculty: 'Dr. P. K. Tripathy' },
+    { day: 'THURSDAY', startTime: '10:00', endTime: '11:00', code: 'CS202', room: 'CSE-201', faculty: 'Prof. Sanjeev Mohanty' },
+    { day: 'THURSDAY', startTime: '11:15', endTime: '12:15', code: 'CS204', room: 'CSE-204', faculty: 'Prof. N. Pattnaik' },
+    { day: 'THURSDAY', startTime: '14:00', endTime: '15:00', code: 'MA201', room: 'LH-1', faculty: 'Dr. M. R. Dash' },
+
+    // FRIDAY
+    { day: 'FRIDAY', startTime: '09:00', endTime: '10:00', code: 'CS203', room: 'CSE-102', faculty: 'Dr. A. Behera' },
+    { day: 'FRIDAY', startTime: '10:00', endTime: '11:00', code: 'CS204', room: 'CSE-204', faculty: 'Prof. N. Pattnaik' },
+    { day: 'FRIDAY', startTime: '11:15', endTime: '12:15', code: 'CS202', room: 'CSE-201', faculty: 'Prof. Sanjeev Mohanty' },
+    { day: 'FRIDAY', startTime: '14:00', endTime: '15:00', code: 'CS201', room: 'CSE-Seminar Hall', faculty: 'Dr. P. K. Tripathy' },
+  ];
+
+  for (const t of timetableData) {
+    const subjectId = subjectMap[t.code];
+    if (subjectId) {
+      await prisma.timetableEntry.create({
+        data: {
+          subjectId,
+          branchId: cseBranchId,
+          year: 2,
+          semester: 3,
+          section: 'A',
+          day: t.day,
+          startTime: t.startTime,
+          endTime: t.endTime,
+          room: t.room,
+          faculty: t.faculty,
+        },
+      });
+    }
+  }
+
+  // Class Updates (Notice system integration)
+  const classUpdates = [
+    {
+      title: 'DBMS — Tomorrow\'s class will be held in CSE-305',
+      content: 'Database Management Systems lecture scheduled for tomorrow will temporarily be held in CSE-305 instead of CSE-201 due to projector calibration work.',
+      priority: 'NORMAL',
+      targets: [
+        { type: 'BRANCH', value: 'CSE' },
+        { type: 'YEAR', value: '2' },
+      ],
+    },
+    {
+      title: 'Data Structures — Assignment 3 deadline extended',
+      content: 'Assignment 3 on Binary Search Trees & Balanced AVL Trees submission window is extended to Friday 11:59 PM. Please verify test cases before submission.',
+      priority: 'NORMAL',
+      targets: [
+        { type: 'BRANCH', value: 'CSE' },
+        { type: 'YEAR', value: '2' },
+      ],
+    },
+    {
+      title: 'Operating Systems — Unit 2 revision class Wednesday',
+      content: 'Special doubt-clearing and revision class covering Process Synchronization, Semaphores, and Deadlock Prevention will be conducted this Wednesday at 3:00 PM in CSE-204.',
+      priority: 'NORMAL',
+      targets: [
+        { type: 'BRANCH', value: 'CSE' },
+        { type: 'YEAR', value: '2' },
+      ],
+    },
+  ];
+
+  for (const cu of classUpdates) {
+    const notice = await prisma.notice.create({
+      data: {
+        title: cu.title,
+        content: cu.content,
+        createdBy: academicUser.id,
+        priority: cu.priority,
+        publishedAt: new Date(),
+        status: 'PUBLISHED',
+      },
+    });
+
+    for (const t of cu.targets) {
+      await prisma.noticeTarget.create({
+        data: {
+          noticeId: notice.id,
+          targetType: t.type,
+          targetValue: t.value,
+        },
+      });
+    }
   }
 
   console.log('✅ Nexora Campus Database Seed Complete!');

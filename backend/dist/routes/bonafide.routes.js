@@ -156,6 +156,9 @@ router.post('/:id/approve', auth_middleware_1.authenticate, (0, rbac_middleware_
         if (bonafide.certificateId) {
             throw new error_middleware_1.AppError('This certificate has already been issued', 409);
         }
+        if (bonafide.request.status !== 'PENDING_APPROVAL') {
+            throw new error_middleware_1.AppError(`Cannot approve certificate request with status: ${bonafide.request.status}`, 422);
+        }
         const student = bonafide.request.requester.student;
         if (!student) {
             throw new error_middleware_1.AppError('Requester does not have an active student profile', 400);
@@ -362,6 +365,27 @@ router.get('/:id/download', auth_middleware_1.authenticate, async (req, res, nex
             throw new error_middleware_1.AppError('File not found on storage server', 404);
         }
         res.download(filePath, `Bonafide-${bonafide.certificateId}.pdf`);
+    }
+    catch (err) {
+        next(err);
+    }
+});
+// POST /api/bonafide/:id/cancel - Student cancels their bonafide certificate request
+router.post('/:id/cancel', auth_middleware_1.authenticate, async (req, res, next) => {
+    try {
+        const id = String(req.params.id);
+        const bonafide = await prisma_1.default.bonafideRequest.findFirst({
+            where: { OR: [{ id }, { requestId: id }] },
+        });
+        if (!bonafide) {
+            throw new error_middleware_1.AppError('Bonafide request not found', 404);
+        }
+        const updated = await request_service_1.RequestService.cancelRequest(bonafide.requestId, req.user.id, req.body?.reason);
+        res.json({
+            success: true,
+            message: 'Bonafide certificate request cancelled successfully',
+            data: updated,
+        });
     }
     catch (err) {
         next(err);

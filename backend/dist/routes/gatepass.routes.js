@@ -23,10 +23,11 @@ const createGatePassSchema = zod_1.z.object({
 });
 const verifySchema = zod_1.z.object({
     tokenOrPin: zod_1.z.string().min(1, 'QR Token or PIN is required'),
+    verificationMethod: zod_1.z.string().optional(),
 });
 const actionNoteSchema = zod_1.z.object({
     notes: zod_1.z.string().optional(),
-    verificationMethod: zod_1.z.enum(['QR', 'PIN']).default('QR'),
+    verificationMethod: zod_1.z.enum(['QR', 'PIN', 'QR_SCAN']).default('QR_SCAN'),
 });
 // POST /api/gate-passes - Student creates gate pass
 router.post('/', auth_middleware_1.authenticate, (0, rbac_middleware_1.requirePermission)('gatepass.create'), (0, validate_middleware_1.validateBody)(createGatePassSchema), async (req, res, next) => {
@@ -258,18 +259,47 @@ router.post('/:id/reject', auth_middleware_1.authenticate, (0, rbac_middleware_1
         next(err);
     }
 });
+// POST /api/gate-passes/:id/cancel - Student cancels their gate pass
+router.post('/:id/cancel', auth_middleware_1.authenticate, async (req, res, next) => {
+    try {
+        const id = String(req.params.id);
+        const gatePass = await prisma_1.default.gatePass.findFirst({
+            where: { OR: [{ id }, { requestId: id }] },
+        });
+        if (!gatePass) {
+            throw new error_middleware_1.AppError('Gate pass not found', 404);
+        }
+        const updated = await request_service_1.RequestService.cancelRequest(gatePass.requestId, req.user.id, req.body?.reason);
+        res.json({
+            success: true,
+            message: 'Gate pass cancelled successfully',
+            data: updated,
+        });
+    }
+    catch (err) {
+        next(err);
+    }
+});
 // POST /api/gate-passes/verify - Security officer verifies QR or PIN
 router.post('/verify', auth_middleware_1.authenticate, (0, rbac_middleware_1.requirePermission)('gatepass.verify'), (0, validate_middleware_1.validateBody)(verifySchema), async (req, res, next) => {
     try {
-        const { tokenOrPin } = req.body;
+        const { tokenOrPin, verificationMethod } = req.body;
         const result = await qr_service_1.QrService.verifyGatePass(tokenOrPin);
         if (result.gatePass) {
+            const method = verificationMethod ||
+                (tokenOrPin.trim().startsWith('NX-GP-') ? 'QR_SCAN' : 'PIN');
             await audit_service_1.AuditService.log({
                 actorId: req.user.id,
                 action: 'GATE_PASS_VERIFIED',
                 entityType: 'GATE_PASS',
                 entityId: result.gatePass.id,
-                newValues: { result: result.status, message: result.message },
+                newValues: {
+                    result: result.status,
+                    message: result.message,
+                    verificationMethod: method,
+                    studentName: result.student?.fullName,
+                    rollNumber: result.student?.rollNumber,
+                },
             });
         }
         res.json({

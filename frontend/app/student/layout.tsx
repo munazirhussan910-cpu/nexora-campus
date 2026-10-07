@@ -6,6 +6,7 @@ import { Sidebar, NavItem } from '@/components/layout/Sidebar';
 import { PortalGuard } from '@/components/layout/PortalGuard';
 import {
   LayoutDashboard,
+  GraduationCap,
   Inbox,
   PlusCircle,
   Key,
@@ -13,10 +14,13 @@ import {
   Calendar,
   Bell,
   User,
+  CheckCircle2,
 } from 'lucide-react';
 
 const studentNavItems: NavItem[] = [
   { label: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard },
+  { label: 'Academic Hub', href: '/student/academics', icon: GraduationCap },
+  { label: 'My Attendance', href: '/student/attendance', icon: CheckCircle2 },
   { label: 'My Requests', href: '/student/requests', icon: Inbox },
   { label: '+ New Complaint', href: '/student/requests/new', icon: PlusCircle },
   { label: 'Gate Pass (QR & PIN)', href: '/student/gate-pass', icon: Key },

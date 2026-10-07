@@ -16,7 +16,7 @@ const loginSchema = z.object({
 });
 
 const switchPersonaSchema = z.object({
-  persona: z.enum(['aryan', 'ramesh', 'suresh', 'warden', 'security', 'academic', 'admin']),
+  persona: z.enum(['aryan', 'ramesh', 'suresh', 'warden', 'security', 'academic', 'admin', 'faculty']),
 });
 
 const registerStudentSchema = z
@@ -524,8 +524,15 @@ router.get('/personas', (req: Request, res: Response): void => {
         key: 'academic',
         name: 'Prof. Sanjeev Mohanty',
         role: 'ACADEMIC_OFFICER',
-        description: 'Academic Officer & Certificates',
+        description: 'Academic Officer & Course Administration',
         email: 'academic@nexora.edu',
+      },
+      {
+        key: 'faculty',
+        name: 'Dr. P. K. Tripathy',
+        role: 'STAFF',
+        description: 'Professor & Faculty (CSE)',
+        email: 'faculty@nexora.edu',
       },
       {
         key: 'admin',
@@ -552,6 +559,7 @@ router.post(
         security: 'security.gate1@nexora.edu',
         academic: 'academic@nexora.edu',
         admin: 'admin@nexora.edu',
+        faculty: 'faculty@nexora.edu',
       };
 
       const targetEmail = emailMap[req.body.persona];

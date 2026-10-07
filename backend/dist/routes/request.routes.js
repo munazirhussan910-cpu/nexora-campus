@@ -296,10 +296,37 @@ const updateStatusSchema = zod_1.z.object({
 router.patch('/:id/status', auth_middleware_1.authenticate, (0, validate_middleware_1.validateBody)(updateStatusSchema), async (req, res, next) => {
     try {
         const { status, comment } = req.body;
+        if (status === 'CANCELLED') {
+            const updated = await request_service_1.RequestService.cancelRequest(String(req.params.id), req.user.id, comment);
+            res.json({
+                success: true,
+                message: 'Request cancelled successfully',
+                data: updated,
+            });
+            return;
+        }
         const updated = await request_service_1.RequestService.transitionStatus(String(req.params.id), status, req.user.id, comment);
         res.json({
             success: true,
             message: `Request status transitioned to ${status}`,
+            data: updated,
+        });
+    }
+    catch (err) {
+        next(err);
+    }
+});
+// POST /api/requests/:id/cancel - Student self-cancellation of requests
+const cancelRequestSchema = zod_1.z.object({
+    reason: zod_1.z.string().optional(),
+});
+router.post('/:id/cancel', auth_middleware_1.authenticate, (0, validate_middleware_1.validateBody)(cancelRequestSchema), async (req, res, next) => {
+    try {
+        const { reason } = req.body;
+        const updated = await request_service_1.RequestService.cancelRequest(String(req.params.id), req.user.id, reason);
+        res.json({
+            success: true,
+            message: 'Request cancelled successfully',
             data: updated,
         });
     }

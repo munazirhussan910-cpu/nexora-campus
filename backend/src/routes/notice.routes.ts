@@ -16,7 +16,7 @@ const createNoticeSchema = z.object({
   priority: z.enum(['LOW', 'NORMAL', 'URGENT']).default('NORMAL'),
   targets: z.array(
     z.object({
-      targetType: z.enum(['ALL', 'BRANCH', 'YEAR', 'HOSTEL']),
+      targetType: z.enum(['ALL', 'BRANCH', 'YEAR', 'HOSTEL', 'SEMESTER', 'SECTION', 'SUBJECT']),
       targetValue: z.string().min(1),
     })
   ).min(1, 'At least one target filter is required'),

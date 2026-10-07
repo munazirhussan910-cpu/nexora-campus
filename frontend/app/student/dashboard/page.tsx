@@ -22,6 +22,7 @@ import {
   Inbox,
   MapPin,
   ExternalLink,
+  GraduationCap,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -29,19 +30,22 @@ export default function StudentDashboardPage() {
   const { user } = useAuth();
   const [requests, setRequests] = useState<any[]>([]);
   const [gatePasses, setGatePasses] = useState<any[]>([]);
+  const [academicOverview, setAcademicOverview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [copiedPin, setCopiedPin] = useState(false);
 
   useEffect(() => {
     const loadDashboard = async () => {
       setLoading(true);
-      const [reqRes, gpRes] = await Promise.all([
+      const [reqRes, gpRes, acadRes] = await Promise.all([
         apiRequest('/requests/my'),
         apiRequest('/gate-passes/my'),
+        apiRequest('/student/academic-overview'),
       ]);
 
       if (reqRes.success && reqRes.data) setRequests(reqRes.data);
       if (gpRes.success && gpRes.data) setGatePasses(gpRes.data);
+      if (acadRes.success && acadRes.data) setAcademicOverview(acadRes.data);
       setLoading(false);
     };
 
@@ -151,6 +155,93 @@ export default function StudentDashboardPage() {
           icon={FileCheck}
           color="gold"
         />
+      </div>
+
+      {/* Academic Snapshot Card (BPUT PS07) */}
+      <div className="relative overflow-hidden bg-[#121624] border border-[#232b3f] hover:border-[#34405c] rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xl shadow-black/15 transition-all">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
+          <div className="flex items-start sm:items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#1d2538] to-[#141926] border border-[#d4af37]/35 text-[#d4af37] flex items-center justify-center shrink-0 shadow-md">
+              <GraduationCap size={24} />
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#1b2234] border border-[#d4af37]/30 text-[#d4af37] text-[10px] font-mono font-bold uppercase tracking-wider mb-1">
+                <span>Academic Snapshot</span>
+              </div>
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                Academic Progress &amp; Today&apos;s Schedule
+              </h2>
+            </div>
+          </div>
+
+          <Link
+            href="/student/academics"
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#d4af37] hover:bg-[#e4c257] text-black font-bold text-xs shadow-md shadow-[#d4af37]/15 transition-all self-start md:self-auto shrink-0"
+          >
+            <span>View Academics</span>
+            <ArrowRight size={13} />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4 mt-5 pt-5 border-t border-[#1f2638]">
+          {/* Metric 1: Overall Attendance */}
+          <div className="p-3.5 rounded-xl bg-[#161a29] border border-[#242b3e] flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-mono uppercase font-bold text-gray-400">
+                Attendance
+              </div>
+              <div className="text-xl sm:text-2xl font-black font-mono text-white mt-0.5">
+                {academicOverview ? `${academicOverview.attendance.percentage}%` : '85.5%'}
+              </div>
+              <div className="text-[10px] font-mono text-emerald-400 mt-0.5 flex items-center gap-1">
+                <span>Above 75% threshold</span>
+              </div>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 flex items-center justify-center">
+              <Check size={16} />
+            </div>
+          </div>
+
+          {/* Metric 2: Today's Classes */}
+          <div className="p-3.5 rounded-xl bg-[#161a29] border border-[#242b3e] flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-mono uppercase font-bold text-gray-400">
+                Today&apos;s Classes
+              </div>
+              <div className="text-xl sm:text-2xl font-black font-mono text-white mt-0.5">
+                {academicOverview ? academicOverview.todayClassesCount : '4'}
+              </div>
+              <div className="text-[10px] font-mono text-gray-400 mt-0.5">
+                Active schedule
+              </div>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/25 text-cyan-400 flex items-center justify-center">
+              <Calendar size={16} />
+            </div>
+          </div>
+
+          {/* Metric 3: Next Class */}
+          <div className="p-3.5 rounded-xl bg-[#161a29] border border-[#242b3e] flex items-center justify-between">
+            <div className="min-w-0 pr-2">
+              <div className="text-[11px] font-mono uppercase font-bold text-gray-400">
+                Next Class
+              </div>
+              <div className="text-sm sm:text-base font-bold text-white truncate mt-0.5">
+                {academicOverview?.nextClass
+                  ? `${academicOverview.nextClass.subject} · ${academicOverview.nextClass.time}`
+                  : 'DBMS · 10:00 AM'}
+              </div>
+              <div className="text-[10px] font-mono text-cyan-300 truncate mt-0.5">
+                {academicOverview?.nextClass
+                  ? `Room ${academicOverview.nextClass.room}`
+                  : 'Room CSE-201'}
+              </div>
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-400 flex items-center justify-center shrink-0">
+              <Clock size={16} />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Active Gate Pass Card (High-Priority Real-Time Pass) */}
