@@ -19,7 +19,9 @@ import {
   Users,
   HeartHandshake,
   Compass,
+  UtensilsCrossed,
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
 
 const studentNavItems: NavItem[] = [
   // 1. Overview
@@ -49,10 +51,33 @@ const studentNavItems: NavItem[] = [
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user } = useAuth();
+
+  const isHostelStudent = Boolean(user?.hostelBlock || user?.roomNumber || user?.role === 'ADMIN');
+
+  const navItems = React.useMemo(() => {
+    if (!isHostelStudent) {
+      return studentNavItems;
+    }
+    const items = [...studentNavItems];
+    const leaveIndex = items.findIndex((i) => i.href === '/student/leave');
+    const messItem: NavItem = {
+      label: 'Hostel Mess Menu',
+      href: '/student/mess-menu',
+      icon: UtensilsCrossed,
+      group: 'Campus Requests',
+    };
+    if (leaveIndex !== -1) {
+      items.splice(leaveIndex + 1, 0, messItem);
+    } else {
+      items.push(messItem);
+    }
+    return items;
+  }, [isHostelStudent]);
 
   return (
     <PortalGuard allowedRoles={['STUDENT', 'ADMIN']} portalTitle="Student Portal">
-      <div className="min-h-screen bg-[#0a0d14] flex flex-col overflow-x-hidden text-[#edeef2]">
+      <div className="min-h-screen bg-background flex flex-col overflow-x-hidden text-foreground">
         <Navbar
           portalName="STUDENT PORTAL"
           onMenuClick={() => setIsMobileMenuOpen((prev) => !prev)}
@@ -60,7 +85,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         />
         <div className="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto">
           <Sidebar
-            items={studentNavItems}
+            items={navItems}
             isOpen={isMobileMenuOpen}
             onClose={() => setIsMobileMenuOpen(false)}
           />

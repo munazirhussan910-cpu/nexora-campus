@@ -2,11 +2,111 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =========================================================
+   NEXORA CAMPUS DESIGN SYSTEM - SEMANTIC CSS TOKENS
+   ========================================================= */
+
 :root {
-  --background: #0f1118;
-  --foreground: #edeef2;
-  --card-bg: #1e2230;
-  --border-color: #2e3447;
+  /* LIGHT MODE (Default :root) - Warm minimal, high-clarity SaaS */
+  --background: #F7F7F4;
+  --foreground: #171717;
+
+  --surface: #FFFFFF;
+  --surface-secondary: #F3F4F6;
+  --surface-hover: #EBECEF;
+
+  --border: #E5E7EB;
+  --border-subtle: #F0F1F3;
+
+  --muted: #F3F4F6;
+  --muted-foreground: #666666;
+  --text-muted: #858585;
+
+  --primary: #245CFF;
+  --primary-hover: #194CE5;
+  --primary-foreground: #FFFFFF;
+
+  --accent: #245CFF;
+  --accent-hover: #194CE5;
+  --accent-foreground: #FFFFFF;
+  --accent-secondary: #0EA5E9;
+
+  --success: #059669;
+  --success-foreground: #FFFFFF;
+  --warning: #D97706;
+  --warning-foreground: #FFFFFF;
+  --danger: #DC2626;
+  --danger-foreground: #FFFFFF;
+
+  --focus-ring: #245CFF;
+  --card-bg: #FFFFFF;
+  --card-border: #E5E7EB;
+
+  --scrollbar-track: #F7F7F4;
+  --scrollbar-thumb: #D1D5DB;
+  --scrollbar-thumb-hover: #9CA3AF;
+
+  --gold: #B48A14;
+  --gold-hover: #9B7710;
+  --gold-foreground: #FFFFFF;
+
+  --sidebar: #FFFFFF;
+  --header: #FFFFFF;
+  --surface-elevated: #FFFFFF;
+  --accent-violet: #7C3AED;
+  --accent-cyan: #0EA5E9;
+}
+
+.dark {
+  /* DARK MODE - Original Nexora Campus Identity */
+  --background: #0B0D14;
+  --foreground: #F5F7FC;
+
+  --surface: #121625;
+  --surface-secondary: #161B2B;
+  --surface-hover: #1A2033;
+  --surface-elevated: #1A2033;
+
+  --sidebar: #0E111B;
+  --header: #0D1019;
+
+  --border: #232B3F;
+  --border-subtle: #1F2638;
+
+  --muted: #161B2B;
+  --muted-foreground: #A5B0C4;
+  --text-muted: #77849B;
+
+  --primary: #7C3AED;
+  --primary-hover: #6D28D9;
+  --primary-foreground: #FFFFFF;
+
+  --accent: #7C3AED;
+  --accent-hover: #6D28D9;
+  --accent-foreground: #FFFFFF;
+  --accent-secondary: #22D3EE;
+
+  --accent-violet: #8B5CF6;
+  --accent-cyan: #22D3EE;
+
+  --gold: #E8BC32;
+  --gold-hover: #F0C742;
+  --gold-foreground: #0B0D14;
+
+  --success: #34D399;
+  --success-foreground: #0B0D14;
+  --warning: #FBBF24;
+  --warning-foreground: #0B0D14;
+  --danger: #FB7185;
+  --danger-foreground: #FFFFFF;
+
+  --focus-ring: #7C3AED;
+  --card-bg: #121625;
+  --card-border: #232B3F;
+
+  --scrollbar-track: #0B0D14;
+  --scrollbar-thumb: #232B3F;
+  --scrollbar-thumb-hover: #384562;
 }
 
 html {
@@ -16,10 +116,11 @@ html {
 
 body {
   color: var(--foreground);
-  background: var(--background);
+  background-color: var(--background);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Custom Scrollbar */
@@ -28,14 +129,14 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f1118;
+  background: var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb {
-  background: #2e3447;
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #474e64;
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* Hide scrollbar for clean touch horizontal scroll */
@@ -49,31 +150,63 @@ body {
 
 /* Academic Card Border Effect */
 .academic-card {
-  background: #181b26;
-  border: 1px solid #282f42;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 0.75rem;
   transition: all 0.2s ease-in-out;
 }
 .academic-card:hover {
-  border-color: #3d4661;
+  border-color: var(--border-subtle);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+.dark .academic-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 .academic-card-accent {
-  background: #181b26;
-  border: 1px solid #3d4661;
-  border-top: 3px solid #d4af37;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--gold);
   border-radius: 0.75rem;
+}
+
+/* SaaS Card */
+.saas-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.saas-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+.dark .saas-card:hover {
+  box-shadow: 0 8px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+.saas-card-interactive {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+.saas-card-interactive:hover {
+  transform: translateY(-3px);
+  border-color: var(--primary);
+  box-shadow: 0 10px 25px -5px rgba(36, 92, 255, 0.15);
+}
+.dark .saas-card-interactive:hover {
+  box-shadow: 0 10px 25px -5px rgba(167, 139, 250, 0.2);
 }
 
 /* Gold Accent Text */
 .text-gold {
-  color: #d4af37;
+  color: var(--gold);
 }
 .border-gold {
-  border-color: #d4af37;
+  border-color: var(--gold);
 }
 .bg-gold {
-  background-color: #d4af37;
+  background-color: var(--gold);
 }
 
 /* =========================================================
@@ -99,12 +232,16 @@ body {
 .stagger-5 { transition-delay: 250ms; }
 .stagger-6 { transition-delay: 300ms; }
 
-/* Enhanced Card Hover Elevation & Glow */
+/* Enhanced Card Hover Elevation */
 .hover-card-elevate {
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
 }
 .hover-card-elevate:hover {
   transform: translateY(-3px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+}
+.dark .hover-card-elevate:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.45);
 }
 
 /* Smooth Tab Transitions */
@@ -254,9 +391,31 @@ body {
   animation: radarPulse 2.5s infinite;
 }
 
-/* =========================================================
-   Live Campus Operations Hero Background & Accessibility
-   ========================================================= */
+/* Copilot Chat Animations */
+@keyframes messageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-message-in {
+  animation: messageIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Accessible focus ring utility */
+.focus-ring-accessible {
+  outline: none;
+}
+.focus-ring-accessible:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Reduced Motion Support */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto !important;
@@ -277,25 +436,20 @@ body {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .hero-animated-bg * {
-    animation: none !important;
-    transition: none !important;
-  }
-  .hero-animated-bg animate,
-  .hero-animated-bg animateMotion,
-  .hero-animated-bg animateTransform {
-    display: none !important;
-  }
   .animate-ambient-glow,
   .animate-scan-beam,
   .animate-dash-flow,
   .animate-radar-node,
   .animate-signal-flow,
   .animate-subtle-float,
-  .shimmer-gold {
+  .shimmer-gold,
+  .animate-message-in,
+  .animate-drawer,
+  .animate-tab-fade {
     animation: none !important;
   }
 }
+
 
 /* =========================================================
    Nexora Brand Theme & Modern SaaS UI Micro-Interactions
@@ -312,44 +466,6 @@ body {
   box-shadow: 0 4px 20px -2px rgba(24, 197, 216, 0.2);
 }
 
-.saas-card {
-  background: #121624;
-  border: 1px solid #232b3f;
-  border-radius: 1rem;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.saas-card:hover {
-  border-color: #384562;
-  box-shadow: 0 8px 30px -10px rgba(0, 0, 0, 0.5);
-  transform: translateY(-2px);
-}
-
-.saas-card-interactive {
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
-}
-
-.saas-card-interactive:hover {
-  transform: translateY(-3px);
-  border-color: rgba(91, 32, 160, 0.5);
-  box-shadow: 0 10px 25px -5px rgba(91, 32, 160, 0.15);
-}
-
-/* Copilot Chat Animations */
-@keyframes messageIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.animate-message-in {
-  animation: messageIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
 @keyframes pulseGlow {
   0%, 100% {
     box-shadow: 0 0 15px -3px rgba(122, 61, 184, 0.3);
@@ -360,4 +476,13 @@ body {
 }
 .animate-pulse-glow {
   animation: pulseGlow 3s ease-in-out infinite;
+}
+
+@keyframes shimmerGold {
+  0% { opacity: 0.85; }
+  50% { opacity: 1; filter: drop-shadow(0 0 6px rgba(232, 188, 50, 0.45)); }
+  100% { opacity: 0.85; }
+}
+.shimmer-gold {
+  animation: shimmerGold 2.8s ease-in-out infinite;
 }

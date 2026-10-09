@@ -29,7 +29,7 @@ export default function AcademicLayout({ children }: { children: React.ReactNode
 
   return (
     <PortalGuard allowedRoles={['ACADEMIC_OFFICER', 'ADMIN']} portalTitle="Academic Operations Desk">
-      <div className="min-h-screen bg-[#0a0d14] flex flex-col overflow-x-hidden text-[#edeef2]">
+      <div className="min-h-screen bg-background flex flex-col overflow-x-hidden text-foreground">
         <Navbar
           portalName="ACADEMIC OPERATIONS"
           onMenuClick={() => setIsMobileMenuOpen((prev) => !prev)}

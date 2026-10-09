@@ -825,4 +825,120 @@ router.get(
   }
 );
 
+/**
+ * GET /api/student/mess-menu
+ * Read-only hostel mess menu endpoint for authenticated hostel students.
+ * Strictly verifies that the student is a resident in a campus hostel block.
+ */
+router.get(
+  '/mess-menu',
+  authenticate,
+  requireRole('STUDENT', 'ADMIN'),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const student = await prisma.student.findUnique({
+        where: { userId: req.user!.id },
+        include: {
+          hostelRoom: {
+            include: { hostelBlock: true },
+          },
+        },
+      });
+
+      if (!student || !student.hostelRoomId || !student.hostelRoom?.hostelBlock) {
+        res.status(403).json({
+          success: false,
+          error: {
+            code: 'HOSTEL_RESIDENT_REQUIRED',
+            message: 'Hostel Mess Menu is exclusively accessible to students residing in campus hostels.',
+          },
+        });
+        return;
+      }
+
+      const block = student.hostelRoom.hostelBlock;
+      const menuRecords = await prisma.messMenu.findMany({
+        where: { hostelBlockId: block.id },
+        include: {
+          updater: {
+            select: {
+              id: true,
+              username: true,
+              staff: { select: { designation: true, fullName: true } },
+            },
+          },
+        },
+      });
+
+      const days = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+      const weekly: Record<string, Record<string, any>> = {};
+      for (const d of days) {
+        weekly[d] = {
+          BREAKFAST: null,
+          LUNCH: null,
+          DINNER: null,
+        };
+      }
+
+      let lastUpdated: Date | null = null;
+      let lastUpdatedBy: string | null = null;
+
+      for (const record of menuRecords) {
+        if (weekly[record.day]) {
+          weekly[record.day][record.meal] = {
+            id: record.id,
+            day: record.day,
+            meal: record.meal,
+            items: record.items,
+            timings: record.timings || null,
+            specialNotes: record.specialNotes || null,
+            updatedAt: record.updatedAt,
+            updatedBy:
+              record.updater?.staff?.fullName ||
+              record.updater?.username ||
+              null,
+          };
+        }
+        if (!lastUpdated || record.updatedAt > lastUpdated) {
+          lastUpdated = record.updatedAt;
+          lastUpdatedBy =
+            record.updater?.staff?.fullName ||
+            record.updater?.username ||
+            null;
+        }
+      }
+
+      const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+      const todayDay = dayNames[new Date().getDay()];
+      const todayMenu = weekly[todayDay] || { BREAKFAST: null, LUNCH: null, DINNER: null };
+
+      res.json({
+        success: true,
+        data: {
+          student: {
+            fullName: student.fullName,
+            rollNumber: student.rollNumber,
+            hostelBlock: block.name,
+            roomNumber: student.hostelRoom.roomNumber,
+          },
+          hostelBlock: {
+            id: block.id,
+            name: block.name,
+            gender: block.gender,
+            wardenName: block.wardenName,
+          },
+          today: todayDay,
+          todayMenu,
+          weekly,
+          canEdit: false,
+          lastUpdated,
+          lastUpdatedBy,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 export default router;

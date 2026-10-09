@@ -22,7 +22,7 @@ export function SLAIndicator({ sla, compact = false }: SLAIndicatorProps) {
   if (compact) {
     if (isCompleted) {
       return (
-        <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
+        <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">
           <CheckCircle size={12} />
           <span>SLA Met</span>
         </span>
@@ -31,7 +31,7 @@ export function SLAIndicator({ sla, compact = false }: SLAIndicatorProps) {
 
     if (isBreached) {
       return (
-        <span className="inline-flex items-center gap-1 text-[11px] text-rose-400 font-semibold">
+        <span className="inline-flex items-center gap-1 text-[11px] text-rose-700 dark:text-rose-400 font-semibold">
           <AlertTriangle size={12} />
           <span>Overdue ({sla.ageingBracket})</span>
         </span>
@@ -40,7 +40,7 @@ export function SLAIndicator({ sla, compact = false }: SLAIndicatorProps) {
 
     if (isAtRisk) {
       return (
-        <span className="inline-flex items-center gap-1 text-[11px] text-amber-400 font-medium">
+        <span className="inline-flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-400 font-medium">
           <Clock size={12} />
           <span>Due in {sla.hoursRemaining}h</span>
         </span>
@@ -48,7 +48,7 @@ export function SLAIndicator({ sla, compact = false }: SLAIndicatorProps) {
     }
 
     return (
-      <span className="inline-flex items-center gap-1 text-[11px] text-blue-400 font-medium">
+      <span className="inline-flex items-center gap-1 text-[11px] text-blue-700 dark:text-blue-400 font-medium">
         <Clock size={12} />
         <span>On Track ({sla.hoursRemaining}h left)</span>
       </span>
@@ -59,21 +59,21 @@ export function SLAIndicator({ sla, compact = false }: SLAIndicatorProps) {
     <div
       className={`p-2.5 rounded-lg border text-xs flex items-center justify-between gap-3 ${
         isCompleted
-          ? 'bg-emerald-950/30 border-emerald-800 text-emerald-300'
+          ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300'
           : isBreached
-          ? 'bg-rose-950/40 border-rose-800 text-rose-300'
+          ? 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300'
           : isAtRisk
-          ? 'bg-amber-950/30 border-amber-800 text-amber-300'
-          : 'bg-[#1e2230] border-[#2e3447] text-gray-300'
+          ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800 dark:text-amber-300'
+          : 'bg-surface-secondary text-foreground border-border'
       }`}
     >
       <div className="flex items-center gap-2">
         {isCompleted ? (
-          <CheckCircle size={16} className="text-emerald-400 shrink-0" />
+          <CheckCircle size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
         ) : isBreached ? (
-          <AlertTriangle size={16} className="text-rose-400 shrink-0" />
+          <AlertTriangle size={16} className="text-rose-600 dark:text-rose-400 shrink-0" />
         ) : (
-          <Clock size={16} className="text-amber-400 shrink-0" />
+          <Clock size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
         )}
         <div>
           <div className="font-semibold">
@@ -92,7 +92,7 @@ export function SLAIndicator({ sla, compact = false }: SLAIndicatorProps) {
       </div>
 
       <div className="text-right shrink-0">
-        <div className="text-[10px] uppercase tracking-wider text-gray-400">Ageing Bracket</div>
+        <div className="text-[10px] uppercase tracking-wider opacity-70">Ageing Bracket</div>
         <div className="font-mono font-bold text-xs">{sla.ageingBracket}</div>
       </div>
     </div>

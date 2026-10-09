@@ -4,10 +4,11 @@ import React, { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar, NavItem } from '@/components/layout/Sidebar';
 import { PortalGuard } from '@/components/layout/PortalGuard';
-import { LayoutDashboard, Key, Calendar, Wrench, Users, Bell, User } from 'lucide-react';
+import { LayoutDashboard, Key, Calendar, Wrench, Users, Bell, User, UtensilsCrossed } from 'lucide-react';
 
 const wardenNavItems: NavItem[] = [
   { label: 'Hostel Dashboard', href: '/warden/dashboard', icon: LayoutDashboard },
+  { label: 'Hostel Mess Menu', href: '/warden/mess-menu', icon: UtensilsCrossed },
   { label: 'Gate Pass Approvals', href: '/warden/gate-passes', icon: Key },
   { label: 'Leave Applications', href: '/warden/leaves', icon: Calendar },
   { label: 'Hostel Complaints', href: '/warden/complaints', icon: Wrench },
@@ -21,7 +22,7 @@ export default function WardenLayout({ children }: { children: React.ReactNode }
 
   return (
     <PortalGuard allowedRoles={['WARDEN', 'ADMIN']} portalTitle="Hostel Warden Desk">
-      <div className="min-h-screen bg-[#0a0d14] flex flex-col overflow-x-hidden text-[#edeef2]">
+      <div className="min-h-screen bg-background flex flex-col overflow-x-hidden text-foreground">
         <Navbar
           portalName="HOSTEL WARDEN DESK"
           onMenuClick={() => setIsMobileMenuOpen((prev) => !prev)}

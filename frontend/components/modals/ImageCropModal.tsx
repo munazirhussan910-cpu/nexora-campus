@@ -185,24 +185,24 @@ export function ImageCropModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
+    <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-tab-fade">
       {/* Hidden offscreen canvas for rendering */}
       <canvas ref={canvasRef} className="hidden" />
 
-      <div className="bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl max-w-lg w-full p-5 sm:p-6 text-white space-y-5 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-surface border border-border rounded-2xl sm:rounded-3xl max-w-lg w-full p-5 sm:p-6 text-foreground space-y-5 shadow-2xl relative">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-[#212739]">
+        <div className="flex items-center justify-between pb-3 border-b border-border">
           <div>
-            <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
               <span>Adjust &amp; Crop Profile Photo</span>
             </h3>
-            <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">
+            <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
               Drag to position and zoom to fit your face in the circular guide.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl bg-[#171c2a] hover:bg-[#20273a] text-gray-400 hover:text-white transition"
+            className="p-1.5 rounded-xl bg-surface hover:bg-surface-secondary text-muted-foreground hover:text-foreground border border-border transition"
             aria-label="Close"
           >
             <X size={16} />
@@ -266,12 +266,12 @@ export function ImageCropModal({
           </div>
 
           {/* Live circular & square thumbnail preview */}
-          <div className="flex sm:flex-col items-center justify-center gap-4 p-3 rounded-2xl bg-[#161a29] border border-[#232b3f] sm:w-32">
-            <span className="text-[10px] font-mono uppercase font-bold text-gray-400 hidden sm:block">
+          <div className="flex sm:flex-col items-center justify-center gap-4 p-3 rounded-2xl bg-surface-secondary border border-border sm:w-32">
+            <span className="text-[10px] font-mono uppercase font-bold text-muted-foreground hidden sm:block">
               Avatar Preview
             </span>
             <div className="flex flex-col items-center gap-1.5">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-[#d4af37] shadow-lg shadow-black/40 bg-black">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-primary shadow-md bg-black">
                 {previewDataUrl && (
                   <img
                     src={previewDataUrl}
@@ -280,21 +280,21 @@ export function ImageCropModal({
                   />
                 )}
               </div>
-              <span className="text-[9px] font-mono text-gray-400">Circular DP</span>
+              <span className="text-[9px] font-mono text-muted-foreground">Circular DP</span>
             </div>
           </div>
         </div>
 
         {/* Zoom & Reset Controls */}
-        <div className="bg-[#161a29] p-3 sm:p-4 rounded-xl border border-[#232b3f] space-y-2">
-          <div className="flex items-center justify-between text-xs text-gray-300">
-            <span className="font-semibold text-gray-300 flex items-center gap-1.5">
+        <div className="bg-surface-secondary p-3 sm:p-4 rounded-xl border border-border space-y-2">
+          <div className="flex items-center justify-between text-xs text-foreground">
+            <span className="font-semibold flex items-center gap-1.5">
               <span>Zoom</span>
             </span>
             <button
               type="button"
               onClick={handleReset}
-              className="text-[11px] text-[#d4af37] hover:underline flex items-center gap-1 font-mono"
+              className="text-[11px] text-primary hover:underline flex items-center gap-1 font-mono"
             >
               <RotateCcw size={11} />
               <span>Reset</span>
@@ -305,7 +305,7 @@ export function ImageCropModal({
             <button
               type="button"
               onClick={() => handleZoomChange(zoom - minZoom * 0.25)}
-              className="p-1.5 rounded-lg bg-[#1f2638] hover:bg-[#283248] text-gray-300 hover:text-white transition"
+              className="p-1.5 rounded-lg bg-surface hover:bg-surface-hover text-foreground border border-border transition"
               aria-label="Zoom out"
             >
               <ZoomOut size={14} />
@@ -318,13 +318,13 @@ export function ImageCropModal({
               step={minZoom * 0.05}
               value={zoom}
               onChange={(e) => handleZoomChange(parseFloat(e.target.value))}
-              className="flex-1 accent-[#d4af37] cursor-pointer h-1.5 bg-[#232c40] rounded-lg"
+              className="flex-1 accent-primary cursor-pointer h-1.5 bg-surface rounded-lg"
             />
 
             <button
               type="button"
               onClick={() => handleZoomChange(zoom + minZoom * 0.25)}
-              className="p-1.5 rounded-lg bg-[#1f2638] hover:bg-[#283248] text-gray-300 hover:text-white transition"
+              className="p-1.5 rounded-lg bg-surface hover:bg-surface-hover text-foreground border border-border transition"
               aria-label="Zoom in"
             >
               <ZoomIn size={14} />
@@ -333,11 +333,11 @@ export function ImageCropModal({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#212739]">
+        <div className="flex items-center justify-end gap-3 pt-2 border-t border-border">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-[#171c2a] hover:bg-[#20273a] text-gray-300 hover:text-white border border-[#273248] text-xs font-semibold transition"
+            className="px-4 py-2 rounded-xl bg-surface hover:bg-surface-secondary text-foreground border border-border text-xs font-semibold transition"
           >
             Cancel
           </button>
@@ -345,7 +345,7 @@ export function ImageCropModal({
           <button
             type="button"
             onClick={handleApply}
-            className="px-5 py-2 rounded-xl bg-[#d4af37] hover:bg-[#e4c257] text-black font-bold text-xs shadow-md shadow-[#d4af37]/20 transition-all active:scale-95 inline-flex items-center gap-1.5"
+            className="px-5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow-xs transition-all active:scale-95 inline-flex items-center gap-1.5"
           >
             <Check size={14} />
             <span>Apply Crop</span>

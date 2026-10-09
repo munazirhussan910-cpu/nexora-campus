@@ -7,7 +7,6 @@ import { apiRequest } from '@/lib/api';
 import {
   Compass,
   FileCheck,
-  GraduationCap,
   Calendar,
   Building,
   Bell,
@@ -18,7 +17,6 @@ import {
   FileText,
   Shield,
   Clock,
-  Sparkles,
   ChevronRight,
   RotateCcw,
   BookOpen,
@@ -38,76 +36,76 @@ interface Step1Option {
 
 const STEP_1_OPTIONS: Step1Option[] = [
   {
-    id: "CERTIFICATE",
-    category: "CERTIFICATE",
-    label: "Certificate",
-    desc: "Bonafide, enrollment proof, bank verification, passport documentation",
+    id: 'CERTIFICATE',
+    category: 'CERTIFICATE',
+    label: 'Certificate',
+    desc: 'Bonafide, enrollment proof, bank verification, passport documentation',
     icon: FileCheck,
-    color: "from-emerald-500/20 to-teal-500/10 border-emerald-500/40 text-emerald-400",
+    color: 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5',
   },
   {
-    id: "ACADEMIC_REQUEST",
-    category: "ACADEMIC_REQUEST",
-    label: "Academic Request",
-    desc: "Timetable discrepancy, attendance condonation, subject corrections",
+    id: 'ACADEMIC_REQUEST',
+    category: 'ACADEMIC_REQUEST',
+    label: 'Academic Request',
+    desc: 'Timetable discrepancy, attendance condonation, subject corrections',
     icon: BookOpen,
-    color: "from-blue-500/20 to-cyan-500/10 border-blue-500/40 text-blue-400",
+    color: 'border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/5',
   },
   {
-    id: "INTERNSHIP",
-    category: "INTERNSHIP",
-    label: "Internship",
-    desc: "Summer training NOC, company offer letters, absence permission",
+    id: 'INTERNSHIP',
+    category: 'INTERNSHIP',
+    label: 'Internship',
+    desc: 'Summer training NOC, company offer letters, absence permission',
     icon: Briefcase,
-    color: "from-[#5B20A0]/25 to-purple-500/10 border-[#7A3DB8]/50 text-purple-300",
+    color: 'border-purple-500/30 text-purple-600 dark:text-purple-300 bg-purple-500/5',
   },
   {
-    id: "SCHOLARSHIP",
-    category: "SCHOLARSHIP",
-    label: "Scholarship",
-    desc: "NSP verification, state portal certification, fee structure proof",
+    id: 'SCHOLARSHIP',
+    category: 'SCHOLARSHIP',
+    label: 'Scholarship',
+    desc: 'NSP verification, state portal certification, fee structure proof',
     icon: DollarSign,
-    color: "from-green-500/20 to-emerald-500/10 border-green-500/40 text-green-400",
+    color: 'border-green-500/30 text-green-600 dark:text-green-400 bg-green-500/5',
   },
   {
-    id: "EXAMINATION",
-    category: "EXAMINATION",
-    label: "Examination",
-    desc: "Exam form registration, admit card guidelines, schedule & backlogs",
+    id: 'EXAMINATION',
+    category: 'EXAMINATION',
+    label: 'Examination',
+    desc: 'Exam form registration, admit card guidelines, schedule & backlogs',
     icon: FlaskConical,
-    color: "from-indigo-500/20 to-purple-500/10 border-indigo-500/40 text-indigo-400",
+    color: 'border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/5',
   },
   {
-    id: "HOSTEL",
-    category: "HOSTEL",
-    label: "Hostel",
-    desc: "Outstation leave, exit gate pass, room plumbing & electrical repair",
+    id: 'HOSTEL',
+    category: 'HOSTEL',
+    label: 'Hostel',
+    desc: 'Outstation leave, exit gate pass, room plumbing & electrical repair',
     icon: Building,
-    color: "from-purple-500/20 to-pink-500/10 border-purple-500/40 text-purple-400",
+    color: 'border-pink-500/30 text-pink-600 dark:text-pink-400 bg-pink-500/5',
   },
   {
-    id: "ROUTINE",
-    category: "ROUTINE",
-    label: "Academic Routine",
-    desc: "Daily lecture schedule, room allocations, faculty timetable",
+    id: 'ROUTINE',
+    category: 'ROUTINE',
+    label: 'Academic Routine',
+    desc: 'Daily lecture schedule, room allocations, faculty timetable',
     icon: Calendar,
-    color: "from-cyan-500/20 to-sky-500/10 border-cyan-500/40 text-[#18C5D8]",
+    color: 'border-cyan-500/30 text-cyan-600 dark:text-cyan-400 bg-cyan-500/5',
   },
   {
-    id: "NOTICE",
-    category: "NOTICE",
-    label: "Academic Notice",
-    desc: "Official university circulars, mid-semester guidelines, holidays",
+    id: 'NOTICE',
+    category: 'NOTICE',
+    label: 'Academic Notice',
+    desc: 'Official university circulars, mid-semester guidelines, holidays',
     icon: Bell,
-    color: "from-amber-500/20 to-orange-500/10 border-amber-500/40 text-amber-400",
+    color: 'border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/5',
   },
   {
-    id: "CONFUSED",
-    category: "CONFUSED",
-    label: "I\x27m not sure",
-    desc: "Tell us what you want to achieve and we will route you to the right desk",
+    id: 'CONFUSED',
+    category: 'CONFUSED',
+    label: "I'm not sure",
+    desc: 'Tell us what you want to achieve and we will route you to the right desk',
     icon: HelpCircle,
-    color: "from-rose-500/20 to-purple-500/10 border-rose-500/40 text-rose-400",
+    color: 'border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/5',
   },
 ];
 
@@ -432,12 +430,10 @@ export default function StudentGuidancePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Workflow Step: 1, 2, or 3
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubOption, setSelectedSubOption] = useState<Step2Option | null>(null);
 
-  // Resolved Guidance Item State
   const [guidanceItems, setGuidanceItems] = useState<any[]>([]);
   const [resolvedItem, setResolvedItem] = useState<any | null>(null);
   const [loadingGuidance, setLoadingGuidance] = useState(true);
@@ -454,7 +450,6 @@ export default function StudentGuidancePage() {
     fetchGuidanceDb();
   }, []);
 
-  // Pre-seed from query params if present e.g. /student/guidance?category=CERTIFICATE
   useEffect(() => {
     const queryCat = searchParams.get('category');
     if (queryCat && STEP_1_OPTIONS.some((o) => o.category === queryCat.toUpperCase())) {
@@ -463,7 +458,6 @@ export default function StudentGuidancePage() {
     }
   }, [searchParams]);
 
-  // Step 1 Handler
   const handleSelectStep1 = (category: string) => {
     setSelectedCategory(category);
     setSelectedSubOption(null);
@@ -471,11 +465,9 @@ export default function StudentGuidancePage() {
     setCurrentStep(2);
   };
 
-  // Step 2 Handler
   const handleSelectStep2 = (option: Step2Option) => {
     setSelectedSubOption(option);
 
-    // Look for matching item in guidance database
     const match = guidanceItems.find((item) => {
       if (option.targetSubcategory && item.subcategory === option.targetSubcategory) {
         return true;
@@ -493,7 +485,6 @@ export default function StudentGuidancePage() {
         actionLabel: option.actionLabelOverride || match.actionLabel,
       });
     } else {
-      // Fallback structured result
       setResolvedItem({
         title: option.label,
         category: option.targetCategory,
@@ -534,19 +525,19 @@ export default function StudentGuidancePage() {
   return (
     <div className="space-y-6 sm:space-y-8 max-w-5xl mx-auto pb-12 animate-tab-fade">
       {/* Top Banner / Hero */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-[#171427] via-[#1a1f33] to-[#121624] border border-[#5B20A0]/50 rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xl shadow-black/20">
+      <div className="relative overflow-hidden bg-surface border border-border dark:bg-gradient-to-r dark:from-[#171427] dark:via-[#1a1f33] dark:to-[#141b2c] dark:border-[#5B20A0]/50 dark:hover:border-[#7A3DB8] dark:shadow-xl dark:shadow-[#5B20A0]/10 rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xs">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#5B20A0]/20 border border-[#7A3DB8]/40 text-[#18C5D8] text-[10px] font-mono font-bold uppercase tracking-wider mb-2.5 shadow-xs">
-              <Compass size={13} className="text-[#18C5D8]" />
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary dark:bg-[#1b2234] dark:border-[#18C5D8]/40 dark:text-[#18C5D8] text-[10px] font-mono font-bold uppercase tracking-wider mb-2.5">
+              <Compass size={13} />
               <span>Campus Navigator &amp; Process Guide</span>
             </div>
 
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
-              🎓 Student Guidance Mode
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-foreground tracking-tight">
+              Student Guidance Mode
             </h1>
-            <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              &ldquo;Tell me what you&apos;re trying to do, and I&apos;ll guide you to the correct campus process.&rdquo;
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-2xl leading-relaxed">
+              Tell us what you are trying to do, and Nexora will guide you to the correct verified campus workflow.
             </p>
           </div>
 
@@ -554,7 +545,7 @@ export default function StudentGuidancePage() {
             {currentStep > 1 && (
               <button
                 onClick={handleReset}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#161a29] border border-[#263047] hover:border-[#18C5D8]/50 text-xs font-semibold text-slate-300 hover:text-white transition active:scale-95"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-secondary hover:bg-surface-hover border border-border text-xs font-semibold text-foreground transition active:scale-95 shadow-xs"
               >
                 <RotateCcw size={13} />
                 <span>Start Over</span>
@@ -562,7 +553,7 @@ export default function StudentGuidancePage() {
             )}
             <Link
               href="/student/dashboard"
-              className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-[#161a29] border border-[#263047] text-xs text-slate-400 hover:text-white transition"
+              className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-surface hover:bg-surface-secondary border border-border text-xs text-muted-foreground hover:text-foreground transition shadow-xs"
             >
               <ArrowLeft size={13} />
               <span>Dashboard</span>
@@ -571,72 +562,70 @@ export default function StudentGuidancePage() {
         </div>
 
         {/* Step Progress Bar */}
-        <div className="mt-6 pt-4 border-t border-[#1f2638] flex items-center justify-between gap-2 max-w-md">
+        <div className="mt-6 pt-4 border-t border-border flex items-center justify-between gap-2 max-w-md">
           <div className="flex items-center gap-2">
             <span
               className={`w-6 h-6 rounded-full flex items-center justify-center font-mono text-xs font-bold transition-all ${
                 currentStep >= 1
-                  ? 'bg-[#5B20A0] text-white shadow-md shadow-[#5B20A0]/40'
-                  : 'bg-[#1b2131] text-slate-500 border border-[#273148]'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  : 'bg-surface-secondary text-muted-foreground border border-border'
               }`}
             >
               1
             </span>
-            <span className={`text-xs font-semibold ${currentStep === 1 ? 'text-white' : 'text-slate-400'}`}>
+            <span className={`text-xs font-semibold ${currentStep === 1 ? 'text-foreground' : 'text-muted-foreground'}`}>
               Select Need
             </span>
           </div>
 
-          <div className="h-0.5 w-10 sm:w-16 bg-[#21293b]" />
+          <div className="h-0.5 w-10 sm:w-16 bg-border" />
 
           <div className="flex items-center gap-2">
             <span
               className={`w-6 h-6 rounded-full flex items-center justify-center font-mono text-xs font-bold transition-all ${
                 currentStep >= 2
-                  ? 'bg-[#5B20A0] text-white shadow-md shadow-[#5B20A0]/40'
-                  : 'bg-[#1b2131] text-slate-500 border border-[#273148]'
+                  ? 'bg-primary text-primary-foreground shadow-xs'
+                  : 'bg-surface-secondary text-muted-foreground border border-border'
               }`}
             >
               2
             </span>
-            <span className={`text-xs font-semibold ${currentStep === 2 ? 'text-white' : 'text-slate-400'}`}>
+            <span className={`text-xs font-semibold ${currentStep === 2 ? 'text-foreground' : 'text-muted-foreground'}`}>
               Clarify Requirement
             </span>
           </div>
 
-          <div className="h-0.5 w-10 sm:w-16 bg-[#21293b]" />
+          <div className="h-0.5 w-10 sm:w-16 bg-border" />
 
           <div className="flex items-center gap-2">
             <span
               className={`w-6 h-6 rounded-full flex items-center justify-center font-mono text-xs font-bold transition-all ${
                 currentStep >= 3
-                  ? 'bg-[#18C5D8] text-black shadow-md shadow-[#18C5D8]/40'
-                  : 'bg-[#1b2131] text-slate-500 border border-[#273148]'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-surface-secondary text-muted-foreground border border-border'
               }`}
             >
               3
             </span>
-            <span className={`text-xs font-semibold ${currentStep === 3 ? 'text-white' : 'text-slate-400'}`}>
+            <span className={`text-xs font-semibold ${currentStep === 3 ? 'text-foreground' : 'text-muted-foreground'}`}>
               Resolution &amp; Form
             </span>
           </div>
         </div>
       </div>
 
-      {/* ======================================================== */}
-      {/* STEP 1: What do you need help with?                      */}
-      {/* ======================================================== */}
+      {/* STEP 1: What do you need help with? */}
       {currentStep === 1 && (
         <div className="space-y-4 animate-tab-fade">
-          <div className="bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xl space-y-4">
+          <div className="bg-surface border border-border rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xs space-y-4">
             <div>
-              <div className="text-[11px] uppercase font-mono font-bold text-[#18C5D8] tracking-wider mb-1">
+              <div className="text-[11px] uppercase font-mono font-bold text-primary tracking-wider mb-1">
                 STEP 1 OF 3
               </div>
-              <h2 className="text-base sm:text-xl font-bold text-white tracking-tight">
+              <h2 className="text-base sm:text-xl font-bold text-foreground tracking-tight">
                 What do you need help with?
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Select the campus area or topic you want to proceed with. If you are uncertain, pick &ldquo;I&apos;m not sure&rdquo;.
               </p>
             </div>
@@ -650,20 +639,20 @@ export default function StudentGuidancePage() {
                     key={opt.id}
                     type="button"
                     onClick={() => handleSelectStep1(opt.category)}
-                    className={`p-4 sm:p-5 rounded-2xl bg-gradient-to-br ${opt.color} bg-[#131724] border text-left hover:scale-[1.01] active:scale-[0.99] transition-all duration-150 flex flex-col justify-between group shadow-sm`}
+                    className={`p-4 sm:p-5 rounded-2xl bg-surface hover:bg-surface-secondary border ${opt.color} text-left transition-all duration-150 flex flex-col justify-between group shadow-xs active:scale-[0.99]`}
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <div className="w-10 h-10 rounded-xl bg-black/40 border border-white/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <div className="w-10 h-10 rounded-xl bg-surface-secondary border border-border flex items-center justify-center group-hover:scale-110 transition-transform">
                         <Icon size={20} />
                       </div>
-                      <ChevronRight size={16} className="text-slate-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                      <ChevronRight size={16} className="text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" />
                     </div>
 
                     <div>
-                      <div className="font-bold text-sm text-white group-hover:text-[#18C5D8] transition">
+                      <div className="font-bold text-sm text-foreground group-hover:text-primary transition">
                         {opt.label}
                       </div>
-                      <div className="text-[11px] text-slate-300 mt-1 leading-snug line-clamp-2">
+                      <div className="text-[11px] text-muted-foreground mt-1 leading-snug line-clamp-2">
                         {opt.desc}
                       </div>
                     </div>
@@ -675,18 +664,16 @@ export default function StudentGuidancePage() {
         </div>
       )}
 
-      {/* ======================================================== */}
-      {/* STEP 2: Clarification based on selection                 */}
-      {/* ======================================================== */}
+      {/* STEP 2: Clarification based on selection */}
       {currentStep === 2 && step2Config && (
         <div className="space-y-4 animate-tab-fade">
-          <div className="bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-[#21273a] pb-3">
+          <div className="bg-surface border border-border rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
-                <div className="text-[11px] uppercase font-mono font-bold text-[#18C5D8] tracking-wider mb-1">
+                <div className="text-[11px] uppercase font-mono font-bold text-primary tracking-wider mb-1">
                   STEP 2 OF 3 • CLARIFICATION
                 </div>
-                <h2 className="text-base sm:text-xl font-bold text-white tracking-tight">
+                <h2 className="text-base sm:text-xl font-bold text-foreground tracking-tight">
                   {step2Config.question}
                 </h2>
               </div>
@@ -694,7 +681,7 @@ export default function StudentGuidancePage() {
               <button
                 type="button"
                 onClick={() => setCurrentStep(1)}
-                className="text-xs text-slate-400 hover:text-white inline-flex items-center gap-1 shrink-0"
+                className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 shrink-0"
               >
                 <ArrowLeft size={13} />
                 <span>Back</span>
@@ -707,18 +694,18 @@ export default function StudentGuidancePage() {
                   key={sub.id}
                   type="button"
                   onClick={() => handleSelectStep2(sub)}
-                  className="w-full p-4 sm:p-5 rounded-2xl bg-[#161a29] border border-[#232b3f] hover:border-[#18C5D8]/60 hover:bg-[#1a2033] text-left transition flex items-center justify-between gap-4 group"
+                  className="w-full p-4 sm:p-5 rounded-2xl bg-surface hover:bg-surface-secondary border border-border hover:border-primary/60 text-left transition flex items-center justify-between gap-4 group shadow-xs"
                 >
                   <div className="space-y-1">
-                    <div className="font-bold text-sm text-white group-hover:text-[#18C5D8] transition flex items-center gap-2">
+                    <div className="font-bold text-sm text-foreground group-hover:text-primary transition flex items-center gap-2">
                       <span>{sub.label}</span>
                     </div>
-                    <div className="text-xs text-slate-400 leading-relaxed max-w-2xl">
+                    <div className="text-xs text-muted-foreground leading-relaxed max-w-2xl">
                       {sub.desc}
                     </div>
                   </div>
 
-                  <div className="w-8 h-8 rounded-xl bg-[#1b2234] border border-[#283248] text-slate-400 group-hover:text-black group-hover:bg-[#18C5D8] group-hover:border-[#18C5D8] flex items-center justify-center shrink-0 transition">
+                  <div className="w-8 h-8 rounded-xl bg-surface-secondary border border-border text-muted-foreground group-hover:text-primary-foreground group-hover:bg-primary group-hover:border-primary flex items-center justify-center shrink-0 transition">
                     <ArrowRight size={14} />
                   </div>
                 </button>
@@ -728,23 +715,21 @@ export default function StudentGuidancePage() {
         </div>
       )}
 
-      {/* ======================================================== */}
-      {/* STEP 3: Result & Direct Campus Form Connection           */}
-      {/* ======================================================== */}
+      {/* STEP 3: Result & Direct Campus Form Connection */}
       {currentStep === 3 && resolvedItem && (
         <div className="space-y-6 animate-tab-fade">
-          <div className="bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xl space-y-6">
+          <div className="bg-surface border border-border rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xs space-y-6">
             {/* Resolution Banner */}
-            <div className="border-b border-[#21273a] pb-5">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono font-bold mb-3 shadow-xs">
-                <CheckCircle2 size={13} className="text-emerald-400" />
+            <div className="border-b border-border pb-5">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-xs font-mono font-bold mb-3 shadow-xs">
+                <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" />
                 <span>IDENTIFIED WORKFLOW &amp; REQUIREMENTS</span>
               </div>
 
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-foreground tracking-tight">
                 You need: {resolvedItem.title}
               </h2>
-              <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed max-w-3xl">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-2 leading-relaxed max-w-3xl">
                 {resolvedItem.description}
               </p>
             </div>
@@ -752,8 +737,8 @@ export default function StudentGuidancePage() {
             {/* Structured Breakdown: Required Info & Process */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {/* Required Documents / Information */}
-              <div className="bg-[#151a28] border border-[#242b3e] rounded-2xl p-4 sm:p-5 space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-[#18C5D8] uppercase font-mono tracking-wider">
+              <div className="bg-surface-secondary border border-border rounded-2xl p-4 sm:p-5 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-primary uppercase font-mono tracking-wider">
                   <FileText size={15} />
                   <span>Required Information &amp; Documents</span>
                 </div>
@@ -761,20 +746,20 @@ export default function StudentGuidancePage() {
                 <div className="space-y-2">
                   {Array.isArray(resolvedItem.requiredDocs) && resolvedItem.requiredDocs.length > 0 ? (
                     resolvedItem.requiredDocs.map((doc: string, idx: number) => (
-                      <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-200">
-                        <CheckCircle2 size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+                      <div key={idx} className="flex items-start gap-2.5 text-xs text-foreground">
+                        <CheckCircle2 size={14} className="text-emerald-500 shrink-0 mt-0.5" />
                         <span>{doc}</span>
                       </div>
                     ))
                   ) : (
-                    <div className="text-xs text-slate-400">Standard student identity verification.</div>
+                    <div className="text-xs text-muted-foreground">Standard student identity verification.</div>
                   )}
                 </div>
               </div>
 
               {/* End-to-End Campus Process */}
-              <div className="bg-[#151a28] border border-[#242b3e] rounded-2xl p-4 sm:p-5 space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-cyan-400 uppercase font-mono tracking-wider">
+              <div className="bg-surface-secondary border border-border rounded-2xl p-4 sm:p-5 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase font-mono tracking-wider">
                   <Clock size={15} />
                   <span>End-to-End Process Workflow</span>
                 </div>
@@ -782,27 +767,27 @@ export default function StudentGuidancePage() {
                 <div className="space-y-2 text-xs">
                   {Array.isArray(resolvedItem.processSteps) && resolvedItem.processSteps.length > 0 ? (
                     resolvedItem.processSteps.map((step: string, idx: number) => (
-                      <div key={idx} className="flex items-start gap-2 text-slate-200">
-                        <span className="w-5 h-5 rounded-full bg-[#1e273a] text-cyan-300 font-mono font-bold flex items-center justify-center shrink-0 text-[10px]">
+                      <div key={idx} className="flex items-start gap-2 text-foreground">
+                        <span className="w-5 h-5 rounded-full bg-surface text-primary border border-border font-mono font-bold flex items-center justify-center shrink-0 text-[10px]">
                           {idx + 1}
                         </span>
                         <span className="leading-snug">{step}</span>
                       </div>
                     ))
                   ) : (
-                    <div className="text-xs text-slate-400">1. Fill application 2. Review 3. Decision.</div>
+                    <div className="text-xs text-muted-foreground">1. Fill application 2. Review 3. Decision.</div>
                   )}
                 </div>
               </div>
             </div>
 
             {/* Department Ownership & Verification SLA */}
-            <div className="p-4 rounded-xl bg-[#161c2c] border border-[#253046] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono">
-              <div className="flex items-center gap-2 text-slate-300">
-                <Shield size={16} className="text-teal-400 shrink-0" />
+            <div className="p-4 rounded-xl bg-surface-secondary border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono">
+              <div className="flex items-center gap-2 text-foreground">
+                <Shield size={16} className="text-primary shrink-0" />
                 <span>
                   Responsible Office:{' '}
-                  <strong className="text-white">
+                  <strong className="text-foreground">
                     {resolvedItem.responsibleRole === 'ACADEMIC_OFFICER'
                       ? 'Academic Operations Officer (Prof. Sanjeev Mohanty)'
                       : resolvedItem.responsibleRole === 'WARDEN'
@@ -814,27 +799,27 @@ export default function StudentGuidancePage() {
                 </span>
               </div>
 
-              <div className="text-slate-400 text-[11px]">
-                Standard Turnaround SLA: <strong className="text-emerald-400">24 – 48 Hours</strong>
+              <div className="text-muted-foreground text-[11px]">
+                Standard Turnaround SLA: <strong className="text-emerald-600 dark:text-emerald-400 font-bold">24 – 48 Hours</strong>
               </div>
             </div>
 
             {/* FINAL ACTION AREA: Connect directly to existing Nexora form */}
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#21273a]">
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border">
               <button
                 type="button"
                 onClick={handleReset}
-                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#171c2b] hover:bg-[#202738] border border-[#283248] text-slate-300 hover:text-white text-xs font-semibold transition"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-surface hover:bg-surface-secondary border border-border text-foreground text-xs font-semibold transition"
               >
-                ← Explore Other Process
+                &larr; Explore Other Process
               </button>
 
               <Link
                 href={resolvedItem.actionUrl}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#5B20A0] hover:bg-[#6c28be] text-white font-bold text-xs shadow-lg shadow-[#5B20A0]/25 transition-all active:scale-95"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow-xs transition-all active:scale-95"
               >
                 <span>{resolvedItem.actionLabel || 'Start Application'}</span>
-                <ArrowRight size={14} className="text-[#18C5D8]" />
+                <ArrowRight size={14} />
               </Link>
             </div>
           </div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/lib/auth-context';
 import HeroCampusBackground from '@/components/layout/HeroCampusBackground';
+import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import {
   ShieldCheck,
   FileCheck,
@@ -29,34 +30,34 @@ import {
   Terminal,
   Menu,
   X,
-  Radio,
   MapPin,
   RefreshCw,
-  Bell,
-  Cpu,
   Workflow,
   Compass,
 } from 'lucide-react';
 
 export default function HomePage() {
-  const { user, switchPersona, loading } = useAuth();
+  const { switchPersona, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<'lifecycle' | 'gatepass' | 'section44'>('lifecycle');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Live countdown timer for SLA simulation
   const [slaTime, setSlaTime] = useState({ hours: 1, minutes: 42, seconds: 18 });
 
-  // Live simulated active workflow step (cycles every 3 seconds)
-  const [activeStepIndex, setActiveStepIndex] = useState(3); // 0=Submitted, 1=Routed, 2=Assigned, 3=In Repair, 4=Resolved
+  // Live simulated active workflow step (cycles every 3.2 seconds)
+  const [activeStepIndex, setActiveStepIndex] = useState(3);
 
   // Selected campus map node for the interactive digital campus topology
   const [selectedCampusNode, setSelectedCampusNode] = useState<'hostel_b' | 'main_gate' | 'academic' | 'hostel_a' | 'mess'>('hostel_b');
 
   // FSM Active state for Section 6
-  const [activeFsmIndex, setActiveFsmIndex] = useState(4); // 0: CREATE, 1: ROUTE, 2: ASSIGN, 3: ACCEPT, 4: IN_PROGRESS, 5: RESOLVE, 6: CLOSE
+  const [activeFsmIndex, setActiveFsmIndex] = useState(4);
 
   // Live audit log stream simulation
   const [auditIndex, setAuditIndex] = useState(0);
+
+  // Active navigation section spy
+  const [activeSection, setActiveSection] = useState<string>('problem');
 
   // SLA countdown timer effect
   useEffect(() => {
@@ -85,8 +86,6 @@ export default function HomePage() {
     return () => clearInterval(cycle);
   }, []);
 
-  const [activeSection, setActiveSection] = useState<string>('problem');
-
   // Close mobile drawer on resize to desktop
   useEffect(() => {
     const handleResize = () => {
@@ -100,7 +99,6 @@ export default function HomePage() {
 
   // IntersectionObserver for Reveal-on-Scroll and Active Section Spy
   useEffect(() => {
-    // 1. Reveal-on-scroll observer
     const revealElements = document.querySelectorAll('.reveal-on-scroll');
     const revealObserver = new IntersectionObserver(
       (entries) => {
@@ -119,7 +117,6 @@ export default function HomePage() {
 
     revealElements.forEach((el) => revealObserver.observe(el));
 
-    // 2. Active section spy observer for navigation
     const sectionIds = ['problem', 'cockpit', 'personas', 'features', 'public-modes'];
     const sectionElements = sectionIds
       .map((id) => document.getElementById(id))
@@ -156,8 +153,8 @@ export default function HomePage() {
       badge: 'B.Tech CSE • Room B-204',
       desc: 'Submit maintenance requests, monitor live ticket SLAs, generate cryptographic gate passes, and request verified Bonafide certificates.',
       href: '/student/dashboard',
-      borderClass: 'border-blue-500/30 hover:border-blue-400 bg-gradient-to-b from-blue-950/20 via-[#141722] to-transparent hover:shadow-blue-950/30',
-      tagClass: 'bg-blue-900/40 text-blue-300 border-blue-700/50',
+      borderClass: 'border-blue-500/30 hover:border-blue-500 bg-surface dark:bg-gradient-to-b dark:from-blue-950/25 dark:via-[#121625] dark:to-[#0e111b] dark:border-blue-500/30 dark:hover:border-blue-400 hover:shadow-lg transition-all',
+      tagClass: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30',
       icon: Users,
     },
     {
@@ -168,8 +165,8 @@ export default function HomePage() {
       badge: 'Facilities • Work Order Desk',
       desc: 'Receive auto-routed work orders based on keyword detection, accept jobs, update live repair logs, and submit auditable resolution proof.',
       href: '/staff/dashboard',
-      borderClass: 'border-amber-500/30 hover:border-amber-400 bg-gradient-to-b from-amber-950/20 via-[#141722] to-transparent hover:shadow-amber-950/30',
-      tagClass: 'bg-amber-900/40 text-amber-300 border-amber-700/50',
+      borderClass: 'border-amber-500/30 hover:border-amber-500 bg-surface dark:bg-gradient-to-b dark:from-amber-950/25 dark:via-[#121625] dark:to-[#0e111b] dark:border-amber-500/30 dark:hover:border-amber-400 hover:shadow-lg transition-all',
+      tagClass: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
       icon: Wrench,
     },
     {
@@ -180,8 +177,8 @@ export default function HomePage() {
       badge: 'Hostel Administration',
       desc: 'Manage hostel curfew permissions, review leaves with parental consent affirmations, approve gate passes, and audit block facility complaints.',
       href: '/warden/dashboard',
-      borderClass: 'border-emerald-500/30 hover:border-emerald-400 bg-gradient-to-b from-emerald-950/20 via-[#141722] to-transparent hover:shadow-emerald-950/30',
-      tagClass: 'bg-emerald-900/40 text-emerald-300 border-emerald-700/50',
+      borderClass: 'border-emerald-500/30 hover:border-emerald-500 bg-surface dark:bg-gradient-to-b dark:from-emerald-950/25 dark:via-[#121625] dark:to-[#0e111b] dark:border-emerald-500/30 dark:hover:border-emerald-400 hover:shadow-lg transition-all',
+      tagClass: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
       icon: ShieldCheck,
     },
     {
@@ -192,8 +189,8 @@ export default function HomePage() {
       badge: 'Sentry Post • Main Gate 1',
       desc: 'Rapidly verify student egress and ingress via high-contrast optical QR scanner or instant 4-digit fallback PIN entry during network drops.',
       href: '/security/dashboard',
-      borderClass: 'border-cyan-500/30 hover:border-cyan-400 bg-gradient-to-b from-cyan-950/20 via-[#141722] to-transparent hover:shadow-cyan-950/30',
-      tagClass: 'bg-cyan-900/40 text-cyan-300 border-cyan-700/50',
+      borderClass: 'border-cyan-500/30 hover:border-cyan-500 bg-surface dark:bg-gradient-to-b dark:from-cyan-950/25 dark:via-[#121625] dark:to-[#0e111b] dark:border-cyan-500/30 dark:hover:border-cyan-400 hover:shadow-lg transition-all',
+      tagClass: 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/30',
       icon: Key,
     },
     {
@@ -204,8 +201,8 @@ export default function HomePage() {
       badge: 'Institutional Command Center',
       desc: 'Comprehensive operations cockpit, Section 44 cluster alert monitoring, SLA ageing tracking, department efficiency metrics, and audit logs.',
       href: '/admin/dashboard',
-      borderClass: 'border-purple-500/30 hover:border-purple-400 bg-gradient-to-b from-purple-950/20 via-[#141722] to-transparent hover:shadow-purple-950/30',
-      tagClass: 'bg-purple-900/40 text-purple-300 border-purple-700/50',
+      borderClass: 'border-purple-500/30 hover:border-purple-500 bg-surface dark:bg-gradient-to-b dark:from-purple-950/25 dark:via-[#121625] dark:to-[#0e111b] dark:border-purple-500/30 dark:hover:border-purple-400 hover:shadow-lg transition-all',
+      tagClass: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30',
       icon: Layers,
     },
   ];
@@ -285,7 +282,7 @@ export default function HomePage() {
       type: 'RESIDENTIAL',
       status: 'ALERT',
       statusText: 'Plumbing Alert (NX-10291)',
-      tagColor: 'text-rose-400 bg-rose-950/60 border-rose-800/60',
+      tagColor: 'text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/60 border-rose-200 dark:border-rose-800/60',
       pulseColor: 'bg-rose-500',
       details: '7 recurring plumbing complaints in 14 days. Section 44 cluster flagged. Work order NX-10291 in progress by Ramesh Kumar.',
       metrics: 'Rooms: 120 • Active Tickets: 7 • Warden: Dr. S. K. Mohapatra',
@@ -296,8 +293,8 @@ export default function HomePage() {
       type: 'SECURITY POST',
       status: 'ACTIVE',
       statusText: 'Dual-Mode Scan Active',
-      tagColor: 'text-cyan-400 bg-cyan-950/60 border-cyan-800/60',
-      pulseColor: 'bg-cyan-400',
+      tagColor: 'text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/60 border-cyan-200 dark:border-cyan-800/60',
+      pulseColor: 'bg-cyan-500',
       details: 'Real-time sentry station verifying HMAC-SHA256 optical QR codes and 4-digit PIN bypass for student curfews.',
       metrics: 'Today Passes: 84 • PIN Fallbacks: 11 • Sentry Officer: Vikram Singh',
     },
@@ -307,8 +304,8 @@ export default function HomePage() {
       type: 'INSTRUCTIONAL',
       status: 'ACTIVE',
       statusText: 'Electrical Triage (NX-10294)',
-      tagColor: 'text-amber-400 bg-amber-950/60 border-amber-800/60',
-      pulseColor: 'bg-amber-400',
+      tagColor: 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800/60',
+      pulseColor: 'bg-amber-500',
       details: 'Lab 302 power trip auto-routed via regex match "power, switch" to Electrical staff Suresh Verma. SLA compliance 98.4%.',
       metrics: 'Lecture Halls: 18 • Labs: 12 • Open Tickets: 2',
     },
@@ -318,8 +315,8 @@ export default function HomePage() {
       type: 'RESIDENTIAL',
       status: 'NORMAL',
       statusText: 'All Systems Normal',
-      tagColor: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/60',
-      pulseColor: 'bg-emerald-400',
+      tagColor: 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/60',
+      pulseColor: 'bg-emerald-500',
       details: 'No pending urgent facility issues. Daily curfew check completed. Digital leaves synchronized with warden console.',
       metrics: 'Rooms: 110 • Active Tickets: 0 • Curfew Compliance: 100%',
     },
@@ -329,8 +326,8 @@ export default function HomePage() {
       type: 'FOOD SERVICES',
       status: 'NORMAL',
       statusText: 'Mess Pass Scanning',
-      tagColor: 'text-emerald-400 bg-emerald-950/60 border-emerald-800/60',
-      pulseColor: 'bg-emerald-400',
+      tagColor: 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/60',
+      pulseColor: 'bg-emerald-500',
       details: 'Meal authentication active via student roll number barcodes. Inventory and kitchen maintenance regularized.',
       metrics: 'Capacity: 600 • Breakfast/Dinner Active • Rating: 4.6/5',
     },
@@ -360,26 +357,26 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f1118] text-white selection:bg-[#d4af37] selection:text-black font-sans pb-28 sm:pb-24">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20 selection:text-primary font-sans pb-28 sm:pb-24 transition-colors">
       {/* Top Notification Announcement Strip */}
-      <div className="bg-[#141722] border-b border-[#282f42] py-1.5 px-3 sm:px-6 text-xs">
+      <div className="bg-surface-secondary/80 dark:bg-[#141722] border-b border-border dark:border-[#282f42] py-1.5 px-3 sm:px-6 text-xs text-muted-foreground dark:text-gray-300 transition-colors">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 truncate">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/30 whitespace-nowrap shimmer-gold">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-primary/10 text-primary border border-primary/25 dark:bg-[#d4af37]/15 dark:text-[#d4af37] dark:border-[#d4af37]/30 dark:shimmer-gold whitespace-nowrap">
               <Sparkles size={11} className="shrink-0" /> PS 7
             </span>
-            <span className="text-gray-500 hidden md:inline">•</span>
-            <span className="text-gray-400 text-[11px] hidden md:inline truncate">
+            <span className="opacity-40 hidden md:inline">•</span>
+            <span className="text-[11px] hidden md:inline truncate">
               Attendance, Mess, Hostel, Repeat: Campus Life, Debugged
             </span>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-[11px] text-gray-400 shrink-0">
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-              <span className="text-gray-300 hidden sm:inline"> HOSTED LIVE : </span>
+          <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-[11px] shrink-0">
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <span className="hidden sm:inline font-mono">HOSTED LIVE</span>
             </span>
-            <span className="text-gray-600 hidden sm:inline">•</span>
-            <a href="#personas" className="text-[#d4af37] hover:underline font-semibold whitespace-nowrap flex items-center gap-0.5">
+            <span className="opacity-40 hidden sm:inline">•</span>
+            <a href="#personas" className="text-primary dark:text-[#d4af37] hover:underline font-semibold whitespace-nowrap flex items-center gap-0.5">
               <span>Demo Personas</span>
               <span className="text-xs">&darr;</span>
             </a>
@@ -388,12 +385,12 @@ export default function HomePage() {
       </div>
 
       {/* Main Institutional Navigation Bar */}
-      <header className="sticky top-0 z-40 bg-[#0f1118]/95 backdrop-blur-md border-b border-[#232838] transition-all">
+      <header className="sticky top-0 z-40 bg-surface/90 dark:bg-[#0D1019]/95 backdrop-blur-md border-b border-border dark:border-[#232838] transition-all">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
           {/* Brand Logo & Name */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <Link href="/" className="flex items-center gap-2 sm:gap-2.5 group">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg overflow-hidden flex items-center justify-center shadow-md shadow-amber-950/20 group-hover:scale-105 transition-transform shrink-0 border border-[#d4af37]/40 bg-[#141722] p-0.5 animate-subtle-float">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl overflow-hidden flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform shrink-0 border border-border dark:border-[#d4af37]/40 bg-surface dark:bg-[#141722] p-0.5 animate-subtle-float">
                 <Image
                   src="/Logo.png"
                   alt="Nexora Logo"
@@ -404,18 +401,18 @@ export default function HomePage() {
                 />
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="font-black tracking-wider text-sm sm:text-lg text-white whitespace-nowrap">
-                  NEXORA CAMPUS 
+                <span className="font-black tracking-wider text-sm sm:text-lg text-foreground whitespace-nowrap">
+                  NEXORA CAMPUS
                 </span>
-                <span className="hidden sm:inline-flex text-[10px] font-mono tracking-widest text-[#d4af37] uppercase bg-[#1c2130] px-1.5 py-0.5 rounded border border-[#2e3447] whitespace-nowrap">
-                  TEAM CIPHER 
+                <span className="hidden sm:inline-flex text-[10px] font-mono tracking-widest text-primary dark:text-[#d4af37] uppercase bg-surface-secondary dark:bg-[#1c2130] px-1.5 py-0.5 rounded border border-border dark:border-[#2e3447] whitespace-nowrap">
+                  TEAM CIPHER
                 </span>
               </div>
             </Link>
           </div>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1.5 text-xs font-medium text-gray-300">
+          <nav className="hidden lg:flex items-center gap-1 text-xs font-medium text-muted-foreground">
             {[
               { href: '#problem', label: 'The Problem', id: 'problem' },
               { href: '#cockpit', label: 'Engine Preview', id: 'cockpit' },
@@ -430,8 +427,8 @@ export default function HomePage() {
                   href={item.href}
                   className={`px-3 py-1.5 rounded-lg transition-all duration-200 ${
                     isActive
-                      ? 'text-[#d4af37] bg-[#1c2130] border border-[#3d4661]/60 font-semibold shadow-sm'
-                      : 'text-gray-300 hover:text-[#d4af37] hover:bg-[#141722]'
+                      ? 'text-primary bg-primary/10 border border-primary/25 font-semibold shadow-xs dark:text-[#d4af37] dark:bg-[#1c2130] dark:border-[#3d4661]/60'
+                      : 'hover:text-foreground hover:bg-surface-secondary dark:text-gray-300 dark:hover:text-[#d4af37] dark:hover:bg-[#141722]'
                   }`}
                 >
                   {item.label}
@@ -440,25 +437,28 @@ export default function HomePage() {
             })}
           </nav>
 
-          {/* Right Header Controls: Action Buttons & 3-Line Mobile Feature Drawer Button */}
+          {/* Right Header Controls: Theme Switcher, Action Buttons & Mobile Menu */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            {/* Theme Switcher in Public Header */}
+            <ThemeToggle />
+
             {/* Desktop / Tablet Quick Actions */}
             <Link
               href="/register"
-              className="hidden md:flex px-3 py-1.5 rounded-lg border border-[#d4af37]/40 bg-[#1c2233] hover:bg-[#222a3f] text-[#d4af37] text-xs font-semibold transition items-center gap-1.5 active:scale-95 whitespace-nowrap"
+              className="hidden md:flex px-3 py-1.5 rounded-xl border border-primary/30 bg-surface hover:bg-surface-secondary text-primary dark:border-[#d4af37]/40 dark:bg-[#1c2233] dark:hover:bg-[#222a3f] dark:text-[#d4af37] text-xs font-semibold transition items-center gap-1.5 active:scale-95 whitespace-nowrap shadow-xs"
             >
               <span>Student Sign Up</span>
             </Link>
             <Link
               href="/login"
-              className="hidden sm:flex px-3 py-1.5 rounded-lg border border-[#2e3447] bg-[#141722] hover:bg-[#1c2130] text-gray-200 hover:text-white text-xs font-medium transition items-center gap-1.5 active:scale-95 whitespace-nowrap"
+              className="hidden sm:flex px-3 py-1.5 rounded-xl border border-border bg-surface hover:bg-surface-secondary text-foreground dark:border-[#2e3447] dark:bg-[#141722] dark:hover:bg-[#1c2130] dark:text-gray-200 dark:hover:text-white text-xs font-medium transition items-center gap-1.5 active:scale-95 whitespace-nowrap shadow-xs"
             >
-              <Lock size={12} className="text-[#d4af37] shrink-0" />
+              <Lock size={12} className="text-primary shrink-0" />
               <span>Portal Login</span>
             </Link>
             <a
               href="#personas"
-              className="hidden sm:flex px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#d4af37] to-[#c49f2e] text-black hover:brightness-110 text-xs font-bold transition shadow-sm items-center gap-1 active:scale-95 whitespace-nowrap"
+              className="hidden sm:flex px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground dark:bg-gradient-to-r dark:from-[#d4af37] dark:to-[#c49f2e] dark:text-black dark:hover:brightness-110 dark:shadow-md dark:shadow-amber-950/30 text-xs font-bold transition shadow-xs items-center gap-1 active:scale-95 whitespace-nowrap"
             >
               <span>Launch Demo</span>
               <ArrowRight size={12} className="shrink-0" />
@@ -467,47 +467,53 @@ export default function HomePage() {
             {/* Mobile View: Quick 1-Click Launch Button */}
             <a
               href="#personas"
-              className="sm:hidden px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-[#d4af37] to-[#c49f2e] text-black text-xs font-bold transition flex items-center gap-1 active:scale-95 whitespace-nowrap shadow-sm"
+              className="sm:hidden px-2.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground dark:bg-gradient-to-r dark:from-[#d4af37] dark:to-[#c49f2e] dark:text-black text-xs font-bold transition flex items-center gap-1 active:scale-95 whitespace-nowrap shadow-xs"
             >
               <span>Demo</span>
               <ArrowRight size={11} className="shrink-0" />
             </a>
 
-            {/* 3-Line Hamburger Menu in the Upper Right Corner for Mobile & Tablet */}
+            {/* Mobile / Tablet Drawer Trigger */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg bg-[#141722] border border-[#2e3447] text-gray-200 hover:text-[#d4af37] hover:border-[#d4af37]/60 transition-all flex items-center justify-center active:scale-90"
+              className="p-2 rounded-xl bg-surface hover:bg-surface-secondary border border-border text-foreground hover:text-primary transition-all flex items-center justify-center active:scale-90"
               aria-label={mobileMenuOpen ? 'Close Feature Menu' : 'Open All Campus Features'}
               title="All Campus Features & Navigation"
             >
               {mobileMenuOpen ? (
-                <X size={20} className="text-[#d4af37] transition-transform rotate-90 duration-200" />
+                <X size={18} className="text-primary transition-transform rotate-90 duration-200" />
               ) : (
-                <Menu size={20} className="transition-transform duration-200" />
+                <Menu size={18} className="transition-transform duration-200" />
               )}
             </button>
           </div>
         </div>
 
-        {/* 3-Line Upper Right Corner Mobile Feature Drawer / Dropdown */}
+        {/* Mobile Feature Drawer / Dropdown */}
         {mobileMenuOpen && (
-          <div className="border-t border-[#232838] bg-[#0c0e14]/98 backdrop-blur-xl shadow-2xl animate-drawer max-h-[85vh] overflow-y-auto">
+          <div className="border-t border-border bg-surface/98 backdrop-blur-xl shadow-2xl animate-drawer max-h-[85vh] overflow-y-auto">
             <div className="max-w-7xl mx-auto px-4 py-5 space-y-6">
               {/* Header inside drawer */}
-              <div className="flex items-center justify-between pb-3 border-b border-[#1f2536]">
+              <div className="flex items-center justify-between pb-3 border-b border-border">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-ping" />
-                  <span className="text-xs font-bold font-mono tracking-wider text-[#d4af37] uppercase">
-                    ALL CAMPUS FEATURES & PORTALS
+                  <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
+                  <span className="text-xs font-bold font-mono tracking-wider text-primary uppercase">
+                    ALL CAMPUS FEATURES &amp; PORTALS
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-gray-500">BPUT 2026</span>
+                <span className="text-[10px] font-mono text-muted-foreground">BPUT 2026</span>
+              </div>
+
+              {/* Theme Switcher in Mobile Drawer */}
+              <div className="p-3 rounded-xl bg-surface-secondary/70 border border-border flex items-center justify-between">
+                <span className="text-xs font-semibold text-foreground">Theme Preference</span>
+                <ThemeToggle variant="segmented" />
               </div>
 
               {/* Feature Section 1: 5 Interactive Role Portals */}
               <div>
-                <div className="text-[11px] font-mono font-bold text-gray-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                  <Users size={13} className="text-[#d4af37]" />
+                <div className="text-[11px] font-mono font-bold text-muted-foreground uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                  <Users size={13} className="text-primary" />
                   <span>Interactive Role Personas (1-Click Demo)</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -518,17 +524,17 @@ export default function HomePage() {
                         key={p.key}
                         onClick={() => handleMobilePersonaLaunch(p.key)}
                         disabled={loading}
-                        className="p-3 rounded-xl bg-[#141722] border border-[#282f42] hover:border-[#d4af37]/60 text-left transition flex items-center justify-between group active:scale-[0.98]"
+                        className="p-3 rounded-xl bg-surface hover:bg-surface-secondary border border-border hover:border-primary/50 text-left transition flex items-center justify-between group active:scale-[0.98]"
                       >
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-[#1c2130] border border-[#2e3447] flex items-center justify-center text-[#d4af37] shrink-0">
+                          <div className="w-8 h-8 rounded-lg bg-surface-secondary border border-border flex items-center justify-center text-primary shrink-0">
                             <IconComponent size={15} />
                           </div>
                           <div>
-                            <div className="text-xs font-bold text-white group-hover:text-[#d4af37] transition">
+                            <div className="text-xs font-bold text-foreground group-hover:text-primary transition">
                               {p.name}
                             </div>
-                            <div className="text-[10px] text-gray-400">{p.roleTitle}</div>
+                            <div className="text-[10px] text-muted-foreground">{p.roleTitle}</div>
                           </div>
                         </div>
                         <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border font-semibold ${p.tagClass}`}>
@@ -542,150 +548,74 @@ export default function HomePage() {
 
               {/* Feature Section 2: Public Modes & Accessibility */}
               <div>
-                <div className="text-[11px] font-mono font-bold text-gray-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                  <Building2 size={13} className="text-amber-400" />
-                  <span>Public & Alternative Channels</span>
+                <div className="text-[11px] font-mono font-bold text-muted-foreground uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                  <Building2 size={13} className="text-amber-500" />
+                  <span>Public &amp; Alternative Channels</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <Link
                     href="/lite"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="p-3 rounded-xl bg-[#141722] border border-[#282f42] hover:border-amber-500/60 transition flex items-center justify-between group"
+                    className="p-3 rounded-xl bg-surface hover:bg-surface-secondary border border-border hover:border-amber-500/60 transition flex items-center justify-between group"
                   >
                     <div className="flex items-center gap-2">
-                      <Smartphone size={16} className="text-amber-400 shrink-0" />
+                      <Smartphone size={16} className="text-amber-500 shrink-0" />
                       <div>
-                        <div className="text-xs font-bold text-gray-200 group-hover:text-amber-300">Nexora Lite</div>
-                        <div className="text-[10px] text-gray-400">&lt; minimal mode</div>
+                        <div className="text-xs font-bold text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400">Nexora Lite</div>
+                        <div className="text-[10px] text-muted-foreground">&lt; 25KB minimal mode</div>
                       </div>
                     </div>
-                    <ArrowRight size={12} className="text-gray-500 group-hover:translate-x-0.5 transition-transform" />
+                    <ArrowRight size={12} className="text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                   </Link>
 
                   <Link
                     href="/kiosk"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="p-3 rounded-xl bg-[#141722] border border-[#282f42] hover:border-cyan-500/60 transition flex items-center justify-between group"
+                    className="p-3 rounded-xl bg-surface hover:bg-surface-secondary border border-border hover:border-cyan-500/60 transition flex items-center justify-between group"
                   >
                     <div className="flex items-center gap-2">
-                      <Monitor size={16} className="text-cyan-400 shrink-0" />
+                      <Monitor size={16} className="text-cyan-500 shrink-0" />
                       <div>
-                        <div className="text-xs font-bold text-gray-200 group-hover:text-cyan-300">Campus Touch Kiosk</div>
-                        <div className="text-[10px] text-gray-400">Roll number terminal</div>
+                        <div className="text-xs font-bold text-foreground group-hover:text-cyan-600 dark:group-hover:text-cyan-400">Campus Touch Kiosk</div>
+                        <div className="text-[10px] text-muted-foreground">Roll number terminal</div>
                       </div>
                     </div>
-                    <ArrowRight size={12} className="text-gray-500 group-hover:translate-x-0.5 transition-transform" />
+                    <ArrowRight size={12} className="text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                   </Link>
 
                   <Link
                     href="/verify/NX-BON-2026-00199"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="p-3 rounded-xl bg-[#141722] border border-[#282f42] hover:border-emerald-500/60 transition flex items-center justify-between group"
+                    className="p-3 rounded-xl bg-surface hover:bg-surface-secondary border border-border hover:border-emerald-500/60 transition flex items-center justify-between group"
                   >
                     <div className="flex items-center gap-2">
-                      <FileCheck size={16} className="text-emerald-400 shrink-0" />
+                      <FileCheck size={16} className="text-emerald-500 shrink-0" />
                       <div>
-                        <div className="text-xs font-bold text-gray-200 group-hover:text-emerald-300">Document Registry</div>
-                        <div className="text-[10px] text-gray-400">Zero-login certificate check</div>
+                        <div className="text-xs font-bold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Document Registry</div>
+                        <div className="text-[10px] text-muted-foreground">Zero-login verification</div>
                       </div>
                     </div>
-                    <ArrowRight size={12} className="text-gray-500 group-hover:translate-x-0.5 transition-transform" />
+                    <ArrowRight size={12} className="text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                   </Link>
                 </div>
               </div>
 
-              {/* Feature Section 3: In-Page Quick Navigation */}
-              <div>
-                <div className="text-[11px] font-mono font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Layers size={13} className="text-cyan-400" />
-                  <span>Landing Page Sections</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5 text-xs">
-                  <a
-                    href="#campus-pulse"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="px-3 py-1.5 rounded-lg bg-[#181c28] border border-[#282f42] text-gray-300 hover:text-[#d4af37] transition"
-                  >
-                    Live Campus Pulse
-                  </a>
-                  <a
-                    href="#cockpit"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="px-3 py-1.5 rounded-lg bg-[#181c28] border border-[#282f42] text-gray-300 hover:text-[#d4af37] transition"
-                  >
-                    Request Engine (NX-10291)
-                  </a>
-                  <a
-                    href="#campus-map"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="px-3 py-1.5 rounded-lg bg-[#181c28] border border-[#282f42] text-gray-300 hover:text-[#d4af37] transition"
-                  >
-                    Digital Campus Topology
-                  </a>
-                  <a
-                    href="#problem"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="px-3 py-1.5 rounded-lg bg-[#181c28] border border-[#282f42] text-gray-300 hover:text-[#d4af37] transition"
-                  >
-                    Problem & Transformation
-                  </a>
-                  <a
-                    href="#fsm-lifecycle"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="px-3 py-1.5 rounded-lg bg-[#181c28] border border-[#282f42] text-gray-300 hover:text-[#d4af37] transition"
-                  >
-                    FSM Lifecycle
-                  </a>
-                  <a
-                    href="#personas"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="px-3 py-1.5 rounded-lg bg-[#181c28] border border-[#282f42] text-gray-300 hover:text-[#d4af37] transition"
-                  >
-                    Role Ecosystem
-                  </a>
-                  <a
-                    href="#command-center"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="px-3 py-1.5 rounded-lg bg-[#181c28] border border-[#282f42] text-gray-300 hover:text-[#d4af37] transition"
-                  >
-                    Command Center Preview
-                  </a>
-                  <a
-                    href="#features"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="px-3 py-1.5 rounded-lg bg-[#181c28] border border-[#282f42] text-gray-300 hover:text-[#d4af37] transition"
-                  >
-                    Six Capabilities
-                  </a>
-                </div>
-              </div>
-
-              {/* Feature Section 4: Auth & Action Buttons */}
-              <div className="pt-3 border-t border-[#1f2434] flex flex-col sm:flex-row gap-2">
+              {/* Feature Section 3: Auth & Action Buttons */}
+              <div className="pt-3 border-t border-border flex flex-col sm:flex-row gap-2">
                 <Link
                   href="/register"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full py-2.5 rounded-xl border border-[#d4af37]/40 bg-[#1c2233] hover:bg-[#222a3f] text-[#d4af37] text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95"
+                  className="w-full text-center py-2.5 rounded-xl border border-primary/30 bg-surface hover:bg-surface-secondary text-primary font-bold text-xs"
                 >
-                  <Users size={13} />
-                  <span>Create Student Account</span>
+                  Student Sign Up
                 </Link>
                 <Link
                   href="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full py-2.5 rounded-xl border border-[#2e3447] bg-[#141722] hover:bg-[#1c2130] text-gray-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95"
+                  className="w-full text-center py-2.5 rounded-xl border border-border bg-surface hover:bg-surface-secondary text-foreground font-semibold text-xs"
                 >
-                  <Lock size={13} className="text-[#d4af37]" />
-                  <span>Standard Account Login</span>
+                  Portal Login
                 </Link>
-                <a
-                  href="#personas"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c49f2e] text-black text-xs font-bold flex items-center justify-center gap-1.5 transition active:scale-95 shadow-md shadow-amber-950/20"
-                >
-                  <span>Launch Interactive Demo</span>
-                  <ArrowRight size={13} />
-                </a>
               </div>
             </div>
           </div>
@@ -693,57 +623,56 @@ export default function HomePage() {
       </header>
 
       {/* 1. HERO SECTION */}
-      <section className="relative pt-8 pb-12 sm:pt-14 sm:pb-20 overflow-hidden">
-        {/* Live Campus Operations Background Infrastructure (CSS/SVG) - Stage 1 */}
+      <section className="relative pt-8 pb-12 sm:pt-16 sm:pb-24 overflow-hidden">
         <HeroCampusBackground />
 
         {/* Ambient Top Glow Layer */}
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 w-full max-w-4xl h-56 sm:h-72 bg-gradient-to-b from-[#d4af37]/10 via-[#1c2338]/15 to-transparent blur-3xl pointer-events-none animate-ambient-glow" />
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 w-full max-w-4xl h-56 sm:h-72 bg-gradient-to-b from-primary/10 via-transparent to-transparent dark:from-[#d4af37]/10 dark:via-[#1c2338]/15 dark:to-transparent blur-3xl pointer-events-none animate-ambient-glow" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#161a25] border border-[#2e3447] text-[11px] sm:text-xs font-medium text-[#d4af37] mb-5 shadow-sm shimmer-gold">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-ping" />
-              <span>TEAM CIPHER PRESENTs </span>
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface border border-border text-[11px] sm:text-xs font-medium text-primary dark:bg-[#161a25] dark:border-[#2e3447] dark:text-[#d4af37] dark:shimmer-gold mb-5 shadow-xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping" />
+              <span className="font-mono tracking-wider font-semibold">CAMPUS OPERATIONS PLATFORM</span>
             </div>
 
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12] mb-5 text-white">
-              ONE CAMPUS {' '}
-              <br className="hidden sm:inline" />
-              <span className="bg-gradient-to-r from-[#d4af37] via-[#f8e7ab] to-[#d4af37] bg-clip-text text-transparent">
-               ONE PLATFORM
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12] mb-5 text-foreground">
+              ONE CAMPUS <br className="hidden sm:inline" />
+              <span className="text-primary dark:bg-gradient-to-r dark:from-[#d4af37] dark:via-[#f8e7ab] dark:to-[#d4af37] dark:bg-clip-text dark:text-transparent">
+                ONE PLATFORM
               </span>
             </h1>
 
-            <p className="text-xs sm:text-base text-gray-300 leading-relaxed font-normal mb-8 max-w-2xl mx-auto px-2">
-Handle complaints, maintenance, gate passes, hostel leaves, certificates, and operational workflows through Nexora Campus.            </p>
+            <p className="text-xs sm:text-base text-muted-foreground leading-relaxed font-normal mb-8 max-w-2xl mx-auto px-2">
+              Handle complaints, maintenance, gate passes, hostel leaves, certificates, and operational workflows through Nexora Campus.
+            </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 mb-8 w-full max-w-md sm:max-w-none mx-auto">
               <a
                 href="#personas"
-                className="w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#c49f2e] text-black font-bold text-xs sm:text-sm hover:brightness-110 shadow-lg shadow-amber-950/30 transition flex items-center justify-center gap-2 active:scale-95 hover:scale-[1.02]"
+                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground dark:bg-gradient-to-r dark:from-[#d4af37] dark:to-[#c49f2e] dark:text-black dark:hover:brightness-110 dark:shadow-lg dark:shadow-amber-950/30 font-bold text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2 active:scale-95"
               >
                 <span>Interactive Persona Launcher</span>
                 <ArrowRight size={14} />
               </a>
               <Link
                 href="/login"
-                className="w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-xl border border-[#2e3447] bg-[#141722] hover:bg-[#1c2130] text-gray-200 text-xs sm:text-sm font-medium transition flex items-center justify-center gap-2 active:scale-95 hover:border-gray-500"
+                className="w-full sm:w-auto px-6 py-3 rounded-xl border border-border bg-surface hover:bg-surface-secondary text-foreground dark:border-[#2e3447] dark:bg-[#141722] dark:hover:bg-[#1c2130] dark:text-gray-200 text-xs sm:text-sm font-semibold transition flex items-center justify-center gap-2 active:scale-95"
               >
                 <span>Direct Account Sign In</span>
               </Link>
             </div>
 
-            {/* LIVE CAMPUS OPERATIONS FLOW VISUALIZATION (Subtle Real Workflow Animation) */}
-            <div className="p-3 sm:p-4 rounded-2xl bg-[#141722]/90 border border-[#282f42] max-w-3xl mx-auto mb-8 shadow-xl text-left relative overflow-hidden">
-              <div className="flex items-center justify-between border-b border-[#232838] pb-2 mb-3">
+            {/* LIVE CAMPUS OPERATIONS FLOW VISUALIZATION */}
+            <div className="p-3 sm:p-4 rounded-2xl bg-surface border border-border dark:bg-[#141722]/90 dark:border-[#282f42] max-w-3xl mx-auto mb-8 shadow-xs dark:shadow-xl text-left relative overflow-hidden">
+              <div className="flex items-center justify-between border-b border-border pb-2 mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[11px] font-mono font-bold text-gray-300 uppercase tracking-wider">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[11px] font-mono font-bold text-foreground uppercase tracking-wider">
                     Live Campus Request Lifecycle Signal
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-[#d4af37]">
+                <span className="text-[10px] font-mono text-primary font-bold">
                   Active Step {activeStepIndex + 1}/5
                 </span>
               </div>
@@ -751,24 +680,24 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
               {/* Connected Stage Nodes */}
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-center text-[10px] font-mono">
                 {[
-                  { label: 'STUDENT', sub: 'Aryan Created', color: 'border-blue-500 text-blue-300' },
-                  { label: 'NEXORA ENGINE', sub: 'Regex Matched', color: 'border-purple-500 text-purple-300' },
-                  { label: 'STAFF ASSIGNED', sub: 'Ramesh Plumber', color: 'border-amber-500 text-amber-300' },
-                  { label: 'IN PROGRESS', sub: 'SLA Clock Active', color: 'border-emerald-500 text-emerald-300' },
-                  { label: 'RESOLVED ✓', sub: 'Audited & Closed', color: 'border-gold text-gold' },
+                  { label: 'STUDENT', sub: 'Aryan Created' },
+                  { label: 'NEXORA ENGINE', sub: 'Regex Matched' },
+                  { label: 'STAFF ASSIGNED', sub: 'Ramesh Plumber' },
+                  { label: 'IN PROGRESS', sub: 'SLA Clock Active' },
+                  { label: 'RESOLVED ✓', sub: 'Audited & Closed' },
                 ].map((st, idx) => {
                   const isActive = activeStepIndex === idx;
                   return (
                     <div
                       key={idx}
-                      className={`p-2 rounded-lg border transition-all duration-300 ${
+                      className={`p-2 rounded-xl border transition-all duration-300 ${
                         isActive
-                          ? 'bg-[#1f2536] border-[#d4af37] text-white shadow-md shadow-amber-950/40 ring-1 ring-[#d4af37]/60'
-                          : 'bg-[#10131d] border-[#232838] text-gray-400 opacity-60'
+                          ? 'bg-primary/10 border-primary text-primary font-bold shadow-xs dark:bg-[#1f2536] dark:border-[#d4af37] dark:text-[#d4af37] dark:shadow-md dark:shadow-amber-950/40 dark:ring-1 dark:ring-[#d4af37]/60'
+                          : 'bg-surface-secondary border-border text-muted-foreground opacity-75 dark:bg-[#10131d] dark:border-[#232838] dark:text-gray-400 dark:opacity-60'
                       }`}
                     >
-                      <div className={`font-bold ${isActive ? 'text-[#d4af37]' : ''}`}>{st.label}</div>
-                      <div className="text-[9px] text-gray-500 mt-0.5 truncate">{st.sub}</div>
+                      <div className="font-bold">{st.label}</div>
+                      <div className="text-[9px] opacity-75 mt-0.5 truncate">{st.sub}</div>
                     </div>
                   );
                 })}
@@ -776,145 +705,143 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
             </div>
 
             {/* Quick Metrics Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 max-w-3xl mx-auto pt-3 border-t border-[#232838] text-left">
-              <div className="p-3 rounded-xl bg-[#141722]/80 border border-[#232838] hover:border-[#3d4661] hover:-translate-y-1 transition-all duration-200">
-                <div className="text-[11px] text-gray-400 font-medium">Campus Roles</div>
-                <div className="text-sm sm:text-base font-bold font-mono text-white mt-0.5">5 Integrated</div>
-                <div className="text-[10px] text-gray-500 font-mono">Student → Admin</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 max-w-3xl mx-auto pt-3 border-t border-border text-left">
+              <div className="p-3 rounded-xl bg-surface border border-border hover:border-primary/40 dark:bg-[#141722]/80 dark:border-[#232838] dark:hover:border-[#3d4661] transition-all">
+                <div className="text-[11px] text-muted-foreground font-medium">Campus Roles</div>
+                <div className="text-sm sm:text-base font-bold font-mono text-foreground mt-0.5">5 Integrated</div>
+                <div className="text-[10px] text-muted-foreground font-mono">Student → Admin</div>
               </div>
-              <div className="p-3 rounded-xl bg-[#141722]/80 border border-[#232838] hover:border-[#3d4661] hover:-translate-y-1 transition-all duration-200">
-                <div className="text-[11px] text-gray-400 font-medium">Ticket Engine</div>
-                <div className="text-sm sm:text-base font-bold font-mono text-emerald-400 mt-0.5">Finite State</div>
-                <div className="text-[10px] text-gray-500 font-mono">Immutable Audit Logs</div>
+              <div className="p-3 rounded-xl bg-surface border border-border hover:border-primary/40 dark:bg-[#141722]/80 dark:border-[#232838] dark:hover:border-[#3d4661] transition-all">
+                <div className="text-[11px] text-muted-foreground font-medium">Ticket Engine</div>
+                <div className="text-sm sm:text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">Finite State</div>
+                <div className="text-[10px] text-muted-foreground font-mono">Immutable Audit Logs</div>
               </div>
-              <div className="p-3 rounded-xl bg-[#141722]/80 border border-[#232838] hover:border-[#3d4661] hover:-translate-y-1 transition-all duration-200">
-                <div className="text-[11px] text-gray-400 font-medium">Gate Pass Sentry</div>
-                <div className="text-sm sm:text-base font-bold font-mono text-cyan-400 mt-0.5">Dual-Mode</div>
-                <div className="text-[10px] text-gray-500 font-mono">HMAC QR + 4-Digit PIN</div>
+              <div className="p-3 rounded-xl bg-surface border border-border hover:border-primary/40 dark:bg-[#141722]/80 dark:border-[#232838] dark:hover:border-[#3d4661] transition-all">
+                <div className="text-[11px] text-muted-foreground font-medium">Gate Pass Sentry</div>
+                <div className="text-sm sm:text-base font-bold font-mono text-cyan-600 dark:text-cyan-400 mt-0.5">Dual-Mode</div>
+                <div className="text-[10px] text-muted-foreground font-mono">HMAC QR + 4-Digit PIN</div>
               </div>
-              <div className="p-3 rounded-xl bg-[#141722]/80 border border-[#232838] hover:border-[#3d4661] hover:-translate-y-1 transition-all duration-200">
-                <div className="text-[11px] text-gray-400 font-medium">Bandwidth Profile</div>
-                <div className="text-sm sm:text-base font-bold font-mono text-[#d4af37] mt-0.5">  Low Internt </div>
-                <div className="text-[10px] text-gray-500 font-mono">Lite & Kiosk Interfaces</div>
+              <div className="p-3 rounded-xl bg-surface border border-border hover:border-primary/40 dark:bg-[#141722]/80 dark:border-[#232838] dark:hover:border-[#3d4661] transition-all">
+                <div className="text-[11px] text-muted-foreground font-medium">Bandwidth Profile</div>
+                <div className="text-sm sm:text-base font-bold font-mono text-primary mt-0.5">Low Bandwidth</div>
+                <div className="text-[10px] text-muted-foreground font-mono">Lite &amp; Kiosk Interfaces</div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 3. LIVE CAMPUS PULSE SECTION */}
-      <section id="campus-pulse" className="scroll-mt-20 py-8 sm:py-12 bg-[#12151f]/70 border-y border-[#232838]">
+      {/* 2. LIVE CAMPUS PULSE SECTION */}
+      <section id="campus-pulse" className="scroll-mt-20 py-8 sm:py-12 bg-surface-secondary/50 border-y border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 reveal-on-scroll">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
             <div className="flex items-center gap-2.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <h2 className="text-sm sm:text-base font-bold tracking-wider font-mono text-white uppercase flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <h2 className="text-sm sm:text-base font-bold tracking-wider font-mono text-foreground uppercase flex items-center gap-2">
                 <span>LIVE CAMPUS PULSE</span>
-                <span className="text-[10px] font-normal px-2 py-0.5 rounded bg-[#1f2536] text-[#d4af37] border border-[#3d4661]">
+                <span className="text-[10px] font-normal px-2 py-0.5 rounded bg-surface text-primary border border-border">
                   DEMO TELEMETRY
                 </span>
               </h2>
             </div>
-            <div className="text-xs text-gray-400 font-mono flex items-center gap-2">
-              <RefreshCw size={12} className="animate-spin text-emerald-400" />
-              <span>SLA Target: 98.4% Compliance • BPUT Central Server Sync</span>
+            <div className="text-xs text-muted-foreground font-mono flex items-center gap-2">
+              <RefreshCw size={12} className="animate-spin text-emerald-500" />
+              <span>SLA Target: 98.4% Compliance • Central Campus Engine</span>
             </div>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            <div className="p-4 rounded-2xl bg-[#141722] border border-[#282f42] hover:border-blue-500/50 transition group">
-              <div className="flex items-center justify-between text-gray-400 mb-1">
+            <div className="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition group shadow-xs">
+              <div className="flex items-center justify-between text-muted-foreground mb-1">
                 <span className="text-xs font-mono">OPEN REQUESTS</span>
-                <span className="w-2 h-2 rounded-full bg-blue-400" />
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
               </div>
-              <div className="text-3xl font-black font-mono text-white group-hover:text-blue-400 transition">18</div>
-              <div className="text-[11px] text-gray-500 mt-1">Across 4 Hostel Blocks</div>
+              <div className="text-3xl font-black font-mono text-foreground group-hover:text-primary transition">18</div>
+              <div className="text-[11px] text-muted-foreground mt-1">Across 4 Hostel Blocks</div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#141722] border border-[#282f42] hover:border-amber-500/50 transition group">
-              <div className="flex items-center justify-between text-gray-400 mb-1">
+            <div className="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition group shadow-xs">
+              <div className="flex items-center justify-between text-muted-foreground mb-1">
                 <span className="text-xs font-mono">IN PROGRESS</span>
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
               </div>
-              <div className="text-3xl font-black font-mono text-amber-300 group-hover:text-amber-200 transition">07</div>
-              <div className="text-[11px] text-gray-500 mt-1">Work Orders Dispatched</div>
+              <div className="text-3xl font-black font-mono text-amber-600 dark:text-amber-400 group-hover:text-amber-500 transition">07</div>
+              <div className="text-[11px] text-muted-foreground mt-1">Work Orders Dispatched</div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#141722] border border-rose-950/60 hover:border-rose-700/60 transition group">
-              <div className="flex items-center justify-between text-gray-400 mb-1">
-                <span className="text-xs font-mono text-rose-300">SLA AT RISK</span>
+            <div className="p-4 rounded-2xl bg-surface border border-rose-200 dark:border-rose-950/60 hover:border-rose-400 transition group shadow-xs">
+              <div className="flex items-center justify-between text-muted-foreground mb-1">
+                <span className="text-xs font-mono text-rose-600 dark:text-rose-400">SLA AT RISK</span>
                 <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
               </div>
-              <div className="text-3xl font-black font-mono text-rose-400 group-hover:text-rose-300 transition">03</div>
-              <div className="text-[11px] text-gray-500 mt-1">&gt; 24h Threshold Flagged</div>
+              <div className="text-3xl font-black font-mono text-rose-600 dark:text-rose-400 transition">03</div>
+              <div className="text-[11px] text-muted-foreground mt-1">&gt; 24h Threshold Flagged</div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#141722] border border-[#282f42] hover:border-emerald-500/50 transition group">
-              <div className="flex items-center justify-between text-gray-400 mb-1">
-                <span className="text-xs font-mono text-emerald-400">RESOLVED TODAY</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            <div className="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition group shadow-xs">
+              <div className="flex items-center justify-between text-muted-foreground mb-1">
+                <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400">RESOLVED TODAY</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
               </div>
-              <div className="text-3xl font-black font-mono text-emerald-300 group-hover:text-emerald-200 transition">142</div>
-              <div className="text-[11px] text-gray-500 mt-1">OTP Confirmed by Students</div>
+              <div className="text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400 transition">142</div>
+              <div className="text-[11px] text-muted-foreground mt-1">OTP Confirmed by Students</div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 2. LIVE REQUEST ENGINE SIMULATION COCKPIT */}
+      {/* 3. LIVE REQUEST ENGINE SIMULATION COCKPIT */}
       <section id="cockpit" className="scroll-mt-20 py-14 sm:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-10">
-            <span className="text-xs font-mono text-[#d4af37] tracking-wider uppercase font-semibold">
-              OPERATIONAL HARDWARE & TELEMETRY
+            <span className="text-xs font-mono text-primary tracking-wider uppercase font-semibold">
+              OPERATIONAL HARDWARE &amp; TELEMETRY
             </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-white mt-2">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground mt-2">
               The Nexora Request Engine in Action
             </h2>
-            <p className="text-xs sm:text-sm text-gray-400 mt-2">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
               Real-time representation of live ticket lifecycle, cryptographic dual-mode security, and algorithmic recurrence clustering.
             </p>
           </div>
 
           <div className="max-w-4xl mx-auto">
-            <div className="rounded-2xl border border-[#2e3447] bg-[#141722] shadow-2xl overflow-hidden hover:border-[#3d4661] transition-colors reveal-on-scroll hover-card-elevate">
+            <div className="rounded-2xl border border-border bg-surface shadow-xl overflow-hidden hover:border-primary/40 transition-colors reveal-on-scroll hover-card-elevate">
               {/* Window Header with Responsive Mobile/Laptop Layout */}
-              <div className="p-3 sm:px-4 sm:py-3 bg-[#181c28] border-b border-[#282f42]">
+              <div className="p-3 sm:px-4 sm:py-3 bg-surface-secondary border-b border-border">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-4">
-                  {/* Top Bar on Mobile / Left on Desktop */}
                   <div className="flex items-center justify-between sm:justify-start gap-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80 inline-block hover:brightness-125 transition" />
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block hover:brightness-125 transition" />
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block hover:brightness-125 transition" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80 inline-block" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block" />
                     </div>
-                    <span className="text-[11px] font-mono text-gray-400 truncate">
+                    <span className="text-[11px] font-mono text-muted-foreground truncate">
                       <span className="hidden sm:inline">nexora://operations-engine/</span>live-telemetry
                     </span>
-                    <span className="sm:hidden text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-400 border border-emerald-800/40">
+                    <span className="sm:hidden text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
                       LIVE
                     </span>
                   </div>
 
-                  {/* Simulator Switcher Segmented Tabs - Full Width on Mobile, Compact on Laptop */}
-                  <div className="grid grid-cols-3 gap-1 bg-[#10131d] p-1 rounded-xl border border-[#282f42] w-full sm:w-auto text-[11px]">
+                  {/* Simulator Switcher Segmented Tabs */}
+                  <div className="grid grid-cols-3 gap-1 bg-surface p-1 rounded-xl border border-border w-full sm:w-auto text-[11px]">
                     <button
                       onClick={() => setActiveTab('lifecycle')}
                       className={`px-2 py-1.5 sm:px-3 sm:py-1 rounded-lg font-semibold text-center whitespace-nowrap transition-all duration-200 ${
                         activeTab === 'lifecycle'
-                          ? 'bg-[#1f2536] text-[#d4af37] shadow-sm border border-[#3d4661]/40'
-                          : 'text-gray-400 hover:text-gray-200'
+                          ? 'bg-primary text-primary-foreground shadow-xs'
+                          : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      <span className="sm:hidden">Request FSM</span>
-                      <span className="hidden sm:inline">Request FSM</span>
+                      <span>Request FSM</span>
                     </button>
                     <button
                       onClick={() => setActiveTab('gatepass')}
                       className={`px-2 py-1.5 sm:px-3 sm:py-1 rounded-lg font-semibold text-center whitespace-nowrap transition-all duration-200 ${
                         activeTab === 'gatepass'
-                          ? 'bg-[#1f2536] text-[#d4af37] shadow-sm border border-[#3d4661]/40'
-                          : 'text-gray-400 hover:text-gray-200'
+                          ? 'bg-primary text-primary-foreground shadow-xs'
+                          : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       <span className="sm:hidden">Gate Pass</span>
@@ -924,8 +851,8 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
                       onClick={() => setActiveTab('section44')}
                       className={`px-2 py-1.5 sm:px-3 sm:py-1 rounded-lg font-semibold text-center whitespace-nowrap transition-all duration-200 ${
                         activeTab === 'section44'
-                          ? 'bg-[#1f2536] text-[#d4af37] shadow-sm border border-[#3d4661]/40'
-                          : 'text-gray-400 hover:text-gray-200'
+                          ? 'bg-primary text-primary-foreground shadow-xs'
+                          : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       <span className="sm:hidden">Section 44</span>
@@ -939,26 +866,25 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
               <div className="p-4 sm:p-6 min-h-[320px]">
                 {activeTab === 'lifecycle' && (
                   <div className="space-y-4 animate-tab-fade">
-                    {/* Live Ticket Header with Real-Time SLA Countdown Clock */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 border-b border-[#232838] pb-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 border-b border-border pb-3">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[11px] sm:text-xs font-mono px-2 py-0.5 rounded bg-blue-950/60 border border-blue-800/60 text-blue-300 font-bold whitespace-nowrap shrink-0">
+                          <span className="text-[11px] sm:text-xs font-mono px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-blue-700 dark:text-blue-300 font-bold whitespace-nowrap shrink-0">
                             TICKET #NX-10291
                           </span>
-                          <span className="text-xs sm:text-sm font-semibold text-gray-200">
+                          <span className="text-xs sm:text-sm font-semibold text-foreground">
                             Hostel Block B, Room 204 — Severe Water Pipe Leak
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-[11px] text-gray-400 mt-1 font-mono">
+                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-1 font-mono">
                           <span>Reported: Aryan Khan (Student)</span>
                           <span>•</span>
-                          <span className="text-[#d4af37]">Assigned: Ramesh Kumar (Plumbing)</span>
+                          <span className="text-primary font-semibold">Assigned: Ramesh Kumar (Plumbing)</span>
                         </div>
                       </div>
                       <div className="self-start sm:self-auto">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-amber-950/50 text-amber-300 border border-amber-800/60 whitespace-nowrap font-mono shadow-sm">
-                          <Clock size={12} className="shrink-0 animate-spin text-amber-400" />
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 whitespace-nowrap font-mono shadow-xs">
+                          <Clock size={12} className="shrink-0 animate-spin text-amber-500" />
                           <span>
                             SLA: {String(slaTime.hours).padStart(2, '0')}:
                             {String(slaTime.minutes).padStart(2, '0')}:
@@ -968,12 +894,7 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
                       </div>
                     </div>
 
-                    {/* Stepper Pipeline with Live State Animation Indicator */}
                     <div>
-                      <div className="flex items-center justify-between sm:hidden mb-1.5 text-[10px] text-gray-500 font-mono">
-                        <span>LIFECYCLE PROGRESSION</span>
-                        <span>Swipe steps →</span>
-                      </div>
                       <div className="flex sm:grid sm:grid-cols-5 gap-2 overflow-x-auto pb-2 no-scrollbar snap-x">
                         {[
                           { title: '1. SUBMITTED', sub: 'Created', time: '10:14 AM', icon: CheckCircle2, complete: true },
@@ -986,35 +907,35 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
                             key={idx}
                             className={`min-w-[135px] sm:min-w-0 snap-start shrink-0 sm:shrink p-2.5 rounded-xl border text-left transition-all ${
                               step.active
-                                ? 'bg-[#1f2536] border-amber-700/60 ring-1 ring-amber-600/40 shadow-md shadow-amber-950/30'
+                                ? 'bg-primary/10 border-primary shadow-xs'
                                 : step.complete
-                                ? 'bg-[#181c28] border-emerald-900/40'
-                                : 'bg-[#181c28] border-[#282f42] opacity-60'
+                                ? 'bg-surface-secondary border-border'
+                                : 'bg-surface border-border opacity-50'
                             }`}
                           >
                             <div
-                              className={`text-[10px] font-mono flex items-center gap-1 ${
-                                step.active ? 'text-amber-400' : step.complete ? 'text-emerald-400' : 'text-gray-500'
+                              className={`text-[10px] font-mono flex items-center gap-1 font-bold ${
+                                step.active ? 'text-primary' : step.complete ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
                               }`}
                             >
                               <step.icon size={11} className={step.active ? 'animate-spin' : ''} />
                               <span>{step.title}</span>
                             </div>
-                            <div className="text-xs font-semibold text-gray-200 mt-0.5">{step.sub}</div>
-                            <div className="text-[10px] text-gray-500 font-mono">{step.time}</div>
+                            <div className="text-xs font-semibold text-foreground mt-0.5">{step.sub}</div>
+                            <div className="text-[10px] text-muted-foreground font-mono">{step.time}</div>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-[#10131d] border border-[#232838] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-gray-400">
+                    <div className="p-3 rounded-xl bg-surface-secondary border border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-muted-foreground">
                       <div className="flex items-start sm:items-center gap-2">
-                        <Terminal size={14} className="text-[#d4af37] shrink-0 mt-0.5 sm:mt-0" />
-                        <span className="font-mono text-[10px] sm:text-[11px] text-gray-300">
+                        <Terminal size={14} className="text-primary shrink-0 mt-0.5 sm:mt-0" />
+                        <span className="font-mono text-[10px] sm:text-[11px] text-foreground">
                           Deterministic Keyword Rule: &quot;pipe, leak, water&quot; &rarr; Auto-Assigned to Spec: PLUMBING
                         </span>
                       </div>
-                      <span className="text-[10px] text-emerald-400 font-mono font-semibold shrink-0">
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-semibold shrink-0">
                         Zero AI Hallucinations
                       </span>
                     </div>
@@ -1024,42 +945,41 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
                 {activeTab === 'gatepass' && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 items-center animate-tab-fade">
                     <div className="space-y-2.5 text-left">
-                      <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-cyan-950/60 text-cyan-300 border border-cyan-800/50">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30">
                         <ShieldCheck size={12} /> GATE SENTRY VERIFICATION
                       </div>
-                      <h4 className="text-sm sm:text-base font-bold text-white">Dual-Mode Curfew Gate Pass</h4>
-                      <p className="text-xs text-gray-400 leading-relaxed">
+                      <h4 className="text-sm sm:text-base font-bold text-foreground">Dual-Mode Curfew Gate Pass</h4>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
                         Issued to Aryan Khan for City Library visit. Validated against warden digital permission with cryptographic HMAC-SHA256 signature and offline 4-digit fallback PIN.
                       </p>
                       <div className="space-y-1.5 text-xs font-mono pt-1">
-                        <div className="flex items-center justify-between text-gray-400 border-b border-[#282f42] pb-1">
+                        <div className="flex items-center justify-between text-muted-foreground border-b border-border pb-1">
                           <span>Pass Identifier:</span>
-                          <span className="text-white font-bold">GP-2026-0842</span>
+                          <span className="text-foreground font-bold">GP-2026-0842</span>
                         </div>
-                        <div className="flex items-center justify-between text-gray-400 border-b border-[#282f42] pb-1">
+                        <div className="flex items-center justify-between text-muted-foreground border-b border-border pb-1">
                           <span>Warden Approval:</span>
-                          <span className="text-emerald-400">Dr. S. K. Mohapatra (VERIFIED)</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Dr. S. K. Mohapatra (VERIFIED)</span>
                         </div>
-                        <div className="flex items-center justify-between text-gray-400">
+                        <div className="flex items-center justify-between text-muted-foreground">
                           <span>Return Curfew:</span>
-                          <span className="text-amber-300 font-bold">Today, 21:00 hrs (Strict)</span>
+                          <span className="text-amber-600 dark:text-amber-400 font-bold">Today, 21:00 hrs (Strict)</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-[#10131d] border border-[#282f42] rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center text-center relative overflow-hidden">
-                      <div className="relative w-24 h-24 sm:w-28 sm:h-28 bg-white p-2 rounded-xl shadow-md flex items-center justify-center">
+                    <div className="bg-surface-secondary border border-border rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                      <div className="relative w-24 h-24 sm:w-28 sm:h-28 bg-white p-2 rounded-xl shadow-xs flex items-center justify-center">
                         <QrCode size={88} className="text-black" />
-                        {/* Animated Laser Scanner Sweep */}
                         <div className="absolute left-1 right-1 h-0.5 bg-cyan-500 shadow-[0_0_8px_#06b6d4] animate-scan-beam pointer-events-none" />
                       </div>
                       <div className="mt-3 text-center">
-                        <span className="text-[10px] text-gray-400 uppercase font-mono block">Offline Sentry PIN</span>
-                        <span className="text-xl sm:text-2xl font-black font-mono text-[#d4af37] tracking-widest bg-[#181c28] px-3.5 py-0.5 rounded-lg border border-[#3d4661] inline-block mt-0.5 shadow-inner">
+                        <span className="text-[10px] text-muted-foreground uppercase font-mono block">Offline Sentry PIN</span>
+                        <span className="text-xl sm:text-2xl font-black font-mono text-primary tracking-widest bg-surface px-3.5 py-0.5 rounded-lg border border-border inline-block mt-0.5 shadow-xs">
                           4 8 1 9
                         </span>
                       </div>
-                      <span className="text-[10px] text-gray-500 mt-2 font-mono">
+                      <span className="text-[10px] text-muted-foreground mt-2 font-mono">
                         Instant optical camera scan or keypad entry at Gate 1
                       </span>
                     </div>
@@ -1068,40 +988,40 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
 
                 {activeTab === 'section44' && (
                   <div className="space-y-3.5 text-left animate-tab-fade">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 border-b border-[#232838] pb-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 border-b border-border pb-3">
                       <div className="flex items-center gap-2">
                         <div className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
-                        <span className="text-xs font-bold text-rose-300 font-mono uppercase tracking-wider">
+                        <span className="text-xs font-bold text-rose-700 dark:text-rose-400 font-mono uppercase tracking-wider">
                           Section 44 Cluster Detected: Systemic Failure Hotspot
                         </span>
                       </div>
-                      <span className="text-[10px] sm:text-[11px] font-mono text-gray-400">
+                      <span className="text-[10px] sm:text-[11px] font-mono text-muted-foreground">
                         Density Scan: 14-Day Window
                       </span>
                     </div>
 
-                    <div className="p-3.5 rounded-xl bg-rose-950/30 border border-rose-900/60 text-xs">
-                      <div className="font-semibold text-rose-200 mb-1 flex items-center gap-2">
-                        <AlertTriangle size={14} className="text-rose-400 shrink-0" />
+                    <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-xs">
+                      <div className="font-semibold text-rose-800 dark:text-rose-200 mb-1 flex items-center gap-2">
+                        <AlertTriangle size={14} className="text-rose-600 dark:text-rose-400 shrink-0" />
                         <span>Hostel Block B • 7 Plumbing Incidents in 14 Days</span>
                       </div>
-                      <p className="text-gray-300 text-[11px] sm:text-xs leading-relaxed">
+                      <p className="text-muted-foreground text-[11px] sm:text-xs leading-relaxed">
                         Rather than treating isolated tap leaks as separate random jobs, Section 44 Intelligence clusters repeated failures. Analysis indicates main riser pipe pressure valve fatigue in Block B East Wing.
                       </p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-xs">
-                      <div className="p-3 rounded-xl bg-[#181c28] border border-[#282f42] hover:border-gray-600 transition">
-                        <span className="text-[10px] text-gray-400 block font-mono">Cluster Threshold</span>
-                        <span className="text-sm sm:text-base font-bold font-mono text-white mt-0.5 block">&ge; 3 Issues / 14 Days</span>
+                      <div className="p-3 rounded-xl bg-surface border border-border hover:border-border-subtle transition">
+                        <span className="text-[10px] text-muted-foreground block font-mono">Cluster Threshold</span>
+                        <span className="text-sm sm:text-base font-bold font-mono text-foreground mt-0.5 block">&ge; 3 Issues / 14 Days</span>
                       </div>
-                      <div className="p-3 rounded-xl bg-[#181c28] border border-[#282f42] hover:border-rose-700 transition">
-                        <span className="text-[10px] text-gray-400 block font-mono">Current Incidence</span>
-                        <span className="text-sm sm:text-base font-bold font-mono text-rose-400 mt-0.5 block">7 Active Tickets</span>
+                      <div className="p-3 rounded-xl bg-surface border border-border hover:border-rose-400 transition">
+                        <span className="text-[10px] text-muted-foreground block font-mono">Current Incidence</span>
+                        <span className="text-sm sm:text-base font-bold font-mono text-rose-600 dark:text-rose-400 mt-0.5 block">7 Active Tickets</span>
                       </div>
-                      <div className="p-3 rounded-xl bg-[#181c28] border border-[#282f42] hover:border-amber-700 transition">
-                        <span className="text-[10px] text-gray-400 block font-mono">Recommended Action</span>
-                        <span className="text-sm sm:text-base font-bold font-mono text-amber-300 mt-0.5 block">Preventive Overhaul</span>
+                      <div className="p-3 rounded-xl bg-surface border border-border hover:border-amber-400 transition">
+                        <span className="text-[10px] text-muted-foreground block font-mono">Recommended Action</span>
+                        <span className="text-sm sm:text-base font-bold font-mono text-amber-600 dark:text-amber-400 mt-0.5 block">Preventive Overhaul</span>
                       </div>
                     </div>
                   </div>
@@ -1113,89 +1033,76 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
       </section>
 
       {/* 4. DIGITAL CAMPUS MAP & TOPOLOGY VISUALIZATION */}
-      <section id="campus-map" className="scroll-mt-20 py-14 sm:py-20 bg-[#12151f]/50 border-t border-[#232838]">
+      <section id="campus-map" className="scroll-mt-20 py-14 sm:py-20 bg-surface-secondary/40 border-t border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-10">
-            <span className="text-xs font-mono text-[#d4af37] tracking-wider uppercase font-semibold flex items-center justify-center gap-1.5">
+            <span className="text-xs font-mono text-primary tracking-wider uppercase font-semibold flex items-center justify-center gap-1.5">
               <Compass size={13} /> PHYSICAL CAMPUS INFRASTRUCTURE
             </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-white mt-2">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground mt-2">
               Interactive Digital Campus Topology
             </h2>
-            <p className="text-xs sm:text-sm text-gray-400 mt-2">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
               Every request maps to a physical location. Click any building node to inspect live operations, occupancy, and active work orders.
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl mx-auto items-start reveal-on-scroll">
-            {/* SVG Schematic Campus Map */}
-            <div className="lg:col-span-2 p-5 sm:p-6 rounded-3xl bg-[#141722] border border-[#2e3447] shadow-xl relative overflow-hidden hover-card-elevate">
-              <div className="flex items-center justify-between pb-3 border-b border-[#232838] mb-4 text-xs font-mono text-gray-400">
+            {/* Schematic Campus Map */}
+            <div className="lg:col-span-2 p-5 sm:p-6 rounded-3xl bg-surface border border-border shadow-md relative overflow-hidden hover-card-elevate">
+              <div className="flex items-center justify-between pb-3 border-b border-border mb-4 text-xs font-mono text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <MapPin size={13} className="text-[#d4af37]" />
-                  <span>COEB  CAMPUS GRID • </span>
+                  <MapPin size={13} className="text-primary" />
+                  <span>CAMPUS GRID</span>
                 </div>
-                <span className="text-emerald-400">5 Active Monitored Zones</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">5 Active Monitored Zones</span>
               </div>
 
               {/* Schematic Map Layout */}
               <div className="relative min-h-[280px] sm:min-h-[320px] flex items-center justify-center">
-                {/* SVG Connecting Path Grid */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
-                  {/* Lines connecting buildings */}
-                  <line x1="20%" y1="30%" x2="50%" y2="50%" stroke="#2e3447" strokeWidth="2" strokeDasharray="4 4" className="animate-dash-flow" />
-                  <line x1="80%" y1="30%" x2="50%" y2="50%" stroke="#2e3447" strokeWidth="2" strokeDasharray="4 4" className="animate-dash-flow" />
-                  <line x1="50%" y1="50%" x2="20%" y2="80%" stroke="#2e3447" strokeWidth="2" strokeDasharray="4 4" className="animate-dash-flow" />
-                  <line x1="50%" y1="50%" x2="80%" y2="80%" stroke="#2e3447" strokeWidth="2" strokeDasharray="4 4" className="animate-dash-flow" />
-                  <line x1="50%" y1="50%" x2="50%" y2="92%" stroke="#2e3447" strokeWidth="2" strokeDasharray="4 4" className="animate-dash-flow" />
+                <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-40 dark:opacity-70" xmlns="http://www.w3.org/2000/svg">
+                  <line x1="20%" y1="30%" x2="50%" y2="50%" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" className="text-border animate-dash-flow" />
+                  <line x1="80%" y1="30%" x2="50%" y2="50%" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" className="text-border animate-dash-flow" />
+                  <line x1="20%" y1="80%" x2="50%" y2="50%" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" className="text-border animate-dash-flow" />
+                  <line x1="80%" y1="80%" x2="50%" y2="50%" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" className="text-border animate-dash-flow" />
                 </svg>
 
-                {/* Node: Hostel Block A (Top Left) */}
-                <button
-                  onClick={() => setSelectedCampusNode('hostel_a')}
-                  className={`absolute top-[15%] left-[8%] sm:left-[15%] p-3 rounded-2xl border text-left transition-all group ${
-                    selectedCampusNode === 'hostel_a'
-                      ? 'bg-[#1f2536] border-[#d4af37] ring-2 ring-[#d4af37]/40 shadow-lg'
-                      : 'bg-[#161a25] border-[#2e3447] hover:border-gray-500'
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span className="text-xs font-bold text-white">Hostel A</span>
-                  </div>
-                  <div className="text-[10px] text-gray-400 font-mono mt-0.5">Normal</div>
-                </button>
+                {/* Node: Central Engine (Center) */}
+                <div className="relative z-10 p-3 sm:p-4 rounded-2xl bg-surface border-2 border-primary shadow-lg text-center">
+                  <div className="text-xs font-mono font-bold text-primary">NEXORA CORE</div>
+                  <div className="text-[10px] text-muted-foreground font-mono">Central FSM Engine</div>
+                </div>
 
-                {/* Node: Hostel Block B (Top Right - Active Alert) */}
+                {/* Node: Hostel B (Top Left) */}
                 <button
                   onClick={() => setSelectedCampusNode('hostel_b')}
-                  className={`absolute top-[15%] right-[8%] sm:right-[15%] p-3 rounded-2xl border text-left transition-all group ${
+                  className={`absolute top-[10%] left-[8%] sm:left-[15%] p-3 rounded-2xl border text-left transition-all group ${
                     selectedCampusNode === 'hostel_b'
-                      ? 'bg-[#221720] border-rose-500 ring-2 ring-rose-500/40 shadow-lg shadow-rose-950/50'
-                      : 'bg-[#161a25] border-rose-900/60 hover:border-rose-500'
+                      ? 'bg-primary/10 border-primary ring-2 ring-primary/40 shadow-md'
+                      : 'bg-surface border-border hover:border-primary/50'
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-                    <span className="text-xs font-bold text-rose-300">Hostel B</span>
+                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                    <span className="text-xs font-bold text-foreground">Hostel B</span>
                   </div>
-                  <div className="text-[10px] text-rose-400 font-mono mt-0.5">Plumbing Alert</div>
+                  <div className="text-[10px] text-muted-foreground font-mono mt-0.5">Plumbing Hotspot</div>
                 </button>
 
-                {/* Node: Academic Complex (Center) */}
+                {/* Node: Academic Block (Top Right) */}
                 <button
                   onClick={() => setSelectedCampusNode('academic')}
-                  className={`p-4 rounded-2xl border text-left transition-all z-10 ${
+                  className={`absolute top-[10%] right-[8%] sm:right-[15%] p-3 rounded-2xl border text-left transition-all group ${
                     selectedCampusNode === 'academic'
-                      ? 'bg-[#1f2536] border-[#d4af37] ring-2 ring-[#d4af37]/40 shadow-xl'
-                      : 'bg-[#181c28] border-[#2e3447] hover:border-amber-500/60'
+                      ? 'bg-primary/10 border-primary ring-2 ring-primary/40 shadow-md'
+                      : 'bg-surface border-border hover:border-primary/50'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-                    <span className="text-xs sm:text-sm font-bold text-white">Academic & Labs</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    <span className="text-xs font-bold text-foreground">Academic Block</span>
                   </div>
-                  <div className="text-[10px] text-amber-300 font-mono mt-0.5">Main Block • Electrical</div>
+                  <div className="text-[10px] text-muted-foreground font-mono mt-0.5">Labs &amp; Lectures</div>
                 </button>
 
                 {/* Node: Central Mess (Bottom Left) */}
@@ -1203,15 +1110,15 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
                   onClick={() => setSelectedCampusNode('mess')}
                   className={`absolute bottom-[10%] left-[8%] sm:left-[15%] p-3 rounded-2xl border text-left transition-all group ${
                     selectedCampusNode === 'mess'
-                      ? 'bg-[#1f2536] border-[#d4af37] ring-2 ring-[#d4af37]/40 shadow-lg'
-                      : 'bg-[#161a25] border-[#2e3447] hover:border-gray-500'
+                      ? 'bg-primary/10 border-primary ring-2 ring-primary/40 shadow-md'
+                      : 'bg-surface border-border hover:border-primary/50'
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span className="text-xs font-bold text-white">Central Mess</span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="text-xs font-bold text-foreground">Central Mess</span>
                   </div>
-                  <div className="text-[10px] text-gray-400 font-mono mt-0.5">Dining Pass</div>
+                  <div className="text-[10px] text-muted-foreground font-mono mt-0.5">Dining Pass</div>
                 </button>
 
                 {/* Node: Main Gate Sentry (Bottom Right) */}
@@ -1219,20 +1126,20 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
                   onClick={() => setSelectedCampusNode('main_gate')}
                   className={`absolute bottom-[10%] right-[8%] sm:right-[15%] p-3 rounded-2xl border text-left transition-all group ${
                     selectedCampusNode === 'main_gate'
-                      ? 'bg-[#14222a] border-cyan-400 ring-2 ring-cyan-400/40 shadow-lg shadow-cyan-950/40'
-                      : 'bg-[#161a25] border-[#2e3447] hover:border-cyan-500/60'
+                      ? 'bg-cyan-500/10 border-cyan-500 ring-2 ring-cyan-500/40 shadow-md'
+                      : 'bg-surface border-border hover:border-cyan-500/60'
                   }`}
                 >
                   <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                    <span className="text-xs font-bold text-cyan-300">Main Gate</span>
+                    <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+                    <span className="text-xs font-bold text-cyan-700 dark:text-cyan-300">Main Gate</span>
                   </div>
-                  <div className="text-[10px] text-gray-400 font-mono mt-0.5">Sentry Scanner</div>
+                  <div className="text-[10px] text-muted-foreground font-mono mt-0.5">Sentry Scanner</div>
                 </button>
               </div>
 
-              <div className="text-[11px] text-gray-500 font-mono text-center pt-2 border-t border-[#232838]">
-                Interactive Campus Topological Model • Coordinates bound to BPUT Campus Master Plan
+              <div className="text-[11px] text-muted-foreground font-mono text-center pt-2 border-t border-border">
+                Interactive Campus Topological Model • Connected to verified campus nodes
               </div>
             </div>
 
@@ -1240,10 +1147,10 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
             {(() => {
               const node = campusNodes.find((n) => n.id === selectedCampusNode) || campusNodes[0];
               return (
-                <div className="p-6 rounded-3xl bg-[#141722] border border-[#2e3447] shadow-xl text-left h-full flex flex-col justify-between">
+                <div className="p-6 rounded-3xl bg-surface border border-border shadow-md text-left h-full flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-3">
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#181c28] text-gray-400 border border-[#282f42]">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-secondary text-muted-foreground border border-border">
                         {node.type}
                       </span>
                       <span className={`text-[10px] font-mono px-2 py-0.5 rounded border font-semibold ${node.tagColor}`}>
@@ -1251,25 +1158,25 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
                       </span>
                     </div>
 
-                    <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-foreground mb-2 flex items-center gap-2">
                       <span className={`w-2.5 h-2.5 rounded-full ${node.pulseColor} shrink-0`} />
                       <span>{node.title}</span>
                     </h3>
 
-                    <p className="text-xs text-gray-300 leading-relaxed mb-4">
+                    <p className="text-xs text-muted-foreground leading-relaxed mb-4">
                       {node.details}
                     </p>
 
-                    <div className="p-3 rounded-xl bg-[#181c28] border border-[#282f42] text-[11px] text-gray-400 font-mono space-y-1.5">
-                      <div className="text-gray-300 font-semibold">{node.metrics}</div>
-                      <div className="text-emerald-400">Integrated telemetry: Online</div>
+                    <div className="p-3 rounded-xl bg-surface-secondary border border-border text-[11px] text-muted-foreground font-mono space-y-1.5">
+                      <div className="text-foreground font-semibold">{node.metrics}</div>
+                      <div className="text-emerald-600 dark:text-emerald-400 font-semibold">Integrated telemetry: Online</div>
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t border-[#232838] mt-4">
+                  <div className="pt-4 border-t border-border mt-4">
                     <a
                       href="#personas"
-                      className="w-full py-2.5 rounded-xl bg-[#1f2536] border border-[#3d4661] hover:border-[#d4af37] text-xs font-semibold text-gray-200 hover:text-white transition flex items-center justify-center gap-1.5"
+                      className="w-full py-2.5 rounded-xl bg-surface hover:bg-surface-secondary border border-border hover:border-primary text-xs font-semibold text-foreground transition flex items-center justify-center gap-1.5"
                     >
                       <span>Simulate Persona in this Sector</span>
                       <ArrowRight size={13} />
@@ -1283,62 +1190,62 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
       </section>
 
       {/* 5. PROBLEM → SOLUTION SECTION */}
-      <section id="problem" className="scroll-mt-20 py-14 sm:py-20 bg-[#141722]/50 border-t border-[#232838]">
+      <section id="problem" className="scroll-mt-20 py-14 sm:py-20 bg-surface border-t border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
-            <span className="text-xs font-mono text-[#d4af37] tracking-wider uppercase font-semibold">
+            <span className="text-xs font-mono text-primary tracking-wider uppercase font-semibold">
               THE REALITY OF CAMPUS ADMINISTRATION
             </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-white mt-2">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground mt-2">
               From Broken Campus Registers to Operational Precision
             </h2>
-            <p className="text-xs sm:text-sm text-gray-400 mt-3 leading-relaxed">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-3 leading-relaxed">
               Traditional campus administration relies on disjointed manual processes that waste student hours and leave staff without audit visibility. Nexora replaces the entire paper trail.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6 max-w-5xl mx-auto reveal-on-scroll">
             {/* Legacy Campus Friction */}
-            <div className="p-5 sm:p-7 rounded-2xl bg-gradient-to-b from-rose-950/15 via-[#161a25] to-[#141722] border border-rose-950/60 shadow-lg hover:border-rose-900/80 transition-all duration-300 hover-card-elevate stagger-1">
+            <div className="p-5 sm:p-7 rounded-2xl bg-rose-500/5 border border-rose-500/20 shadow-xs transition-all duration-300 hover-card-elevate stagger-1">
               <div className="flex items-center justify-between gap-2 mb-5">
-                <div className="flex items-center gap-2 text-rose-400 text-xs sm:text-sm font-bold uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400 text-xs sm:text-sm font-bold uppercase tracking-wider">
                   <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
                   <span>Fragmented Campus Reality</span>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-950/60 text-rose-300 border border-rose-800/40">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/30">
                   BEFORE
                 </span>
               </div>
-              <ul className="space-y-3.5 text-xs text-gray-300">
+              <ul className="space-y-3.5 text-xs text-muted-foreground">
                 {legacyVsNexora.map((item, idx) => (
                   <li key={idx} className="flex items-start gap-2.5">
-                    <span className="w-4 h-4 rounded-full bg-rose-950/80 text-rose-400 flex items-center justify-center shrink-0 text-[11px] font-mono mt-0.5 font-bold">
+                    <span className="w-4 h-4 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 text-[11px] font-mono mt-0.5 font-bold">
                       &times;
                     </span>
-                    <span className="leading-relaxed text-gray-400">{item.legacy}</span>
+                    <span className="leading-relaxed">{item.legacy}</span>
                   </li>
                 ))}
               </ul>
             </div>
 
             {/* The Nexora Standard */}
-            <div className="p-5 sm:p-7 rounded-2xl bg-gradient-to-b from-amber-950/15 via-[#161b28] to-[#141722] border border-[#d4af37]/40 shadow-xl shadow-amber-950/10 hover:border-[#d4af37]/80 transition-all duration-300 hover-card-elevate stagger-2">
+            <div className="p-5 sm:p-7 rounded-2xl bg-primary/5 border border-primary/25 shadow-xs transition-all duration-300 hover-card-elevate stagger-2">
               <div className="flex items-center justify-between gap-2 mb-5">
-                <div className="flex items-center gap-2 text-[#d4af37] text-xs sm:text-sm font-bold uppercase tracking-wider">
-                  <span className="w-2 h-2 rounded-full bg-[#d4af37] animate-pulse" />
-                  <span>With Our  Nexora Campus </span>
+                <div className="flex items-center gap-2 text-primary text-xs sm:text-sm font-bold uppercase tracking-wider">
+                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  <span>With Nexora Campus</span>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#22283a] text-gold border border-[#3d4661]">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/25 font-bold">
                   NOW
                 </span>
               </div>
-              <ul className="space-y-3.5 text-xs text-gray-200">
+              <ul className="space-y-3.5 text-xs text-foreground">
                 {legacyVsNexora.map((item, idx) => (
                   <li key={idx} className="flex items-start gap-2.5">
-                    <span className="w-4 h-4 rounded-full bg-emerald-950/80 text-emerald-400 flex items-center justify-center shrink-0 text-[10px] font-mono mt-0.5">
+                    <span className="w-4 h-4 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 text-[10px] font-mono mt-0.5">
                       <Check size={11} />
                     </span>
-                    <span className="leading-relaxed text-gray-200 font-medium">{item.nexora}</span>
+                    <span className="leading-relaxed font-medium">{item.nexora}</span>
                   </li>
                 ))}
               </ul>
@@ -1348,22 +1255,21 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
       </section>
 
       {/* 6. REQUEST ENGINE FSM LIFECYCLE VISUALIZATION */}
-      <section id="fsm-lifecycle" className="scroll-mt-20 py-14 sm:py-20 bg-[#0f1118] border-t border-[#232838]">
+      <section id="fsm-lifecycle" className="scroll-mt-20 py-14 sm:py-20 bg-background border-t border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-10">
-            <span className="text-xs font-mono text-[#d4af37] tracking-wider uppercase font-semibold flex items-center justify-center gap-1.5">
+            <span className="text-xs font-mono text-primary tracking-wider uppercase font-semibold flex items-center justify-center gap-1.5">
               <Workflow size={13} /> FINITE-STATE MACHINE ARCHITECTURE
             </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-white mt-2">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground mt-2">
               RFC-Compliant State Machine Pipeline
             </h2>
-            <p className="text-xs sm:text-sm text-gray-400 mt-2">
-              Every transition is strictly validated on the backend. Illegal transitions (e.g. CLOSED → APPROVED) trigger immediate HTTP 422 rejections.
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+              Every transition is strictly validated on the backend. Illegal transitions trigger immediate validation rejection.
             </p>
           </div>
 
-          <div className="max-w-5xl mx-auto p-6 sm:p-8 rounded-3xl bg-[#141722] border border-[#2e3447] shadow-2xl reveal-on-scroll hover-card-elevate">
-            {/* Animated FSM State Pipeline */}
+          <div className="max-w-5xl mx-auto p-6 sm:p-8 rounded-3xl bg-surface border border-border shadow-md reveal-on-scroll hover-card-elevate">
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-center mb-6">
               {fsmSteps.map((fsm, i) => {
                 const isActive = activeFsmIndex === i;
@@ -1373,12 +1279,12 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
                     onClick={() => setActiveFsmIndex(i)}
                     className={`p-3 rounded-xl border text-left transition-all ${
                       isActive
-                        ? 'bg-[#1f2536] border-[#d4af37] text-white ring-2 ring-[#d4af37]/40 shadow-lg'
-                        : 'bg-[#10131d] border-[#232838] text-gray-400 hover:border-gray-600'
+                        ? 'bg-primary/10 border-primary shadow-xs'
+                        : 'bg-surface-secondary border-border hover:border-primary/40'
                     }`}
                   >
-                    <div className="text-[10px] font-mono text-gray-500">{i + 1}. {fsm.role}</div>
-                    <div className={`text-xs font-extrabold font-mono mt-0.5 ${isActive ? 'text-[#d4af37]' : 'text-gray-200'}`}>
+                    <div className="text-[10px] font-mono text-muted-foreground font-semibold">{fsm.role}</div>
+                    <div className={`text-xs font-bold mt-0.5 ${isActive ? 'text-primary' : 'text-foreground'}`}>
                       {fsm.name}
                     </div>
                   </button>
@@ -1386,252 +1292,136 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
               })}
             </div>
 
-            {/* Currently Selected FSM State Detail */}
-            <div className="p-4 rounded-2xl bg-[#181c28] border border-[#282f42] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-mono">
+            <div className="p-4 rounded-2xl bg-surface-secondary border border-border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <span className="text-gray-400">ACTIVE STAGE: </span>
-                <span className="text-[#d4af37] font-bold">{fsmSteps[activeFsmIndex].name}</span>
-                <span className="text-gray-500 ml-2">({fsmSteps[activeFsmIndex].desc})</span>
+                <span className="font-mono text-primary font-bold uppercase text-[11px] block">
+                  Active Stage: {fsmSteps[activeFsmIndex].name} ({fsmSteps[activeFsmIndex].role})
+                </span>
+                <span className="text-muted-foreground text-xs">{fsmSteps[activeFsmIndex].desc}</span>
               </div>
-              <div className="text-emerald-400 text-[11px] shrink-0">
-                ✓ Validated with Immutable DB Transition Log
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 7. CONNECTED ROLE ECOSYSTEM */}
-      <section id="personas" className="scroll-mt-20 py-16 sm:py-20 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-[#141722] border border-[#2e3447] rounded-3xl p-5 sm:p-10 shadow-2xl relative overflow-hidden reveal-on-scroll">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#282f42] pb-6 mb-8">
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[#1f2536] border border-[#3d4661] text-xs font-mono text-[#d4af37] mb-2 shimmer-gold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>1-CLICK PRESENTATION LAUNCHER</span>
-                </div>
-                <h3 className="text-xl sm:text-3xl font-extrabold text-white">
-                  Experience Nexora by Campus Persona
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-400 mt-1 max-w-2xl">
-                  Click any role card to immediately authenticate as that persona with pre-seeded campus records and role-specific permissions.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-                <Link
-                  href="/register"
-                  className="px-3.5 py-2 rounded-xl bg-[#202738] border border-[#d4af37]/45 hover:border-[#d4af37] text-xs font-semibold text-[#d4af37] hover:text-[#e4c257] transition flex items-center gap-1.5 active:scale-95 shadow-xs"
-                >
-                  <Users size={13} />
-                  <span>Student Sign Up</span>
-                </Link>
-                <Link
-                  href="/login"
-                  className="px-3.5 py-2 rounded-xl bg-[#1c2130] border border-[#2e3447] hover:border-[#d4af37]/60 text-xs font-medium text-gray-200 hover:text-white transition flex items-center gap-1.5 active:scale-95"
-                >
-                  <Lock size={13} className="text-[#d4af37]" />
-                  <span>Portal Login</span>
-                </Link>
-              </div>
-            </div>
-
-            {/* 5 Persona Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-              {personas.map((p) => {
-                const IconComponent = p.icon;
-                const isCurrentActive = user && (
-                  p.key === 'aryan' ? user.username === 'aryan' :
-                  p.key === 'ramesh' ? user.username === 'ramesh' :
-                  p.key === 'warden' ? user.username === 'warden_b' :
-                  p.key === 'security' ? user.username === 'security_gate1' :
-                  p.key === 'admin' ? user.username === 'admin' : false
-                );
-
-                return (
-                  <button
-                    key={p.key}
-                    type="button"
-                    onClick={() => switchPersona(p.key)}
-                    disabled={loading}
-                    className={`p-5 rounded-2xl border text-left transition-all duration-300 group flex flex-col justify-between relative hover:-translate-y-1.5 hover:shadow-2xl active:scale-[0.98] ${p.borderClass} ${
-                      isCurrentActive ? 'ring-2 ring-[#d4af37]' : ''
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-[#181c28] border border-[#2e3447] flex items-center justify-center text-gray-300 group-hover:text-[#d4af37] group-hover:scale-105 transition-all shrink-0">
-                            <IconComponent size={16} />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-sm text-white group-hover:text-[#d4af37] transition-colors">
-                              {p.name}
-                            </h4>
-                            <span className="text-[11px] text-gray-400 block">{p.roleTitle}</span>
-                          </div>
-                        </div>
-                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded border font-semibold shrink-0 ${p.tagClass}`}>
-                          {p.role}
-                        </span>
-                      </div>
-
-                      <p className="text-xs text-gray-300 mb-4 leading-relaxed font-normal">
-                        {p.desc}
-                      </p>
-                    </div>
-
-                    <div className="pt-3 border-t border-white/5 flex items-center justify-between text-[11px] text-gray-400 font-mono">
-                      <span className="truncate mr-2">{p.badge}</span>
-                      <span className="flex items-center gap-1 text-[#d4af37] font-semibold group-hover:translate-x-1.5 transition-transform shrink-0">
-                        Launch Demo <ArrowRight size={13} />
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-
-              {/* Public Quick Access Hub */}
-              <div className="p-5 rounded-2xl border border-[#2e3447] bg-[#181c28] flex flex-col justify-between hover:border-[#3d4661] transition-all duration-300">
-                <div>
-                  <div className="flex items-center gap-2 text-gray-200 font-bold text-sm mb-1">
-                    <Building2 size={16} className="text-[#d4af37]" />
-                    <span>Public Portals & Offline Access</span>
-                  </div>
-                  <p className="text-xs text-gray-400 mb-4 leading-relaxed">
-                    Zero-login operational entry points designed for non-authenticated campus users, kiosks, and low-connectivity environments:
-                  </p>
-
-                  <div className="space-y-2 text-xs">
-                    <Link
-                      href="/lite"
-                      className="flex items-center justify-between p-2.5 rounded-xl bg-[#141722] hover:bg-[#1f2536] border border-[#282f42] hover:border-amber-700/60 transition group active:scale-95"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Smartphone size={14} className="text-amber-400" />
-                        <div>
-                          <div className="font-semibold text-gray-200 group-hover:text-amber-300 transition">
-                            Nexora Lite (&lt;25KB)
-                          </div>
-                          <div className="text-[10px] text-gray-400">Minimal text mode for slow 2G/3G</div>
-                        </div>
-                      </div>
-                      <ArrowRight size={13} className="text-gray-500 group-hover:translate-x-0.5 transition-transform" />
-                    </Link>
-
-                    <Link
-                      href="/kiosk"
-                      className="flex items-center justify-between p-2.5 rounded-xl bg-[#141722] hover:bg-[#1f2536] border border-[#282f42] hover:border-cyan-700/60 transition group active:scale-95"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Monitor size={14} className="text-cyan-400" />
-                        <div>
-                          <div className="font-semibold text-gray-200 group-hover:text-cyan-300 transition">
-                            Campus Touch Kiosk
-                          </div>
-                          <div className="text-[10px] text-gray-400">Roll number lookup terminal</div>
-                        </div>
-                      </div>
-                      <ArrowRight size={13} className="text-gray-500 group-hover:translate-x-0.5 transition-transform" />
-                    </Link>
-
-                    <Link
-                      href="/verify/NX-BON-2026-00199"
-                      className="flex items-center justify-between p-2.5 rounded-xl bg-[#141722] hover:bg-[#1f2536] border border-[#282f42] hover:border-emerald-700/60 transition group active:scale-95"
-                    >
-                      <div className="flex items-center gap-2">
-                        <FileCheck size={14} className="text-emerald-400" />
-                        <div>
-                          <div className="font-semibold text-gray-200 group-hover:text-emerald-300 transition">
-                            Certificate Verification
-                          </div>
-                          <div className="text-[10px] text-gray-400">Cryptographic public registry</div>
-                        </div>
-                      </div>
-                      <ArrowRight size={13} className="text-gray-500 group-hover:translate-x-0.5 transition-transform" />
-                    </Link>
-                  </div>
-                </div>
-
-                <div className="text-[10px] text-gray-500 font-mono pt-3 border-t border-white/5">
-                  Universal accessibility • Zero account credentials required
-                </div>
-              </div>
-            </div>
-
-            <div className="text-center text-xs text-gray-400 border-t border-[#232838] pt-4 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-              <span>Demo Persona accounts pre-seeded with real operational records.</span>
-              <span className="hidden sm:inline">&bull;</span>
-              <span>
-                Standard password for manual login:{' '}
-                <code className="text-[#d4af37] font-mono bg-[#181c28] px-1.5 py-0.5 rounded border border-[#2e3447]">
-                  Password123!
-                </code>
+              <span className="text-[10px] font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 shrink-0 font-semibold">
+                Validated Transition
               </span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 8. COMMAND CENTER PREVIEW & LIVE EVENT AUDIT */}
-      <section id="command-center" className="scroll-mt-20 py-14 sm:py-20 bg-[#12151f]/60 border-t border-[#232838]">
+      {/* 7. ROLE ECOSYSTEM (Interactive Personas) */}
+      <section id="personas" className="scroll-mt-20 py-16 sm:py-24 relative bg-surface-secondary/40 border-t border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-10">
-            <span className="text-xs font-mono text-[#d4af37] tracking-wider uppercase font-semibold flex items-center justify-center gap-1.5">
-              <Activity size={13} /> EXECUTIVE FLIGHT COCKPIT
+          <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
+            <span className="text-xs font-mono text-primary tracking-wider uppercase font-semibold">
+              COMPLETE CAMPUS ROLE ECOSYSTEM
             </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-white mt-2">
-              Nexora Command Center Preview
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground mt-2">
+              Experience Nexora from Any Perspective
             </h2>
-            <p className="text-xs sm:text-sm text-gray-400 mt-2">
-              Campus directors and wardens monitor real-time SLA ageing, audit logs, and recurring cluster alerts from one unified cockpit.
+            <p className="text-xs sm:text-sm text-muted-foreground mt-3">
+              One-click simulation into pre-seeded role environments. No registration required for testing.
             </p>
           </div>
 
-          <div className="max-w-5xl mx-auto p-6 rounded-3xl bg-[#141722] border border-[#2e3447] shadow-2xl reveal-on-scroll hover-card-elevate">
-            {/* Top Status Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#232838] pb-4 mb-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 max-w-6xl mx-auto">
+            {personas.map((p) => {
+              const Icon = p.icon;
+              return (
+                <div
+                  key={p.key}
+                  className={`p-6 rounded-3xl border ${p.borderClass} shadow-xs flex flex-col justify-between`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-surface-secondary border border-border flex items-center justify-center text-primary">
+                        <Icon size={20} />
+                      </div>
+                      <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full border font-bold ${p.tagClass}`}>
+                        {p.role}
+                      </span>
+                    </div>
+
+                    <h3 className="text-base font-bold text-foreground">{p.name}</h3>
+                    <div className="text-xs text-primary font-mono font-semibold mt-0.5">{p.roleTitle}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5 font-mono">{p.badge}</div>
+
+                    <p className="text-xs text-muted-foreground mt-3 leading-relaxed">
+                      {p.desc}
+                    </p>
+                  </div>
+
+                  <div className="pt-5 border-t border-border mt-5">
+                    <button
+                      onClick={() => switchPersona(p.key)}
+                      disabled={loading}
+                      className="w-full py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground dark:bg-gradient-to-r dark:from-[#d4af37] dark:to-[#c49f2e] dark:text-black dark:hover:brightness-110 dark:shadow-md dark:shadow-amber-950/30 font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-xs active:scale-95"
+                    >
+                      <span>Simulate {p.name.split(' ')[0]}</span>
+                      <ArrowRight size={13} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* 8. COMMAND CENTER PREVIEW & LIVE EVENT AUDIT */}
+      <section id="command-center" className="scroll-mt-20 py-14 sm:py-20 bg-surface border-t border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-10">
+            <span className="text-xs font-mono text-primary tracking-wider uppercase font-semibold flex items-center justify-center gap-1.5">
+              <Activity size={13} /> EXECUTIVE COMMAND COCKPIT
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground mt-2">
+              Nexora Command Center Preview
+            </h2>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+              Campus directors and administrators monitor real-time SLA ageing, audit logs, and recurring cluster alerts from one unified cockpit.
+            </p>
+          </div>
+
+          <div className="max-w-5xl mx-auto p-6 sm:p-8 rounded-3xl bg-surface border border-border shadow-xl reveal-on-scroll hover-card-elevate">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4 mb-5">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs sm:text-sm font-bold font-mono text-white">NEXORA COMMAND CENTER</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#181c28] text-emerald-400 border border-emerald-900/60">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs sm:text-sm font-bold font-mono text-foreground">NEXORA COMMAND CENTER</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                   ONLINE
                 </span>
               </div>
-              <div className="text-xs font-mono text-gray-400">
+              <div className="text-xs font-mono text-muted-foreground">
                 Audited by Dr. Ananya Ray (Chief Administrator)
               </div>
             </div>
 
-            {/* Live Operational Metrics in Command Center */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-              <div className="p-3 rounded-xl bg-[#181c28] border border-[#282f42]">
-                <div className="text-[10px] font-mono text-gray-400">ACTIVE TICKETS</div>
-                <div className="text-xl font-bold font-mono text-white mt-0.5">18 Open</div>
+              <div className="p-3 rounded-xl bg-surface-secondary border border-border">
+                <div className="text-[10px] font-mono text-muted-foreground">ACTIVE TICKETS</div>
+                <div className="text-xl font-bold font-mono text-foreground mt-0.5">18 Open</div>
               </div>
-              <div className="p-3 rounded-xl bg-[#181c28] border border-[#282f42]">
-                <div className="text-[10px] font-mono text-gray-400">IN REPAIR</div>
-                <div className="text-xl font-bold font-mono text-amber-400 mt-0.5">07 Active</div>
+              <div className="p-3 rounded-xl bg-surface-secondary border border-border">
+                <div className="text-[10px] font-mono text-muted-foreground">IN REPAIR</div>
+                <div className="text-xl font-bold font-mono text-amber-600 dark:text-amber-400 mt-0.5">07 Active</div>
               </div>
-              <div className="p-3 rounded-xl bg-[#181c28] border border-rose-950/60">
-                <div className="text-[10px] font-mono text-rose-400">SLA BREACH RISK</div>
-                <div className="text-xl font-bold font-mono text-rose-400 mt-0.5">03 Tickets</div>
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25">
+                <div className="text-[10px] font-mono text-rose-600 dark:text-rose-400">SLA BREACH RISK</div>
+                <div className="text-xl font-bold font-mono text-rose-600 dark:text-rose-400 mt-0.5">03 Tickets</div>
               </div>
-              <div className="p-3 rounded-xl bg-[#181c28] border border-[#282f42]">
-                <div className="text-[10px] font-mono text-emerald-400">RESOLVED TODAY</div>
-                <div className="text-xl font-bold font-mono text-emerald-400 mt-0.5">142 Cases</div>
+              <div className="p-3 rounded-xl bg-surface-secondary border border-border">
+                <div className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">RESOLVED TODAY</div>
+                <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">142 Cases</div>
               </div>
             </div>
 
             {/* Section 44 Hotspot Notice */}
-            <div className="p-3.5 rounded-2xl bg-rose-950/30 border border-rose-900/60 text-xs mb-6 flex items-start gap-3">
-              <AlertTriangle size={18} className="text-rose-400 shrink-0 mt-0.5 animate-pulse" />
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-xs mb-6 flex items-start gap-3">
+              <AlertTriangle size={18} className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5 animate-pulse" />
               <div>
-                <span className="font-bold text-rose-200">
+                <span className="font-bold text-rose-800 dark:text-rose-200">
                   SECTION 44 ALERT: Hostel Block B / Plumbing
                 </span>
-                <p className="text-gray-300 text-[11px] mt-0.5">
+                <p className="text-muted-foreground text-[11px] mt-0.5">
                   7 complaints clustered in 14 days. Algorithmic diagnosis indicates East Wing riser valve stress. Preventive overhaul flagged for maintenance head.
                 </p>
               </div>
@@ -1639,9 +1429,9 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
 
             {/* Live Audit Log Stream */}
             <div>
-              <div className="text-[11px] font-mono text-gray-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+              <div className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider mb-2 flex items-center justify-between">
                 <span>Real-Time Audit Trail (RFC 5424 Format)</span>
-                <span className="text-[10px] text-emerald-400">Live Stream</span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Live Stream</span>
               </div>
               <div className="space-y-1.5 font-mono text-xs">
                 {liveAuditEvents.map((evt, idx) => (
@@ -1649,19 +1439,19 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
                     key={idx}
                     className={`p-2 rounded-lg border flex flex-col sm:flex-row sm:items-center justify-between gap-1 transition-all ${
                       auditIndex === idx
-                        ? 'bg-[#1f2536] border-[#d4af37] text-gray-100 ring-1 ring-[#d4af37]/30'
-                        : 'bg-[#10131d] border-[#232838] text-gray-400'
+                        ? 'bg-primary/10 border-primary text-foreground ring-1 ring-primary/25'
+                        : 'bg-surface-secondary border-border text-muted-foreground'
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-gray-500">{evt.time}</span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-black/40 text-gray-300 border border-white/10">
+                      <span className="text-[10px] opacity-75">{evt.time}</span>
+                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-surface border border-border text-foreground font-semibold">
                         {evt.type}
                       </span>
-                      <span className="text-gray-200 font-semibold">{evt.user}:</span>
+                      <span className="text-foreground font-semibold">{evt.user}:</span>
                       <span className="truncate">{evt.action}</span>
                     </div>
-                    <span className="text-[10px] text-gray-500 shrink-0">Status: Audited</span>
+                    <span className="text-[10px] text-muted-foreground shrink-0">Status: Audited</span>
                   </div>
                 ))}
               </div>
@@ -1670,37 +1460,60 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
         </div>
       </section>
 
-      {/* 9. STUDENT GUIDANCE */}
-      <section className="py-14 sm:py-20 bg-[#101522] border-t border-[#232838]">
+      {/* 9. STUDENT GUIDANCE & AI COPILOT PREVIEW */}
+      <section className="py-14 sm:py-20 bg-surface-secondary/40 border-t border-border">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-5">
-          <div className="rounded-3xl border border-violet-500/30 bg-gradient-to-br from-violet-950/40 to-[#141722] p-6 sm:p-8">
-            <div className="w-11 h-11 rounded-xl bg-violet-500/15 text-violet-300 flex items-center justify-center"><Sparkles size={22} /></div>
-            <p className="mt-5 text-[10px] font-mono uppercase tracking-widest text-violet-300">AI-guided next steps</p>
-            <h2 className="mt-2 text-2xl font-extrabold text-white">Ask what to do next.</h2>
-            <p className="mt-3 text-sm leading-relaxed text-gray-400">Nexora Copilot helps students turn everyday campus questions into clear, verified next steps—from a maintenance issue or document request to study planning and finding academic resources.</p>
-            <Link href="/student/copilot" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-violet-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-violet-400"><Sparkles size={16} /> Open Nexora Copilot <ArrowRight size={15} /></Link>
+          <div className="rounded-3xl border border-primary/30 bg-surface p-6 sm:p-8 shadow-md">
+            <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <Sparkles size={22} />
+            </div>
+            <p className="mt-5 text-[10px] font-mono uppercase tracking-widest text-primary font-bold">
+              AI-guided next steps
+            </p>
+            <h2 className="mt-2 text-2xl font-extrabold text-foreground">Ask what to do next.</h2>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              Nexora Copilot helps students turn everyday campus questions into clear, verified next steps—from a maintenance issue or document request to study planning and finding academic resources.
+            </p>
+            <Link
+              href="/student/copilot"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground hover:bg-primary-hover shadow-xs transition"
+            >
+              <Sparkles size={16} /> Open Nexora Copilot <ArrowRight size={15} />
+            </Link>
           </div>
-          <div className="rounded-3xl border border-cyan-500/25 bg-gradient-to-br from-cyan-950/30 to-[#141722] p-6 sm:p-8">
-            <div className="w-11 h-11 rounded-xl bg-cyan-500/15 text-cyan-300 flex items-center justify-center"><Users size={22} /></div>
-            <p className="mt-5 text-[10px] font-mono uppercase tracking-widest text-cyan-300">Peer mentorship</p>
-            <h2 className="mt-2 text-2xl font-extrabold text-white">Learn from the students ahead of you.</h2>
-            <p className="mt-3 text-sm leading-relaxed text-gray-400">Browse available senior guides by year and branch, review the topics they support, and send a thoughtful mentorship request. Seniors control their public profile, availability, LinkedIn link, and CGPA disclosure.</p>
-            <Link href="/student/mentors" className="mt-6 inline-flex items-center gap-2 rounded-xl border border-cyan-400/50 px-4 py-2.5 text-sm font-bold text-cyan-200 hover:bg-cyan-500/10"><Users size={16} /> Find a senior guide <ArrowRight size={15} /></Link>
+
+          <div className="rounded-3xl border border-cyan-500/25 bg-surface p-6 sm:p-8 shadow-md">
+            <div className="w-11 h-11 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
+              <Users size={22} />
+            </div>
+            <p className="mt-5 text-[10px] font-mono uppercase tracking-widest text-cyan-600 dark:text-cyan-400 font-bold">
+              Peer mentorship
+            </p>
+            <h2 className="mt-2 text-2xl font-extrabold text-foreground">Learn from the students ahead of you.</h2>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              Browse available senior guides by year and branch, review the topics they support, and send a thoughtful mentorship request. Seniors control their public profile, availability, and CGPA disclosure.
+            </p>
+            <Link
+              href="/student/mentors"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl border border-cyan-500/40 bg-surface px-4 py-2.5 text-sm font-bold text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/10 shadow-xs transition"
+            >
+              <Users size={16} /> Find a senior guide <ArrowRight size={15} />
+            </Link>
           </div>
         </div>
       </section>
 
       {/* 10. CORE ARCHITECTURAL CAPABILITIES */}
-      <section id="features" className="scroll-mt-20 py-14 sm:py-20 bg-[#0f1118] border-t border-[#232838]">
+      <section id="features" className="scroll-mt-20 py-14 sm:py-20 bg-background border-t border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">
-            <span className="text-xs font-mono text-[#d4af37] tracking-wider uppercase font-semibold">
+            <span className="text-xs font-mono text-primary tracking-wider uppercase font-semibold">
               ENGINEERED FOR PRODUCTION REALITIES
             </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-white mt-2">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground mt-2">
               Six Architectural Pillars of Nexora Campus
             </h2>
-            <p className="text-xs sm:text-sm text-gray-400 mt-3 leading-relaxed">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-3 leading-relaxed">
               Designed to meet strict institutional standards with deterministic guarantees, cryptographic verifiability, and zero tolerance for hallucinated data.
             </p>
           </div>
@@ -1711,25 +1524,25 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
               return (
                 <div
                   key={i}
-                  className="bg-[#141722] border border-[#232838] rounded-2xl p-5 hover:border-[#3d4661] hover:-translate-y-1.5 hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
+                  className="bg-surface border border-border rounded-2xl p-5 hover:border-primary/40 hover:-translate-y-1 hover:shadow-md transition-all duration-300 flex flex-col justify-between group shadow-xs"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-[#1c2130] border border-[#2e3447] flex items-center justify-center text-[#d4af37] group-hover:scale-110 group-hover:rotate-2 transition-transform duration-300">
+                      <div className="w-10 h-10 rounded-xl bg-surface-secondary border border-border flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
                         <Icon size={19} />
                       </div>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#181c28] text-gray-400 border border-[#282f42]">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-secondary text-muted-foreground border border-border">
                         {f.tag}
                       </span>
                     </div>
-                    <h3 className="font-bold text-sm text-white mb-2 group-hover:text-[#d4af37] transition-colors">
+                    <h3 className="font-bold text-sm text-foreground mb-2 group-hover:text-primary transition-colors">
                       {f.title}
                     </h3>
-                    <p className="text-xs text-gray-400 leading-relaxed mb-4">
+                    <p className="text-xs text-muted-foreground leading-relaxed mb-4">
                       {f.desc}
                     </p>
                   </div>
-                  <div className="pt-3 border-t border-[#232838] font-mono text-[10px] text-gray-500">
+                  <div className="pt-3 border-t border-border font-mono text-[10px] text-muted-foreground">
                     {f.code}
                   </div>
                 </div>
@@ -1739,17 +1552,17 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
         </div>
       </section>
 
-      {/* 10. PUBLIC ACCESSIBILITY & CHANNELS */}
-      <section id="public-modes" className="scroll-mt-20 py-14 sm:py-20 bg-[#141722]/40 border-t border-[#232838]">
+      {/* 11. PUBLIC ACCESSIBILITY & CHANNELS */}
+      <section id="public-modes" className="scroll-mt-20 py-14 sm:py-20 bg-surface-secondary/40 border-t border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center mb-10">
-            <span className="text-xs font-mono text-[#d4af37] tracking-wider uppercase font-semibold">
+            <span className="text-xs font-mono text-primary tracking-wider uppercase font-semibold">
               ALTERNATIVE PLATFORM CHANNELS
             </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-2">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground mt-2">
               Inclusive Campus Access, On Any Device
             </h2>
-            <p className="text-xs sm:text-sm text-gray-400 mt-2">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
               Campuses have dead zones, power outages, and diverse smartphone access. Nexora ensures no student is left stranded.
             </p>
           </div>
@@ -1757,172 +1570,88 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 max-w-5xl mx-auto reveal-on-scroll">
             <Link
               href="/lite"
-              className="p-5 sm:p-6 rounded-2xl bg-[#141722] border border-[#282f42] hover:border-amber-500/60 hover:-translate-y-1.5 transition-all duration-300 group text-left active:scale-[0.99] hover:shadow-lg hover:shadow-amber-950/20"
+              className="p-5 sm:p-6 rounded-2xl bg-surface border border-border hover:border-amber-500/60 hover:-translate-y-1 transition-all duration-300 group text-left active:scale-[0.99] shadow-xs hover:shadow-md"
             >
-              <div className="w-10 h-10 rounded-xl bg-amber-950/40 border border-amber-800/50 flex items-center justify-center text-amber-400 mb-4 group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 mb-4 group-hover:scale-105 transition-transform">
                 <Smartphone size={20} />
               </div>
-              <h3 className="text-sm font-bold text-white group-hover:text-amber-300 transition">
+              <h3 className="text-sm font-bold text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400 transition">
                 Nexora Lite (&lt; 25KB)
               </h3>
-              <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                 Hyper-optimized text interface designed for 2G campus signals. Operates smoothly even with JavaScript disabled.
               </p>
-              <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-amber-400">
+              <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
                 <span>Open Lite Portal</span>
-                <ChevronRight size={14} className="group-hover:translate-x-1.5 transition-transform" />
+                <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </div>
             </Link>
 
             <Link
               href="/kiosk"
-              className="p-5 sm:p-6 rounded-2xl bg-[#141722] border border-[#282f42] hover:border-cyan-500/60 hover:-translate-y-1.5 transition-all duration-300 group text-left active:scale-[0.99] hover:shadow-lg hover:shadow-cyan-950/20"
+              className="p-5 sm:p-6 rounded-2xl bg-surface border border-border hover:border-cyan-500/60 hover:-translate-y-1 transition-all duration-300 group text-left active:scale-[0.99] shadow-xs hover:shadow-md"
             >
-              <div className="w-10 h-10 rounded-xl bg-cyan-950/40 border border-cyan-800/50 flex items-center justify-center text-cyan-400 mb-4 group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-500 mb-4 group-hover:scale-105 transition-transform">
                 <Monitor size={20} />
               </div>
-              <h3 className="text-sm font-bold text-white group-hover:text-cyan-300 transition">
+              <h3 className="text-sm font-bold text-foreground group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition">
                 Touch Kiosk Mode
               </h3>
-              <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                 Terminal interface installed in hostel lobbies. Allows instant roll-number ticket submission without personal phones.
               </p>
-              <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-cyan-400">
+              <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-cyan-600 dark:text-cyan-400">
                 <span>Launch Touch Kiosk</span>
-                <ChevronRight size={14} className="group-hover:translate-x-1.5 transition-transform" />
+                <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </div>
             </Link>
 
             <Link
               href="/verify/NX-BON-2026-00199"
-              className="p-5 sm:p-6 rounded-2xl bg-[#141722] border border-[#282f42] hover:border-emerald-500/60 hover:-translate-y-1.5 transition-all duration-300 group text-left active:scale-[0.99] hover:shadow-lg hover:shadow-emerald-950/20"
+              className="p-5 sm:p-6 rounded-2xl bg-surface border border-border hover:border-emerald-500/60 hover:-translate-y-1 transition-all duration-300 group text-left active:scale-[0.99] shadow-xs hover:shadow-md"
             >
-              <div className="w-10 h-10 rounded-xl bg-emerald-950/40 border border-emerald-800/50 flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500 mb-4 group-hover:scale-105 transition-transform">
                 <FileCheck size={20} />
               </div>
-              <h3 className="text-sm font-bold text-white group-hover:text-emerald-300 transition">
-                Public Registry Verify
+              <h3 className="text-sm font-bold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">
+                Public Certificate Registry
               </h3>
-              <p className="text-xs text-gray-400 mt-2 leading-relaxed">
-                Zero-login verification portal for companies, visa authorities, and parents to validate Bonafide certificate authenticity.
+              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                External verifiers scan the certificate QR to directly authenticate digital Bonafide status without credentials.
               </p>
-              <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-emerald-400">
-                <span>View Sample Certificate</span>
-                <ChevronRight size={14} className="group-hover:translate-x-1.5 transition-transform" />
+              <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                <span>Verify Registry</span>
+                <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </div>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* 11. INSTITUTIONAL FOOTER */}
-      <footer className="border-t border-[#232838] bg-[#0c0e14] py-12 text-xs text-gray-400">
+      {/* FOOTER */}
+      <footer className="border-t border-border bg-surface py-12 text-xs text-muted-foreground">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-start justify-between gap-8 pb-10 border-b border-[#1f2434]">
-            <div className="max-w-sm">
-              <div className="flex items-center gap-2.5 mb-3">
-                <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center border border-[#d4af37]/40 bg-[#141722] p-0.5 shrink-0">
-                  <Image
-                    src="/Logo.png"
-                    alt="Nexora Logo"
-                    width={32}
-                    height={32}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <span className="font-bold text-white tracking-wider text-sm">NEXORA CAMPUS</span>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-surface-secondary border border-border flex items-center justify-center p-0.5">
+                <Image src="/Logo.png" alt="Nexora Logo" width={28} height={28} className="object-contain" />
               </div>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                Centralized campus operations platform engineered for BPUT Hackathon 2026. Eliminating fragmented paper workflows with deterministic lifecycle governance.
-              </p>
+              <div>
+                <div className="font-bold text-foreground text-sm tracking-wide">NEXORA CAMPUS</div>
+                <div className="text-[10px] text-muted-foreground">BPUT Hackathon 2026 • Problem Statement 7</div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 text-xs w-full md:w-auto">
-              <div>
-                <div className="font-bold text-white mb-2.5 font-mono text-[11px] uppercase tracking-wider">
-                  Role Portals
-                </div>
-                <ul className="space-y-1.5 text-gray-400">
-                  <li>
-                    <button onClick={() => switchPersona('aryan')} className="hover:text-[#d4af37] transition text-left">
-                      Student Dashboard
-                    </button>
-                  </li>
-                  <li>
-                    <button onClick={() => switchPersona('ramesh')} className="hover:text-[#d4af37] transition text-left">
-                      Staff Work Orders
-                    </button>
-                  </li>
-                  <li>
-                    <button onClick={() => switchPersona('warden')} className="hover:text-[#d4af37] transition text-left">
-                      Warden Cockpit
-                    </button>
-                  </li>
-                  <li>
-                    <button onClick={() => switchPersona('security')} className="hover:text-[#d4af37] transition text-left">
-                      Security Gate Scanner
-                    </button>
-                  </li>
-                  <li>
-                    <button onClick={() => switchPersona('admin')} className="hover:text-[#d4af37] transition text-left">
-                      Admin Command Center
-                    </button>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <div className="font-bold text-white mb-2.5 font-mono text-[11px] uppercase tracking-wider">
-                  Public Modes
-                </div>
-                <ul className="space-y-1.5 text-gray-400">
-                  <li>
-                    <Link href="/lite" className="hover:text-[#d4af37] transition">
-                      Nexora Lite (&lt; Low Speed Internet)
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/kiosk" className="hover:text-[#d4af37] transition">
-                      Lobby Touch Kiosk
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/verify/NX-BON-2026-00199" className="hover:text-[#d4af37] transition">
-                      Public Certificate Registry
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/login" className="hover:text-[#d4af37] transition">
-                      Standard Authentication
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="col-span-2 sm:col-span-1">
-                <div className="font-bold text-white mb-2.5 font-mono text-[11px] uppercase tracking-wider">
-                  Hackathon Meta
-                </div>
-                <div className="text-gray-400 space-y-1">
-                  <div className="text-gray-300 font-medium">BPUT Hackathon 2026</div>
-                  <div className="text-[11px]">Track: Campus Operations</div>
-                  <div className="text-[11px] font-mono text-emerald-400 mt-1">24 Integration Tests (100% Pass)</div>
-                </div>
-              </div>
+            <div className="flex items-center gap-4 text-xs font-medium">
+              <Link href="/lite" className="hover:text-foreground transition">Nexora Lite</Link>
+              <Link href="/kiosk" className="hover:text-foreground transition">Kiosk Terminal</Link>
+              <Link href="/verify/NX-BON-2026-00199" className="hover:text-foreground transition">Verify Certificate</Link>
+              <Link href="/login" className="hover:text-foreground transition">Sign In</Link>
             </div>
           </div>
 
-          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-gray-500 text-[11px]">
-            <div>
-              &copy; 2026 Nexora Campus . All rights are Reserved to Team Cipher .
-            </div>
-            <div className="flex items-center gap-3">
-              <span>Next.js 14 App Router</span>
-              <span>&bull;</span>
-              <span>TypeScript</span>
-              <span>&bull;</span>
-              <span>Tailwind CSS</span>
-            </div>
+          <div className="mt-8 pt-6 border-t border-border text-center text-[11px] text-muted-foreground">
+            © 2026 Nexora Campus Operations Platform. Designed for institutional efficiency, accountability, and accessibility.
           </div>
         </div>
       </footer>

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { apiRequest } from '@/lib/api';
 import { StatCard } from '@/components/cards/StatCard';
-import { StatusBadge } from '@/components/status/StatusBadge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { StatGridSkeleton, CardSkeleton } from '@/components/ui/SkeletonLoader';
 import {
@@ -16,10 +15,7 @@ import {
   ArrowRight,
   Check,
   X,
-  User,
   Shield,
-  Clock,
-  Home,
   CheckCircle2,
 } from 'lucide-react';
 
@@ -81,27 +77,27 @@ export default function WardenDashboardPage() {
   );
 
   return (
-    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto pb-12 animate-tab-fade">
       {/* Warden Desk Header */}
-      <div className="bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xl shadow-black/15">
+      <div className="bg-surface border border-border dark:bg-[#121624] dark:border-[#232b3f] dark:shadow-xl dark:shadow-black/15 rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#1b2234] border border-emerald-500/35 text-emerald-400 text-[10px] font-mono font-bold uppercase tracking-wider mb-2 shadow-xs">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:bg-[#1b2234] dark:border-emerald-500/35 dark:text-emerald-400 text-[10px] font-mono font-bold uppercase tracking-wider mb-2">
               <Shield size={12} />
               <span>Hostel Residential Oversight</span>
             </div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-foreground tracking-tight">
               Warden Desk: {user?.fullName || 'Dr. S. K. Mohapatra'}
             </h1>
-            <p className="text-xs sm:text-sm text-gray-400 mt-1 max-w-2xl font-mono">
-              Residential Jurisdiction: <strong className="text-emerald-400">Hostel Block B (Men&apos;s Residential Wing)</strong>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-2xl font-mono">
+              Residential Jurisdiction: <strong className="text-emerald-600 dark:text-emerald-400">Hostel Block B (Men&apos;s Residential Wing)</strong>
             </p>
           </div>
 
           <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
             <Link
               href="/warden/gate-passes"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-xs shadow transition active:scale-95"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground dark:bg-emerald-600 dark:hover:bg-emerald-500 dark:text-white dark:shadow-md dark:shadow-emerald-950/20 font-bold text-xs shadow-xs transition active:scale-95"
             >
               <Key size={14} />
               <span>Review Gate Passes ({pendingGatePasses.length})</span>
@@ -111,8 +107,8 @@ export default function WardenDashboardPage() {
       </div>
 
       {actionMsg && (
-        <div className="p-4 rounded-xl bg-emerald-950/70 border border-emerald-700 text-emerald-300 text-xs flex items-center gap-2.5 shadow-sm animate-tab-fade">
-          <CheckCircle2 size={16} className="shrink-0 text-emerald-400" />
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2.5 shadow-xs animate-tab-fade">
+          <CheckCircle2 size={16} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
           <span className="font-semibold">{actionMsg}</span>
         </div>
       )}
@@ -154,17 +150,17 @@ export default function WardenDashboardPage() {
       )}
 
       {/* Pending Gate Passes Queue */}
-      <div className="bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xl shadow-black/15 space-y-4">
-        <div className="flex items-center justify-between border-b border-[#21273a] pb-4">
+      <div className="bg-surface border border-border rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-border pb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#182030] text-cyan-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
               <Key size={16} />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">
+              <h2 className="text-sm sm:text-base font-bold text-foreground tracking-tight">
                 Pending Gate Pass Applications
               </h2>
-              <p className="text-[11px] text-gray-400">
+              <p className="text-[11px] text-muted-foreground">
                 Authorize or reject curfew exit passes for Hostel Block B
               </p>
             </div>
@@ -172,7 +168,7 @@ export default function WardenDashboardPage() {
 
           <Link
             href="/warden/gate-passes"
-            className="text-xs text-[#d4af37] hover:text-[#e4c257] font-semibold inline-flex items-center gap-1 group transition"
+            className="text-xs text-primary hover:underline font-semibold inline-flex items-center gap-1 group transition"
           >
             <span>All Passes ({pendingGatePasses.length})</span>
             <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
@@ -188,48 +184,48 @@ export default function WardenDashboardPage() {
             icon={Key}
           />
         ) : (
-          <div className="divide-y divide-[#202638]">
+          <div className="divide-y divide-border">
             {pendingGatePasses.map((gp) => (
               <div
                 key={gp.id}
-                className="py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs hover:bg-[#161a29] transition-colors rounded-xl px-2"
+                className="py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs hover:bg-surface-secondary/50 transition-colors rounded-xl px-2"
               >
                 <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono font-bold text-sm text-cyan-300">
+                    <span className="font-mono font-bold text-sm text-cyan-700 dark:text-cyan-300">
                       {gp.request?.requestNumber}
                     </span>
-                    <span className="font-bold text-gray-100 text-sm">
+                    <span className="font-bold text-foreground text-sm">
                       {gp.request?.requester?.student?.fullName || 'Student'}
                     </span>
-                    <span className="text-gray-400 font-mono text-[11px]">
+                    <span className="text-muted-foreground font-mono text-[11px]">
                       ({gp.request?.requester?.student?.rollNumber})
                     </span>
                   </div>
 
-                  <div className="text-gray-200">
-                    Destination: <strong className="text-white">{gp.destination}</strong> • Reason: {gp.reason}
+                  <div className="text-foreground">
+                    Destination: <strong className="text-foreground font-bold">{gp.destination}</strong> • Reason: {gp.reason}
                   </div>
 
-                  <div className="text-[11px] text-gray-500 font-mono flex items-center gap-2 flex-wrap">
+                  <div className="text-[11px] text-muted-foreground font-mono flex items-center gap-2 flex-wrap">
                     <span>Dep: {new Date(gp.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     <span>•</span>
                     <span>Return: {new Date(gp.expectedReturnTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#22293d]">
+                <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border">
                   <button
                     type="button"
                     onClick={() => handleApproveGatePass(gp.id)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs shadow-xs active:scale-95 transition-all"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs active:scale-95 transition-all"
                   >
                     <Check size={14} /> Approve
                   </button>
                   <button
                     type="button"
                     onClick={() => handleRejectGatePass(gp.id)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-950/70 hover:bg-rose-900 border border-rose-800 text-rose-300 font-bold text-xs active:scale-95 transition-all"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface hover:bg-rose-50 dark:hover:bg-rose-950/30 border border-border hover:border-rose-400 text-rose-700 dark:text-rose-300 font-semibold text-xs active:scale-95 transition-all"
                   >
                     <X size={14} /> Reject
                   </button>
@@ -241,17 +237,17 @@ export default function WardenDashboardPage() {
       </div>
 
       {/* Pending Leaves Queue */}
-      <div className="bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xl shadow-black/15 space-y-4">
-        <div className="flex items-center justify-between border-b border-[#21273a] pb-4">
+      <div className="bg-surface border border-border rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-border pb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#182030] text-purple-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 flex items-center justify-center">
               <Calendar size={16} />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">
+              <h2 className="text-sm sm:text-base font-bold text-foreground tracking-tight">
                 Pending Leave Applications
               </h2>
-              <p className="text-[11px] text-gray-400">
+              <p className="text-[11px] text-muted-foreground">
                 Multi-day residential absences requiring warden sign-off
               </p>
             </div>
@@ -259,7 +255,7 @@ export default function WardenDashboardPage() {
 
           <Link
             href="/warden/leaves"
-            className="text-xs text-[#d4af37] hover:text-[#e4c257] font-semibold inline-flex items-center gap-1 group transition"
+            className="text-xs text-primary hover:underline font-semibold inline-flex items-center gap-1 group transition"
           >
             <span>All Leaves ({pendingLeaves.length})</span>
             <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
@@ -273,36 +269,36 @@ export default function WardenDashboardPage() {
             icon={Calendar}
           />
         ) : (
-          <div className="divide-y divide-[#202638]">
+          <div className="divide-y divide-border">
             {pendingLeaves.map((l) => (
               <div
                 key={l.id}
-                className="py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs hover:bg-[#161a29] transition-colors rounded-xl px-2"
+                className="py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs hover:bg-surface-secondary/50 transition-colors rounded-xl px-2"
               >
                 <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono font-bold text-sm text-purple-300">
+                    <span className="font-mono font-bold text-sm text-purple-700 dark:text-purple-300">
                       {l.request?.requestNumber}
                     </span>
-                    <span className="font-bold text-white text-sm">
+                    <span className="font-bold text-foreground text-sm">
                       {l.request?.requester?.student?.fullName}
                     </span>
                   </div>
 
-                  <div className="text-gray-200">
+                  <div className="text-foreground">
                     {new Date(l.startDate).toLocaleDateString()} to {new Date(l.endDate).toLocaleDateString()} • {l.reason}
                   </div>
 
-                  <div className="text-[11px] text-gray-400 font-mono">
-                    Emergency Contact: <strong className="text-gray-300">{l.emergencyContact}</strong>
+                  <div className="text-[11px] text-muted-foreground font-mono">
+                    Emergency Contact: <strong className="text-foreground">{l.emergencyContact}</strong>
                   </div>
                 </div>
 
-                <div className="shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#22293d]">
+                <div className="shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border">
                   <button
                     type="button"
                     onClick={() => handleApproveLeave(l.id)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-xs shadow-xs active:scale-95 transition-all"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs active:scale-95 transition-all"
                   >
                     <Check size={14} /> Approve Leave
                   </button>

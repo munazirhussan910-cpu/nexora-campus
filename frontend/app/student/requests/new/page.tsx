@@ -62,33 +62,33 @@ export default function NewComplaintPage() {
     <div className="max-w-3xl mx-auto space-y-6 pb-12 animate-tab-fade">
       <Link
         href="/student/requests"
-        className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition group"
+        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition group"
       >
         <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
         <span>Back to My Requests</span>
       </Link>
 
-      <div className="bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xl shadow-black/25">
-        <div className="flex items-center gap-3.5 border-b border-[#21273a] pb-5 mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-[#5B20A0]/20 border border-[#7A3DB8]/40 text-[#18C5D8] flex items-center justify-center shrink-0 shadow-md">
+      <div className="bg-surface border border-border rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xs">
+        <div className="flex items-center gap-3.5 border-b border-border pb-5 mb-6">
+          <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/25 text-primary flex items-center justify-center shrink-0 shadow-xs">
             <Wrench size={22} />
           </div>
           <div>
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1b2234] text-[#18C5D8] text-[10px] font-mono font-bold uppercase mb-1">
+            <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[10px] font-mono font-bold uppercase mb-1">
               <span>Campus Service Desk</span>
             </div>
-            <h1 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
+            <h1 className="text-lg sm:text-xl font-extrabold text-foreground tracking-tight">
               Log Campus Maintenance Ticket
             </h1>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5">
               Submit your maintenance or repair request. It will be automatically routed to the right technician.
             </p>
           </div>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-rose-950/50 border border-rose-800/60 text-rose-300 text-xs flex items-center gap-3">
-            <AlertCircle size={18} className="shrink-0 text-rose-400" />
+          <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-3">
+            <AlertCircle size={18} className="shrink-0 text-rose-500" />
             <span>{error}</span>
           </div>
         )}
@@ -96,10 +96,10 @@ export default function NewComplaintPage() {
         <form onSubmit={handleSubmit} className="space-y-5 text-xs">
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-slate-200 font-semibold">
-                Issue Summary <span className="text-rose-400">*</span>
+              <label className="text-foreground font-semibold">
+                Issue Summary <span className="text-rose-500">*</span>
               </label>
-              <span className="text-[11px] text-slate-500 font-mono">Brief headline</span>
+              <span className="text-[11px] text-muted-foreground font-mono">Brief headline</span>
             </div>
             <input
               type="text"
@@ -107,31 +107,31 @@ export default function NewComplaintPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Washbasin tap leaking continuously in Bathroom 2"
-              className="w-full bg-[#161a29] border border-[#232b3f] focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] rounded-xl p-3 text-xs text-white placeholder-slate-500 outline-none transition"
+              className="w-full bg-surface border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-xl p-3 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none transition"
             />
           </div>
 
           {/* Real-time Deterministic Routing Indicator */}
           {title.trim().length > 2 && (
-            <div className="p-3.5 rounded-xl bg-[#161f30] border border-[#18C5D8]/40 text-[11px] flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-tab-fade">
+            <div className="p-3.5 rounded-xl bg-surface-secondary/70 border border-accent-teal/40 text-[11px] flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-tab-fade">
               <div className="flex items-center gap-2">
-                <Sparkles size={15} className="text-[#18C5D8] shrink-0" />
-                <span className="text-slate-200">
-                  Detected Category: <strong className="text-[#18C5D8] font-bold">{preview.category}</strong>
+                <Sparkles size={15} className="text-accent-teal shrink-0" />
+                <span className="text-foreground">
+                  Detected Category: <strong className="text-accent-teal font-bold">{preview.category}</strong>
                 </span>
               </div>
-              <span className="text-slate-400 font-mono text-[10px]">
-                Target Specialist: <span className="text-slate-200 font-semibold">{preview.staff}</span>
+              <span className="text-muted-foreground font-mono text-[10px]">
+                Target Specialist: <span className="text-foreground font-semibold">{preview.staff}</span>
               </span>
             </div>
           )}
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-slate-200 font-semibold">
-                Detailed Description <span className="text-rose-400">*</span>
+              <label className="text-foreground font-semibold">
+                Detailed Description <span className="text-rose-500">*</span>
               </label>
-              <span className="text-[11px] text-slate-500 font-mono">Include room fixtures or specifics</span>
+              <span className="text-[11px] text-muted-foreground font-mono">Include room fixtures or specifics</span>
             </div>
             <textarea
               required
@@ -139,15 +139,15 @@ export default function NewComplaintPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Provide more context so the technician can bring appropriate tools (e.g., Water is pooling on the floor; tap handle appears loose)..."
-              className="w-full bg-[#161a29] border border-[#232b3f] focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] rounded-xl p-3 text-xs text-white placeholder-slate-500 outline-none transition"
+              className="w-full bg-surface border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-xl p-3 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none transition"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-slate-200 font-semibold">
-                  Location / Room <span className="text-rose-400">*</span>
+                <label className="text-foreground font-semibold">
+                  Location / Room <span className="text-rose-500">*</span>
                 </label>
               </div>
               <input
@@ -156,20 +156,20 @@ export default function NewComplaintPage() {
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="e.g. Hostel B / Room 204"
-                className="w-full bg-[#161a29] border border-[#232b3f] focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] rounded-xl p-3 text-xs text-white outline-none transition"
+                className="w-full bg-surface border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-xl p-3 text-xs text-foreground placeholder:text-muted-foreground/50 outline-none transition"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-slate-200 font-semibold">
-                  Urgency / Priority <span className="text-rose-400">*</span>
+                <label className="text-foreground font-semibold">
+                  Urgency / Priority <span className="text-rose-500">*</span>
                 </label>
               </div>
               <select
                 value={priority}
                 onChange={(e: any) => setPriority(e.target.value)}
-                className="w-full bg-[#161a29] border border-[#232b3f] focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] rounded-xl p-3 text-xs text-white outline-none transition"
+                className="w-full bg-surface border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-xl p-3 text-xs text-foreground outline-none transition cursor-pointer"
               >
                 <option value="LOW">LOW (Standard 48-Hour SLA)</option>
                 <option value="NORMAL">NORMAL (Regular 24-Hour SLA)</option>
@@ -179,17 +179,17 @@ export default function NewComplaintPage() {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-[#21273a] flex items-center justify-end gap-3">
+          <div className="pt-4 border-t border-border flex items-center justify-end gap-3">
             <Link
               href="/student/requests"
-              className="px-4 py-2.5 rounded-xl bg-[#161a29] hover:bg-[#1d2336] border border-[#232b3f] text-slate-300 hover:text-white font-medium transition"
+              className="px-4 py-2.5 rounded-xl bg-surface-secondary hover:bg-surface-secondary/80 border border-border text-foreground font-medium transition"
             >
               Cancel
             </Link>
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#5B20A0] hover:bg-[#6c28be] text-white font-bold text-xs shadow-lg shadow-[#5B20A0]/25 transition-all duration-150 active:scale-95 disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow-xs transition-all duration-150 active:scale-95 disabled:opacity-50"
             >
               {loading && <Loader2 size={14} className="animate-spin" />}
               <span>{loading ? 'Submitting Ticket...' : 'Submit Maintenance Request'}</span>

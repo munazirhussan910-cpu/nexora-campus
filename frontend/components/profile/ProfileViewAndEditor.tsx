@@ -36,7 +36,7 @@ interface ProfileViewAndEditorProps {
 export function ProfileViewAndEditor({
   portalTitle = 'User Profile',
   portalSubtitle = 'Official campus identity, departmental records, and communication credentials.',
-  roleBadgeColor = 'from-[#d4af37] to-[#997c1e]',
+  roleBadgeColor = 'from-primary to-amber-600',
 }: ProfileViewAndEditorProps) {
   const { user, updateProfile } = useAuth();
 
@@ -217,14 +217,14 @@ export function ProfileViewAndEditor({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#1b2234] border border-[#d4af37]/35 text-[#d4af37] text-[10px] font-mono font-bold uppercase tracking-wider mb-2 shadow-xs">
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-[10px] font-mono font-bold uppercase tracking-wider mb-2 shadow-xs">
             <Shield size={12} />
             <span>Verified Campus Credential</span>
           </div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-foreground tracking-tight">
             {portalTitle}
           </h1>
-          <p className="text-xs sm:text-sm text-gray-400 mt-1 max-w-2xl">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-2xl">
             {portalSubtitle}
           </p>
         </div>
@@ -233,7 +233,7 @@ export function ProfileViewAndEditor({
           <button
             type="button"
             onClick={handleEditClick}
-            className="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#d4af37] hover:bg-[#e4c257] text-black font-bold text-xs shadow-md shadow-[#d4af37]/20 transition-all active:scale-95 shrink-0"
+            className="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow-xs transition-all active:scale-95 shrink-0"
           >
             <Edit2 size={14} />
             <span>Edit Profile</span>
@@ -243,14 +243,14 @@ export function ProfileViewAndEditor({
 
       {/* Notifications */}
       {successMsg && (
-        <div className="p-4 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-xs flex items-center justify-between gap-3 animate-tab-fade">
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between gap-3 animate-tab-fade">
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+            <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
             <span>{successMsg}</span>
           </div>
           <button
             onClick={() => setSuccessMsg('')}
-            className="p-1 hover:bg-emerald-900/50 rounded-lg text-emerald-400 hover:text-white"
+            className="p-1 hover:bg-emerald-500/20 rounded-lg text-emerald-600 dark:text-emerald-400 hover:text-foreground"
           >
             <X size={14} />
           </button>
@@ -258,14 +258,14 @@ export function ProfileViewAndEditor({
       )}
 
       {errorMsg && (
-        <div className="p-4 rounded-xl bg-rose-950/60 border border-rose-800 text-rose-300 text-xs flex items-center justify-between gap-3 animate-tab-fade">
+        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between gap-3 animate-tab-fade">
           <div className="flex items-center gap-2.5">
-            <AlertCircle size={16} className="text-rose-400 shrink-0" />
+            <AlertCircle size={16} className="text-rose-500 shrink-0" />
             <span>{errorMsg}</span>
           </div>
           <button
             onClick={() => setErrorMsg('')}
-            className="p-1 hover:bg-rose-900/50 rounded-lg text-rose-400 hover:text-white"
+            className="p-1 hover:bg-rose-500/20 rounded-lg text-rose-600 dark:text-rose-400 hover:text-foreground"
           >
             <X size={14} />
           </button>
@@ -273,9 +273,9 @@ export function ProfileViewAndEditor({
       )}
 
       {/* Main Identity & Editor Card */}
-      <div className="bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xl shadow-black/20 space-y-6">
+      <div className="bg-surface border border-border rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
         {/* Profile Identity Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-[#212739]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 pb-6 border-b border-border">
           <div className="flex items-center gap-4">
             <div className="relative shrink-0">
               <Avatar
@@ -284,40 +284,40 @@ export function ProfileViewAndEditor({
                 size="xl"
                 shape="circle"
                 roleBadgeColor={roleBadgeColor}
-                className="w-16 h-16 sm:w-20 sm:h-20 border-2 border-[#d4af37]/80 shadow-lg shadow-black/40"
+                className="w-16 h-16 sm:w-20 sm:h-20 border-2 border-primary/80 shadow-md"
               />
             </div>
 
             <div className="space-y-1">
-              <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">
                 {user?.fullName || user?.username}
               </h2>
 
-              <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400 font-mono">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground font-mono">
                 {user?.rollNumber && (
                   <>
                     <span>
-                      Roll No: <strong className="text-[#d4af37] font-bold">{user.rollNumber}</strong>
+                      Roll No: <strong className="text-primary font-bold">{user.rollNumber}</strong>
                     </span>
-                    <span className="text-gray-600">•</span>
+                    <span className="text-muted-foreground/60">•</span>
                   </>
                 )}
                 {user?.employeeId && (
                   <>
                     <span>
-                      Emp ID: <strong className="text-[#d4af37] font-bold">{user.employeeId}</strong>
+                      Emp ID: <strong className="text-primary font-bold">{user.employeeId}</strong>
                     </span>
-                    <span className="text-gray-600">•</span>
+                    <span className="text-muted-foreground/60">•</span>
                   </>
                 )}
                 <span>
-                  Role: <strong className="text-gray-200">{user?.role}</strong>
+                  Role: <strong className="text-foreground">{user?.role}</strong>
                 </span>
               </div>
 
               <div className="pt-1">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-700/80 text-[10px] font-mono font-bold">
-                  <CheckCircle2 size={11} className="text-emerald-400" />
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold">
+                  <CheckCircle2 size={11} className="text-emerald-500" />
                   <span>ACTIVE CAMPUS CREDENTIAL • 2026</span>
                 </span>
               </div>
@@ -330,7 +330,7 @@ export function ProfileViewAndEditor({
                 type="button"
                 onClick={handleCancelClick}
                 disabled={submitting}
-                className="px-3.5 py-2 rounded-xl bg-[#171c2a] hover:bg-[#20273a] text-gray-300 hover:text-white border border-[#273248] text-xs font-semibold transition"
+                className="px-3.5 py-2 rounded-xl bg-surface-secondary hover:bg-surface-secondary/80 text-foreground border border-border text-xs font-semibold transition"
               >
                 Cancel
               </button>
@@ -346,45 +346,45 @@ export function ProfileViewAndEditor({
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               {/* Department & Assignment */}
-              <div className="bg-[#161a29] p-5 rounded-2xl border border-[#232b3f] space-y-4">
-                <span className="text-[10px] font-bold uppercase tracking-wider font-mono text-[#d4af37] block">
+              <div className="bg-surface-secondary/50 p-5 rounded-2xl border border-border space-y-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider font-mono text-primary block">
                   Institutional Assignment
                 </span>
 
-                <div className="flex items-start gap-3 text-gray-300">
-                  <div className="p-2 rounded-lg bg-[#1e2538] border border-[#2b354d] text-[#d4af37] shrink-0 mt-0.5">
+                <div className="flex items-start gap-3 text-muted-foreground">
+                  <div className="p-2 rounded-lg bg-surface border border-border text-primary shrink-0 mt-0.5">
                     <Building size={15} />
                   </div>
                   <div>
-                    <div className="text-[10px] text-gray-400 uppercase font-mono">Department / Unit</div>
-                    <div className="text-xs sm:text-sm font-bold text-white mt-0.5">
+                    <div className="text-[10px] text-muted-foreground uppercase font-mono">Department / Unit</div>
+                    <div className="text-xs sm:text-sm font-bold text-foreground mt-0.5">
                       {user?.department || (user?.branch ? `Department of ${user.branch}` : 'General Administration')}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 text-gray-300">
-                  <div className="p-2 rounded-lg bg-[#1e2538] border border-[#2b354d] text-[#d4af37] shrink-0 mt-0.5">
+                <div className="flex items-start gap-3 text-muted-foreground">
+                  <div className="p-2 rounded-lg bg-surface border border-border text-primary shrink-0 mt-0.5">
                     <Award size={15} />
                   </div>
                   <div>
-                    <div className="text-[10px] text-gray-400 uppercase font-mono">
+                    <div className="text-[10px] text-muted-foreground uppercase font-mono">
                       {isStudent ? 'Academic Standing' : 'Designation / Title'}
                     </div>
-                    <div className="text-xs sm:text-sm font-bold text-white mt-0.5">
+                    <div className="text-xs sm:text-sm font-bold text-foreground mt-0.5">
                       {isStudent ? academicStanding : user?.designation || user?.role}
                     </div>
                   </div>
                 </div>
 
                 {user?.specialization && (
-                  <div className="flex items-start gap-3 text-gray-300">
-                    <div className="p-2 rounded-lg bg-[#1e2538] border border-[#2b354d] text-[#d4af37] shrink-0 mt-0.5">
+                  <div className="flex items-start gap-3 text-muted-foreground">
+                    <div className="p-2 rounded-lg bg-surface border border-border text-primary shrink-0 mt-0.5">
                       <Briefcase size={15} />
                     </div>
                     <div>
-                      <div className="text-[10px] text-gray-400 uppercase font-mono">Specialization</div>
-                      <div className="text-xs sm:text-sm font-bold text-white mt-0.5">
+                      <div className="text-[10px] text-muted-foreground uppercase font-mono">Specialization</div>
+                      <div className="text-xs sm:text-sm font-bold text-foreground mt-0.5">
                         {user.specialization}
                       </div>
                     </div>
@@ -393,50 +393,50 @@ export function ProfileViewAndEditor({
               </div>
 
               {/* Contact & Residential Allocation */}
-              <div className="bg-[#161a29] p-5 rounded-2xl border border-[#232b3f] space-y-4">
-                <span className="text-[10px] font-bold uppercase tracking-wider font-mono text-cyan-400 block">
+              <div className="bg-surface-secondary/50 p-5 rounded-2xl border border-border space-y-4">
+                <span className="text-[10px] font-bold uppercase tracking-wider font-mono text-sky-600 dark:text-sky-400 block">
                   Contact Records &amp; Channels
                 </span>
 
-                <div className="flex items-start gap-3 text-gray-300">
-                  <div className="p-2 rounded-lg bg-[#1e2538] border border-[#2b354d] text-cyan-400 shrink-0 mt-0.5">
+                <div className="flex items-start gap-3 text-muted-foreground">
+                  <div className="p-2 rounded-lg bg-surface border border-border text-sky-600 dark:text-sky-400 shrink-0 mt-0.5">
                     <Mail size={15} />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[10px] text-gray-400 uppercase font-mono flex items-center gap-1.5">
+                    <div className="text-[10px] text-muted-foreground uppercase font-mono flex items-center gap-1.5">
                       <span>Official Campus Email</span>
                       <span title="Managed by campus auth" className="inline-flex items-center">
-                        <Lock size={10} className="text-gray-500" />
+                        <Lock size={10} className="text-muted-foreground" />
                       </span>
                     </div>
-                    <div className="text-xs sm:text-sm font-bold text-white mt-0.5 font-mono truncate">
+                    <div className="text-xs sm:text-sm font-bold text-foreground mt-0.5 font-mono truncate">
                       {user?.email}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 text-gray-300">
-                  <div className="p-2 rounded-lg bg-[#1e2538] border border-[#2b354d] text-cyan-400 shrink-0 mt-0.5">
+                <div className="flex items-start gap-3 text-muted-foreground">
+                  <div className="p-2 rounded-lg bg-surface border border-border text-sky-600 dark:text-sky-400 shrink-0 mt-0.5">
                     <Phone size={15} />
                   </div>
                   <div>
-                    <div className="text-[10px] text-gray-400 uppercase font-mono">
+                    <div className="text-[10px] text-muted-foreground uppercase font-mono">
                       {isStudent ? 'Personal Mobile' : 'Duty / Office Mobile'}
                     </div>
-                    <div className="text-xs sm:text-sm font-bold text-white mt-0.5 font-mono">
+                    <div className="text-xs sm:text-sm font-bold text-foreground mt-0.5 font-mono">
                       {user?.phone || 'Not provided'}
                     </div>
                   </div>
                 </div>
 
                 {isStudent && user?.parentPhone && (
-                  <div className="flex items-start gap-3 text-gray-300">
-                    <div className="p-2 rounded-lg bg-[#1e2538] border border-[#2b354d] text-cyan-400 shrink-0 mt-0.5">
+                  <div className="flex items-start gap-3 text-muted-foreground">
+                    <div className="p-2 rounded-lg bg-surface border border-border text-sky-600 dark:text-sky-400 shrink-0 mt-0.5">
                       <Phone size={15} />
                     </div>
                     <div>
-                      <div className="text-[10px] text-gray-400 uppercase font-mono">Emergency Contact</div>
-                      <div className="text-xs sm:text-sm font-bold text-white mt-0.5 font-mono">
+                      <div className="text-[10px] text-muted-foreground uppercase font-mono">Emergency Contact</div>
+                      <div className="text-xs sm:text-sm font-bold text-foreground mt-0.5 font-mono">
                         {user.parentPhone}
                       </div>
                     </div>
@@ -444,13 +444,13 @@ export function ProfileViewAndEditor({
                 )}
 
                 {user?.hostelBlock && (
-                  <div className="flex items-start gap-3 text-gray-300">
-                    <div className="p-2 rounded-lg bg-[#1e2538] border border-[#2b354d] text-cyan-400 shrink-0 mt-0.5">
+                  <div className="flex items-start gap-3 text-muted-foreground">
+                    <div className="p-2 rounded-lg bg-surface border border-border text-sky-600 dark:text-sky-400 shrink-0 mt-0.5">
                       <Home size={15} />
                     </div>
                     <div>
-                      <div className="text-[10px] text-gray-400 uppercase font-mono">Hostel Allocation</div>
-                      <div className="text-xs sm:text-sm font-bold text-white mt-0.5">
+                      <div className="text-[10px] text-muted-foreground uppercase font-mono">Hostel Allocation</div>
+                      <div className="text-xs sm:text-sm font-bold text-foreground mt-0.5">
                         {user.hostelBlock} {user.roomNumber ? `/ Room ${user.roomNumber}` : ''}
                       </div>
                     </div>
@@ -460,25 +460,25 @@ export function ProfileViewAndEditor({
             </div>
 
             {/* Bio / About Box */}
-            <div className="bg-[#161a29] p-5 rounded-2xl border border-[#232b3f] space-y-2">
+            <div className="bg-surface-secondary/50 p-5 rounded-2xl border border-border space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider font-mono text-gray-400 flex items-center gap-1.5">
-                  <FileText size={12} className="text-[#d4af37]" />
+                <span className="text-[10px] font-bold uppercase tracking-wider font-mono text-muted-foreground flex items-center gap-1.5">
+                  <FileText size={12} className="text-primary" />
                   <span>About &amp; Professional Statement</span>
                 </span>
                 {!user?.bio && (
                   <button
                     type="button"
                     onClick={handleEditClick}
-                    className="text-[11px] text-[#d4af37] hover:underline font-mono"
+                    className="text-[11px] text-primary hover:underline font-mono"
                   >
                     + Add Bio
                   </button>
                 )}
               </div>
-              <p className="text-xs sm:text-sm text-gray-300 leading-relaxed">
+              <p className="text-xs sm:text-sm text-foreground leading-relaxed">
                 {user?.bio || (
-                  <span className="text-gray-500 italic">
+                  <span className="text-muted-foreground italic">
                     No personal statement or bio provided yet. Click &ldquo;Edit Profile&rdquo; to add a brief introduction.
                   </span>
                 )}
@@ -490,31 +490,31 @@ export function ProfileViewAndEditor({
           /* EDIT MODE                                                */
           /* ======================================================== */
           <form onSubmit={handleSubmit} className="space-y-5 animate-tab-fade">
-            <div className="border-b border-[#212739] pb-3 flex items-center justify-between">
+            <div className="border-b border-border pb-3 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <Edit2 size={16} className="text-[#d4af37]" />
+                <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                  <Edit2 size={16} className="text-primary" />
                   <span>Edit Profile Information</span>
                 </h3>
-                <p className="text-[11px] text-gray-400 mt-0.5">
+                <p className="text-[11px] text-muted-foreground mt-0.5">
                   Update your profile photo, contact channels, departmental details, and bio statement.
                 </p>
               </div>
             </div>
 
             {/* Dedicated Profile Photo Area */}
-            <div className="bg-[#161a29] p-4 sm:p-5 rounded-2xl border border-[#232b3f] space-y-3">
+            <div className="bg-surface-secondary/50 p-4 sm:p-5 rounded-2xl border border-border space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider font-mono text-[#d4af37] flex items-center gap-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider font-mono text-primary flex items-center gap-1.5">
                   <Camera size={13} />
                   <span>Profile Photo</span>
                 </span>
                 {formData.profilePhotoUrl ? (
-                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
                     Custom Photo Active
                   </span>
                 ) : (
-                  <span className="text-[10px] font-mono text-gray-400 bg-[#121624] border border-[#232b3f] px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-mono text-muted-foreground bg-surface border border-border px-2 py-0.5 rounded-full">
                     Default Initials Active
                   </span>
                 )}
@@ -523,7 +523,7 @@ export function ProfileViewAndEditor({
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 pt-1">
                 {/* Circular DP Preview */}
                 <div className="relative group shrink-0">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-[#d4af37]/80 bg-[#121624] shadow-xl shadow-black/40 flex items-center justify-center">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-2 border-primary/80 bg-surface shadow-md flex items-center justify-center">
                     <Avatar
                       src={formData.profilePhotoUrl}
                       name={formData.fullName || user?.username}
@@ -540,9 +540,9 @@ export function ProfileViewAndEditor({
                   <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
                     <label
                       htmlFor="profile-photo-input"
-                      className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#1f2638] hover:bg-[#283248] text-white border border-[#2e374f] hover:border-[#d4af37]/60 text-xs font-semibold cursor-pointer shadow-sm active:scale-95 transition-all"
+                      className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-surface hover:bg-surface-secondary text-foreground border border-border hover:border-primary text-xs font-semibold cursor-pointer shadow-xs active:scale-95 transition-all"
                     >
-                      <Upload size={14} className="text-[#d4af37]" />
+                      <Upload size={14} className="text-primary" />
                       <span>{formData.profilePhotoUrl ? 'Change Photo' : 'Upload Photo'}</span>
                     </label>
 
@@ -558,7 +558,7 @@ export function ProfileViewAndEditor({
                       <button
                         type="button"
                         onClick={() => setRemoveModalOpen(true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-950/40 hover:bg-rose-950/70 text-rose-300 hover:text-white border border-rose-800/60 text-xs font-semibold active:scale-95 transition-all"
+                        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-semibold active:scale-95 transition-all"
                       >
                         <Trash2 size={13} />
                         <span>Remove Photo</span>
@@ -566,7 +566,7 @@ export function ProfileViewAndEditor({
                     )}
                   </div>
 
-                  <p className="text-[11px] text-gray-400 leading-normal">
+                  <p className="text-[11px] text-muted-foreground leading-normal">
                     Upload a clear profile photo. JPG, PNG or WEBP. Maximum 5 MB.
                   </p>
                 </div>
@@ -576,21 +576,21 @@ export function ProfileViewAndEditor({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               {/* Full Name */}
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">
-                  Full Name <span className="text-[#d4af37]">*</span>
+                <label className="block text-foreground font-semibold mb-1">
+                  Full Name <span className="text-primary">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#d4af37]"
+                  className="w-full bg-surface border border-border rounded-xl p-3 text-xs sm:text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 />
               </div>
 
               {/* Phone */}
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">
+                <label className="block text-foreground font-semibold mb-1">
                   {isStudent ? 'Personal Mobile Number' : 'Duty / Mobile Phone'}
                 </label>
                 <input
@@ -598,7 +598,7 @@ export function ProfileViewAndEditor({
                   placeholder="+91 9876543210"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#d4af37]"
+                  className="w-full bg-surface border border-border rounded-xl p-3 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 />
               </div>
             </div>
@@ -606,7 +606,7 @@ export function ProfileViewAndEditor({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               {/* Department */}
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">
+                <label className="block text-foreground font-semibold mb-1">
                   Department / Operational Unit
                 </label>
                 <input
@@ -614,13 +614,13 @@ export function ProfileViewAndEditor({
                   placeholder="e.g. Computer Science & Engineering / Maintenance"
                   value={formData.department}
                   onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                  className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#d4af37]"
+                  className="w-full bg-surface border border-border rounded-xl p-3 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                 />
               </div>
 
               {/* Designation */}
               <div>
-                <label className="block text-gray-300 font-semibold mb-1">
+                <label className="block text-foreground font-semibold mb-1">
                   Designation / Role Title
                 </label>
                 <input
@@ -630,12 +630,12 @@ export function ProfileViewAndEditor({
                   onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
                   className={`w-full border rounded-xl p-3 text-xs sm:text-sm ${
                     isStudent
-                      ? 'bg-[#141824] border-[#22293a] text-gray-400 cursor-not-allowed'
-                      : 'bg-[#161a29] border-[#283248] text-white focus:outline-none focus:border-[#d4af37]'
+                      ? 'bg-surface-secondary border-border text-muted-foreground cursor-not-allowed'
+                      : 'bg-surface border-border text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary'
                   }`}
                 />
                 {isStudent && (
-                  <span className="text-[10px] text-gray-500 font-mono mt-1 block">
+                  <span className="text-[10px] text-muted-foreground font-mono mt-1 block">
                     Student designation is managed by university admissions.
                   </span>
                 )}
@@ -646,7 +646,7 @@ export function ProfileViewAndEditor({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               {isStudent ? (
                 <div>
-                  <label className="block text-gray-300 font-semibold mb-1">
+                  <label className="block text-foreground font-semibold mb-1">
                     Emergency / Parent Contact Phone
                   </label>
                   <input
@@ -654,12 +654,12 @@ export function ProfileViewAndEditor({
                     placeholder="+91 9876500001"
                     value={formData.parentPhone}
                     onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })}
-                    className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#d4af37]"
+                    className="w-full bg-surface border border-border rounded-xl p-3 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   />
                 </div>
               ) : (
                 <div>
-                  <label className="block text-gray-300 font-semibold mb-1">
+                  <label className="block text-foreground font-semibold mb-1">
                     Specialization Area (Optional)
                   </label>
                   <input
@@ -667,27 +667,19 @@ export function ProfileViewAndEditor({
                     placeholder="e.g. ELECTRICAL, PLUMBING, CSE_FACULTY, ACADEMIC_AFFAIRS"
                     value={formData.specialization}
                     onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-                    className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#d4af37]"
+                    className="w-full bg-surface border border-border rounded-xl p-3 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                   />
                 </div>
               )}
-
-              {/* Read-only Official Email notice */}
-              <div className="p-3 rounded-xl bg-[#141724] border border-[#222a3d] flex items-center gap-3">
-                <Lock size={16} className="text-gray-500 shrink-0" />
-                <div className="text-[11px] text-gray-400 leading-tight">
-                  <span className="font-semibold text-gray-300">Campus Email Locked:</span> {user?.email} is tied to your cryptographic security session.
-                </div>
-              </div>
             </div>
 
             {/* Bio */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-gray-300 font-semibold text-xs">
+                <label className="block text-foreground font-semibold text-xs">
                   Bio / About Statement
                 </label>
-                <span className="text-[10px] text-gray-500 font-mono">
+                <span className="text-[10px] text-muted-foreground font-mono">
                   {formData.bio.length}/1000
                 </span>
               </div>
@@ -697,17 +689,17 @@ export function ProfileViewAndEditor({
                 placeholder="Share a short bio, research focus, guidance interests, or office hours..."
                 value={formData.bio}
                 onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#d4af37] resize-none"
+                className="w-full bg-surface border border-border rounded-xl p-3 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-none"
               />
             </div>
 
             {/* Form Action Buttons */}
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#212739]">
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
               <button
                 type="button"
                 onClick={handleCancelClick}
                 disabled={submitting}
-                className="px-4 py-2.5 rounded-xl bg-[#171c2a] hover:bg-[#20273a] text-gray-300 hover:text-white border border-[#273248] text-xs font-semibold transition"
+                className="px-4 py-2.5 rounded-xl bg-surface-secondary hover:bg-surface-secondary/80 text-foreground border border-border text-xs font-semibold transition"
               >
                 Cancel
               </button>
@@ -715,7 +707,7 @@ export function ProfileViewAndEditor({
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-6 py-2.5 rounded-xl bg-[#d4af37] hover:bg-[#e4c257] text-black font-bold text-xs shadow-md shadow-[#d4af37]/20 transition-all active:scale-95 disabled:opacity-50 inline-flex items-center gap-2"
+                className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow-xs transition-all active:scale-95 disabled:opacity-50 inline-flex items-center gap-2"
               >
                 <Save size={15} />
                 <span>{submitting ? 'Saving...' : 'Save Changes'}</span>

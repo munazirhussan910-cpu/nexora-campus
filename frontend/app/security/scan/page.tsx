@@ -164,8 +164,8 @@ function SecurityScanContent() {
           }}
           className={`py-3.5 sm:py-4 px-3 rounded-2xl border text-center font-bold text-xs sm:text-sm transition-all duration-150 flex flex-col items-center justify-center gap-1.5 active:scale-95 ${
             method === 'QR'
-              ? 'bg-cyan-950/70 border-cyan-400 text-cyan-300 shadow-lg shadow-cyan-950/40 ring-1 ring-cyan-400/40'
-              : 'bg-[#121624] border-[#232b3f] text-gray-400 hover:text-white hover:bg-[#161c2d]'
+              ? 'bg-cyan-500/15 border-cyan-500 text-cyan-700 dark:text-cyan-300 shadow-xs ring-1 ring-cyan-500/40'
+              : 'bg-surface border-border text-muted-foreground hover:text-foreground hover:bg-surface-secondary'
           }`}
         >
           <QrCode size={22} className={method === 'QR' ? 'text-cyan-400' : 'text-gray-500'} />
@@ -180,8 +180,8 @@ function SecurityScanContent() {
           }}
           className={`py-3.5 sm:py-4 px-3 rounded-2xl border text-center font-bold text-xs sm:text-sm transition-all duration-150 flex flex-col items-center justify-center gap-1.5 active:scale-95 ${
             method === 'PIN'
-              ? 'bg-cyan-950/70 border-cyan-400 text-cyan-300 shadow-lg shadow-cyan-950/40 ring-1 ring-cyan-400/40'
-              : 'bg-[#121624] border-[#232b3f] text-gray-400 hover:text-white hover:bg-[#161c2d]'
+              ? 'bg-cyan-500/15 border-cyan-500 text-cyan-700 dark:text-cyan-300 shadow-xs ring-1 ring-cyan-500/40'
+              : 'bg-surface border-border text-muted-foreground hover:text-foreground hover:bg-surface-secondary'
           }`}
         >
           <Key size={22} className={method === 'PIN' ? 'text-cyan-400' : 'text-gray-500'} />
@@ -190,7 +190,7 @@ function SecurityScanContent() {
       </div>
 
       {/* Interactive Verification Section */}
-      <div className="bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xl shadow-black/20 space-y-5">
+      <div className="bg-surface border border-border rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xs space-y-5">
         {/* MODE 1: Camera QR Scanner */}
         {method === 'QR' && (
           <div className="space-y-4">
@@ -239,7 +239,7 @@ function SecurityScanContent() {
                       value={inputVal}
                       onChange={(e) => setInputVal(e.target.value)}
                       placeholder="Paste scanned token hash (NX-GP-...)..."
-                      className="flex-1 bg-[#161a29] border border-[#2b354d] rounded-xl px-3.5 py-2.5 text-xs font-mono text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400"
+                      className="flex-1 bg-surface border border-border rounded-xl px-3.5 py-2.5 text-xs font-mono text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-cyan-500"
                     />
                     <button
                       type="submit"
@@ -270,7 +270,7 @@ function SecurityScanContent() {
                 value={inputVal}
                 onChange={(e) => setInputVal(e.target.value)}
                 placeholder="e.g. 7392"
-                className="flex-1 bg-[#161a29] border-2 border-[#2b354d] rounded-xl px-4 py-3.5 text-center text-xl sm:text-2xl font-mono font-extrabold text-white placeholder-gray-600 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 tracking-widest transition"
+                className="flex-1 bg-surface border-2 border-border rounded-xl px-4 py-3.5 text-center text-xl sm:text-2xl font-mono font-extrabold text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 tracking-widest transition"
                 autoFocus
               />
 
@@ -292,7 +292,7 @@ function SecurityScanContent() {
                   setInputVal('7392');
                   executeVerification('7392', 'PIN');
                 }}
-                className="px-2.5 py-1 rounded-lg bg-[#182030] hover:text-cyan-300 font-mono text-[11px] border border-[#26334a] transition"
+                className="px-2.5 py-1 rounded-lg bg-surface-secondary hover:text-cyan-600 dark:hover:text-cyan-300 font-mono text-[11px] border border-border text-foreground transition"
               >
                 PIN 7392 (Aryan - Ready)
               </button>
@@ -302,7 +302,7 @@ function SecurityScanContent() {
                   setInputVal('4821');
                   executeVerification('4821', 'PIN');
                 }}
-                className="px-2.5 py-1 rounded-lg bg-[#182030] hover:text-cyan-300 font-mono text-[11px] border border-[#26334a] transition"
+                className="px-2.5 py-1 rounded-lg bg-surface-secondary hover:text-cyan-600 dark:hover:text-cyan-300 font-mono text-[11px] border border-border text-foreground transition"
               >
                 PIN 4821 (Pending Approval)
               </button>
@@ -342,25 +342,25 @@ function SecurityScanContent() {
                 </div>
 
                 {/* Structured Student & Pass Details */}
-                <div className="bg-[#121622] p-4 sm:p-5 rounded-xl border border-[#232c3f] space-y-3 text-xs">
-                  <div className="flex justify-between items-center border-b border-[#1c2436] pb-2">
+                <div className="bg-surface-secondary/60 p-4 sm:p-5 rounded-xl border border-border space-y-3 text-xs">
+                  <div className="flex justify-between items-center border-b border-border pb-2">
                     <span className="text-gray-400">Student:</span>
                     <span className="font-bold text-white text-sm">{verifyResult.student?.fullName || 'Aryan Khan'}</span>
                   </div>
 
-                  <div className="flex justify-between items-center border-b border-[#1c2436] pb-2 font-mono">
+                  <div className="flex justify-between items-center border-b border-border pb-2 font-mono">
                     <span className="text-gray-400">Roll Number:</span>
                     <span className="font-bold text-cyan-300 text-sm">{verifyResult.student?.rollNumber}</span>
                   </div>
 
-                  <div className="flex justify-between items-center border-b border-[#1c2436] pb-2 font-mono">
+                  <div className="flex justify-between items-center border-b border-border pb-2 font-mono">
                     <span className="text-gray-400">Pass ID:</span>
                     <span className="font-bold text-white">
                       {verifyResult.gatePass?.request?.requestNumber || verifyResult.gatePass?.id?.slice(0, 8)}
                     </span>
                   </div>
 
-                  <div className="flex justify-between items-center border-b border-[#1c2436] pb-2">
+                  <div className="flex justify-between items-center border-b border-border pb-2">
                     <span className="text-gray-400">Hostel Allocation:</span>
                     <span className="text-gray-200">
                       {verifyResult.student?.hostelRoom?.hostelBlock?.name || 'Block B'} / Room{' '}
@@ -368,19 +368,19 @@ function SecurityScanContent() {
                     </span>
                   </div>
 
-                  <div className="flex justify-between items-center border-b border-[#1c2436] pb-2">
+                  <div className="flex justify-between items-center border-b border-border pb-2">
                     <span className="text-gray-400">Destination:</span>
                     <span className="font-bold text-white">{verifyResult.gatePass?.destination}</span>
                   </div>
 
-                  <div className="flex justify-between items-center border-b border-[#1c2436] pb-2">
+                  <div className="flex justify-between items-center border-b border-border pb-2">
                     <span className="text-gray-400">Reason:</span>
                     <span className="text-gray-300">{verifyResult.gatePass?.reason}</span>
                   </div>
 
-                  <div className="flex justify-between items-center border-b border-[#1c2436] pb-2 font-mono">
+                  <div className="flex justify-between items-center border-b border-border pb-2 font-mono">
                     <span className="text-gray-400">Valid Until:</span>
-                    <span className="text-[#d4af37] font-bold text-sm">
+                    <span className="text-primary font-bold text-sm">
                       {new Date(
                         verifyResult.gatePass?.qrExpiresAt || verifyResult.gatePass?.expectedReturnTime
                       ).toLocaleString([], {
@@ -392,7 +392,7 @@ function SecurityScanContent() {
                     </span>
                   </div>
 
-                  <div className="flex justify-between items-center border-b border-[#1c2436] pb-2">
+                  <div className="flex justify-between items-center border-b border-border pb-2">
                     <span className="text-gray-400">Verification Method:</span>
                     <span className="px-2 py-0.5 rounded font-mono font-bold text-[11px] bg-[#1a2336] text-cyan-300 border border-cyan-800/60">
                       {lastVerificationMethod === 'QR_SCAN' ? 'QR SCAN' : '4-DIGIT PIN'}
@@ -437,7 +437,7 @@ function SecurityScanContent() {
                     type="button"
                     onClick={handleResetForNextScan}
                     disabled={actionLoading}
-                    className="py-3.5 px-5 rounded-xl bg-[#171f30] hover:bg-[#202b42] border border-[#2b374f] text-gray-300 font-bold text-xs sm:text-sm transition active:scale-95 disabled:opacity-50 shrink-0 flex items-center justify-center gap-1.5"
+                    className="py-3.5 px-5 rounded-xl bg-surface-secondary hover:bg-surface-secondary/80 border border-border text-foreground font-bold text-xs sm:text-sm transition active:scale-95 disabled:opacity-50 shrink-0 flex items-center justify-center gap-1.5"
                   >
                     <RotateCcw size={16} />
                     <span>Cancel / Scan Another</span>

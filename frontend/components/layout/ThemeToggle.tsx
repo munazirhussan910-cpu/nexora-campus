@@ -1,110 +1,156 @@
 'use client';
 
-import React from 'react';
-import { useTheme } from '@/lib/theme-context';
-import { Sun, Moon, Sparkles } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useTheme, Theme } from '@/lib/theme-context';
+import { Sun, Moon, Monitor, Check } from 'lucide-react';
 
 interface ThemeToggleProps {
-  compact?: boolean;
   className?: string;
-  showLabel?: boolean;
+  variant?: 'compact' | 'segmented' | 'dropdown';
+  align?: 'left' | 'right';
 }
 
 export function ThemeToggle({
-  compact = false,
   className = '',
-  showLabel = true,
+  variant = 'compact',
+  align = 'right',
 }: ThemeToggleProps) {
-  const { isNight, toggleTheme, mounted } = useTheme();
+  const { theme, resolvedTheme, setTheme, mounted } = useTheme();
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click or ESC key
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
 
   if (!mounted) {
     return (
       <div
-        className={`w-9 h-9 rounded-xl bg-card border border-border animate-pulse shrink-0 ${className}`}
+        className={`w-9 h-9 rounded-xl bg-surface border border-border animate-pulse shrink-0 ${className}`}
         aria-hidden="true"
       />
     );
   }
 
-  if (compact) {
+  const options: Array<{ value: Theme; label: string; icon: React.ElementType }> = [
+    { value: 'light', label: 'Light', icon: Sun },
+    { value: 'dark', label: 'Dark', icon: Moon },
+    { value: 'system', label: 'System', icon: Monitor },
+  ];
+
+  // Segmented Pill Control (e.g., for profile settings or inline bars)
+  if (variant === 'segmented') {
     return (
-      <button
-        onClick={toggleTheme}
-        role="switch"
-        aria-checked={isNight}
-        className={`relative p-2 rounded-xl border transition-all duration-300 shadow-sm active:scale-95 flex items-center justify-center shrink-0 group ${
-          isNight
-            ? 'bg-[#181b26] hover:bg-[#22283a] border-[#282f42] text-gray-300 hover:text-gold'
-            : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700 hover:text-amber-600 shadow-sm'
-        } ${className}`}
-        title={isNight ? 'Switch to Day Mode (Light)' : 'Switch to Night Mode (Dark)'}
-        aria-label={isNight ? 'Switch to Day Mode' : 'Switch to Night Mode'}
+      <div
+        role="radiogroup"
+        aria-label="Theme preference"
+        className={`inline-flex items-center p-1 rounded-xl bg-surface-secondary border border-border ${className}`}
       >
-        <span className="sr-only">
-          {isNight ? 'Switch to Day Mode' : 'Switch to Night Mode'}
-        </span>
-        <div className="relative w-5 h-5 flex items-center justify-center">
-          {isNight ? (
-            <Sun
-              size={17}
-              className="text-amber-400 group-hover:rotate-90 transition-transform duration-500"
-            />
-          ) : (
-            <Moon
-              size={17}
-              className="text-indigo-600 group-hover:-rotate-12 transition-transform duration-500"
-            />
-          )}
-        </div>
-      </button>
+        {options.map((opt) => {
+          const Icon = opt.icon;
+          const isSelected = theme === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              role="radio"
+              aria-checked={isSelected}
+              onClick={() => setTheme(opt.value)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 ${
+                isSelected
+                  ? 'bg-surface text-foreground shadow-xs font-semibold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Icon size={14} className={isSelected ? 'text-primary' : ''} />
+              <span>{opt.label}</span>
+            </button>
+          );
+        })}
+      </div>
     );
   }
 
-  return (
-    <button
-      onClick={toggleTheme}
-      role="switch"
-      aria-checked={isNight}
-      className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all duration-300 shadow-sm active:scale-95 shrink-0 ${
-        isNight
-          ? 'bg-[#181b26] hover:bg-[#202538] border-[#2e3549] text-gray-200 hover:border-gold/50'
-          : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800 shadow-sm hover:border-amber-400'
-      } ${className}`}
-      title={isNight ? 'Switch to Day Mode' : 'Switch to Night Mode'}
-      aria-label="Toggle Day and Night Mode"
-    >
-      {/* Visual Track / Switch Bubble */}
-      <div
-        className={`relative flex items-center justify-center w-5 h-5 rounded-full transition-transform duration-300 ${
-          isNight
-            ? 'bg-[#252b3d] text-cyan-400 group-hover:bg-[#2d354c]'
-            : 'bg-amber-100 text-amber-600 group-hover:bg-amber-200'
-        }`}
-      >
-        {isNight ? (
-          <Moon
-            size={12}
-            className="transition-transform duration-300 group-hover:scale-110"
-          />
-        ) : (
-          <Sun
-            size={12}
-            className="transition-transform duration-300 group-hover:rotate-45"
-          />
-        )}
-      </div>
+  // Compact Button with Dropdown (Default for Navbar and Header)
+  const CurrentIcon =
+    theme === 'system' ? Monitor : resolvedTheme === 'dark' ? Moon : Sun;
 
-      {showLabel && (
-        <span
-          className={`text-[11px] font-mono tracking-tight transition-colors select-none ${
-            isNight
-              ? 'text-gray-300 group-hover:text-white'
-              : 'text-slate-600 group-hover:text-slate-900 font-bold'
-          }`}
+  return (
+    <div ref={containerRef} className={`relative inline-block text-left shrink-0 ${className}`}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex items-center justify-center w-9 h-9 rounded-xl bg-surface hover:bg-surface-secondary border border-border text-foreground hover:text-primary transition-all duration-150 shadow-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-95"
+        aria-label={`Theme switcher: current theme is ${theme} (${resolvedTheme})`}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        title={`Theme: ${theme.toUpperCase()} (Click to change)`}
+      >
+        <CurrentIcon size={16} className="text-foreground transition-transform duration-200" />
+      </button>
+
+      {isOpen && (
+        <div
+          role="menu"
+          aria-label="Theme options"
+          className={`absolute ${
+            align === 'right' ? 'right-0' : 'left-0'
+          } mt-2 w-36 rounded-xl bg-surface border border-border shadow-xl p-1 z-50 animate-tab-fade text-xs`}
         >
-          {isNight ? 'Night' : 'Day'}
-        </span>
+          <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground border-b border-border mb-1">
+            Theme Mode
+          </div>
+          {options.map((opt) => {
+            const Icon = opt.icon;
+            const isSelected = theme === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="menuitemradio"
+                aria-checked={isSelected}
+                onClick={() => {
+                  setTheme(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg transition-colors ${
+                  isSelected
+                    ? 'bg-surface-secondary text-primary font-bold'
+                    : 'text-foreground hover:bg-surface-secondary/70 hover:text-foreground'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Icon
+                    size={14}
+                    className={isSelected ? 'text-primary' : 'text-muted-foreground'}
+                  />
+                  <span>{opt.label}</span>
+                </div>
+                {isSelected && <Check size={14} className="text-primary stroke-[2.5]" />}
+              </button>
+            );
+          })}
+        </div>
       )}
-    </button>
+    </div>
   );
 }

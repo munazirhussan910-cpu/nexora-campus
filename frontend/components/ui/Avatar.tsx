@@ -49,8 +49,8 @@ export function Avatar({
   const sizeConfig = sizeClasses[size] || sizeClasses.md;
 
   const defaultBackground = roleBadgeColor
-    ? `bg-gradient-to-br ${roleBadgeColor} text-black`
-    : 'bg-[#1e2538] text-[#18C5D8] border border-[#2e374f]';
+    ? `bg-gradient-to-br ${roleBadgeColor} text-white`
+    : 'bg-primary/10 text-primary border border-primary/25';
 
   const shouldRenderImage = !!src && !hasError;
 

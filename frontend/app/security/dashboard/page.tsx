@@ -17,8 +17,6 @@ import {
   Users,
   Clock,
   Shield,
-  MapPin,
-  CheckCircle2,
 } from 'lucide-react';
 
 export default function SecurityDashboardPage() {
@@ -40,28 +38,28 @@ export default function SecurityDashboardPage() {
   }, []);
 
   return (
-    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto pb-12 animate-tab-fade">
       {/* Security Top Bar */}
-      <div className="bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xl shadow-black/15">
+      <div className="bg-surface border border-border dark:bg-[#121624] dark:border-[#232b3f] dark:shadow-xl dark:shadow-black/15 rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#1b2234] border border-cyan-500/35 text-cyan-400 text-[10px] font-mono font-bold uppercase tracking-wider mb-2 shadow-xs">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-700 dark:bg-[#1b2234] dark:border-cyan-500/35 dark:text-cyan-400 text-[10px] font-mono font-bold uppercase tracking-wider mb-2">
               <Shield size={12} />
               <span>Main Gate Security Clearance</span>
             </div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-foreground tracking-tight">
               Duty Officer: {user?.fullName || 'Vikram Singh'}
             </h1>
-            <p className="text-xs sm:text-sm text-gray-400 mt-1 max-w-2xl font-mono">
-              Post: <strong className="text-cyan-400">Campus Gate 1 (Main Entrance &amp; Exit)</strong>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-2xl font-mono">
+              Post: <strong className="text-cyan-600 dark:text-cyan-400">Campus Gate 1 (Main Entrance &amp; Exit)</strong>
             </p>
           </div>
 
           <Link
             href="/security/scan"
-            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black text-sm shadow-xl shadow-cyan-950/40 active:scale-95 transition-all duration-150 shrink-0"
+            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground dark:bg-cyan-500 dark:hover:bg-cyan-400 dark:text-black dark:shadow-md dark:shadow-cyan-950/30 font-black text-sm shadow-xs active:scale-95 transition-all duration-150 shrink-0"
           >
-            <QrCode size={20} />
+            <QrCode size={18} />
             <span>OPEN GATE SCANNER (QR / PIN)</span>
           </Link>
         </div>
@@ -104,17 +102,17 @@ export default function SecurityDashboardPage() {
       )}
 
       {/* Currently Departed Students Roster */}
-      <div className="bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xl shadow-black/15 space-y-4">
-        <div className="flex items-center justify-between border-b border-[#21273a] pb-4">
+      <div className="bg-surface border border-border rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-border pb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#182030] text-cyan-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
               <Activity size={16} />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">
+              <h2 className="text-sm sm:text-base font-bold text-foreground tracking-tight">
                 Students Currently Off-Campus (Departed)
               </h2>
-              <p className="text-[11px] text-gray-400">
+              <p className="text-[11px] text-muted-foreground">
                 Active passes requiring return scanning prior to curfew
               </p>
             </div>
@@ -122,7 +120,7 @@ export default function SecurityDashboardPage() {
 
           <Link
             href="/security/scan"
-            className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold inline-flex items-center gap-1 group transition"
+            className="text-xs text-primary hover:underline font-semibold inline-flex items-center gap-1 group transition"
           >
             <span>Scan Return Arrival</span>
             <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
@@ -138,38 +136,38 @@ export default function SecurityDashboardPage() {
             icon={ShieldCheck}
           />
         ) : (
-          <div className="divide-y divide-[#202638]">
+          <div className="divide-y divide-border">
             {activeDepartures.map((req) => (
               <div
                 key={req.id}
-                className="py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs hover:bg-[#161a29] transition-colors rounded-xl px-2"
+                className="py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs hover:bg-surface-secondary/50 transition-colors rounded-xl px-2"
               >
                 <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono font-bold text-sm text-cyan-300">{req.requestNumber}</span>
-                    <span className="font-bold text-white text-sm">
+                    <span className="font-mono font-bold text-sm text-cyan-700 dark:text-cyan-300">{req.requestNumber}</span>
+                    <span className="font-bold text-foreground text-sm">
                       {req.requester?.student?.fullName || req.requester?.username}
                     </span>
-                    <span className="font-mono text-gray-400 text-[11px]">
+                    <span className="font-mono text-muted-foreground text-[11px]">
                       ({req.requester?.student?.rollNumber})
                     </span>
                     <StatusBadge status="DEPARTED" size="sm" />
                   </div>
 
-                  <div className="text-gray-300">
-                    Destination: <strong className="text-white">{req.gatePass?.destination || 'City'}</strong> • Reason: {req.description}
+                  <div className="text-muted-foreground">
+                    Destination: <strong className="text-foreground">{req.gatePass?.destination || 'City'}</strong> • Reason: {req.description}
                   </div>
 
-                  <div className="text-[11px] text-gray-500 font-mono">
+                  <div className="text-[11px] text-muted-foreground font-mono">
                     Authorized Exit: {new Date(req.createdAt).toLocaleDateString()}
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#22293d]">
-                  <div className="text-left sm:text-right text-[11px] text-gray-400 font-mono">
+                <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border">
+                  <div className="text-left sm:text-right text-[11px] text-muted-foreground font-mono">
                     <div>
                       Return By:{' '}
-                      <strong className="text-gray-200">
+                      <strong className="text-foreground">
                         {req.gatePass?.expectedReturnTime
                           ? new Date(req.gatePass.expectedReturnTime).toLocaleTimeString([], {
                               hour: '2-digit',
@@ -178,14 +176,14 @@ export default function SecurityDashboardPage() {
                           : 'Curfew'}
                       </strong>
                     </div>
-                    <div className="font-mono text-cyan-300 font-bold">
+                    <div className="font-mono text-cyan-600 dark:text-cyan-400 font-bold">
                       PIN: {req.gatePass?.passPin}
                     </div>
                   </div>
 
                   <Link
                     href={`/security/scan?pin=${req.gatePass?.passPin}`}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-black font-extrabold text-xs shadow transition active:scale-95"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow-xs transition active:scale-95"
                   >
                     <span>Mark Return</span>
                     <ArrowRight size={13} />

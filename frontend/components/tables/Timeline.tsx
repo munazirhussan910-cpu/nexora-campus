@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Circle, Clock, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { StatusBadge } from '../status/StatusBadge';
 
 export interface TimelineItem {
@@ -23,11 +23,11 @@ interface TimelineProps {
 
 export function Timeline({ history }: TimelineProps) {
   if (!history || history.length === 0) {
-    return <div className="text-gray-400 text-xs py-4 text-center">No timeline history recorded yet.</div>;
+    return <div className="text-muted-foreground text-xs py-4 text-center">No timeline history recorded yet.</div>;
   }
 
   return (
-    <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-3 before:bottom-3 before:w-0.5 before:bg-[#282f42]">
+    <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-3 before:bottom-3 before:w-0.5 before:bg-border">
       {history.map((item, idx) => {
         const isLatest = idx === history.length - 1;
         const dateObj = new Date(item.createdAt);
@@ -46,41 +46,41 @@ export function Timeline({ history }: TimelineProps) {
             <div
               className={`absolute -left-[27px] top-1 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${
                 isLatest
-                  ? 'bg-emerald-500 border-emerald-300 ring-4 ring-emerald-950'
-                  : 'bg-[#1e2230] border-[#3d4661]'
+                  ? 'bg-emerald-500 border-surface ring-4 ring-emerald-500/20'
+                  : 'bg-surface border-border'
               }`}
             >
               {isLatest && <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
             </div>
 
-            <div className="bg-[#181b26] border border-[#282f42] rounded-xl p-3.5 hover:border-[#3d4661] transition">
+            <div className="bg-surface border border-border rounded-xl p-3.5 hover:border-primary/40 transition shadow-xs">
               <div className="flex items-center justify-between gap-2 mb-1.5">
                 <div className="flex items-center gap-2 flex-wrap">
                   <StatusBadge status={item.newStatus} size="sm" />
                   {item.oldStatus && (
-                    <span className="text-[11px] text-gray-500 flex items-center gap-1">
+                    <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                       <span>from {item.oldStatus}</span>
                       <ArrowRight size={10} />
                     </span>
                   )}
                 </div>
-                <div className="text-[11px] font-mono text-gray-400">
-                  {timeStr} • <span className="text-gray-500">{dateStr}</span>
+                <div className="text-[11px] font-mono text-muted-foreground">
+                  {timeStr} • <span>{dateStr}</span>
                 </div>
               </div>
 
               {item.comment && (
-                <p className="text-xs text-gray-200 mt-1 mb-2 leading-relaxed bg-[#12151f] p-2 rounded-lg border border-[#22283a]">
+                <p className="text-xs text-foreground mt-1 mb-2 leading-relaxed bg-surface-secondary/70 p-2.5 rounded-lg border border-border">
                   {item.comment}
                 </p>
               )}
 
-              <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-[#22283a]/60">
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1.5 border-t border-border">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-gray-500">Action By:</span>
-                  <span className="font-semibold text-gray-300">{actorName}</span>
+                  <span className="opacity-70">Action By:</span>
+                  <span className="font-semibold text-foreground">{actorName}</span>
                 </div>
-                <span className="px-1.5 py-0.5 rounded bg-[#202534] text-gray-400 text-[10px]">
+                <span className="px-1.5 py-0.5 rounded bg-surface-secondary text-muted-foreground text-[10px] font-mono border border-border">
                   {actorRole}
                 </span>
               </div>

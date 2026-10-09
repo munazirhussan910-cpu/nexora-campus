@@ -1,11 +1,13 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 
-type Theme = 'dark' | 'light';
+export type Theme = 'light' | 'dark' | 'system';
+export type ResolvedTheme = 'light' | 'dark';
 
 interface ThemeContextType {
   theme: Theme;
+  resolvedTheme: ResolvedTheme;
   isNight: boolean;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
@@ -14,6 +16,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType>({
   theme: 'dark',
+  resolvedTheme: 'dark',
   isNight: true,
   toggleTheme: () => {},
   setTheme: () => {},
@@ -21,60 +24,68 @@ const ThemeContext = createContext<ThemeContextType>({
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark');
+  const [theme, setThemeState] = useState<Theme>('system');
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('dark');
   const [mounted, setMounted] = useState(false);
 
-  // Apply theme to DOM and meta tags
-  const applyTheme = (newTheme: Theme) => {
+  const getSystemTheme = useCallback((): ResolvedTheme => {
+    if (typeof window === 'undefined') return 'dark';
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light';
+  }, []);
+
+  const applyThemeToDom = useCallback((resolved: ResolvedTheme) => {
+    if (typeof document === 'undefined') return;
     const root = document.documentElement;
-    if (newTheme === 'light') {
+    if (resolved === 'dark') {
+      root.classList.add('dark');
+      root.classList.remove('light');
+    } else {
       root.classList.remove('dark');
       root.classList.add('light');
-    } else {
-      root.classList.remove('light');
-      root.classList.add('dark');
     }
 
-    // Update meta theme-color for mobile address bars
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
-      metaThemeColor.setAttribute('content', newTheme === 'light' ? '#f8fafc' : '#0a0c12');
+      metaThemeColor.setAttribute('content', resolved === 'dark' ? '#0B0D12' : '#F7F7F4');
     }
-  };
+  }, []);
 
   useEffect(() => {
     setMounted(true);
 
-    // Initial check from localStorage or OS preference
-    const stored = localStorage.getItem('nexora-theme') as Theme | null;
-    let initialTheme: Theme = 'dark';
+    const stored = (localStorage.getItem('nexora-theme') as Theme | null) || 'system';
+    const validTheme: Theme = stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
+    setThemeState(validTheme);
 
-    if (stored === 'light' || stored === 'dark') {
-      initialTheme = stored;
-    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-      initialTheme = 'light';
-    }
+    const initialResolved: ResolvedTheme =
+      validTheme === 'system' ? getSystemTheme() : validTheme;
+    setResolvedTheme(initialResolved);
+    applyThemeToDom(initialResolved);
 
-    setThemeState(initialTheme);
-    applyTheme(initialTheme);
-
-    // Listen for storage changes across tabs
+    // Storage listener across browser tabs
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'nexora-theme' && (e.newValue === 'light' || e.newValue === 'dark')) {
-        setThemeState(e.newValue as Theme);
-        applyTheme(e.newValue as Theme);
+      if (e.key === 'nexora-theme' && e.newValue) {
+        const next = e.newValue as Theme;
+        if (next === 'light' || next === 'dark' || next === 'system') {
+          setThemeState(next);
+          const res = next === 'system' ? getSystemTheme() : next;
+          setResolvedTheme(res);
+          applyThemeToDom(res);
+        }
       }
     };
     window.addEventListener('storage', handleStorage);
 
-    // Listen for OS system theme changes if no explicit user preference stored
+    // Media query listener for OS dark mode changes
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleMediaChange = (e: MediaQueryListEvent) => {
       const currentStored = localStorage.getItem('nexora-theme');
-      if (!currentStored) {
-        const sysTheme = e.matches ? 'dark' : 'light';
-        setThemeState(sysTheme);
-        applyTheme(sysTheme);
+      if (!currentStored || currentStored === 'system') {
+        const nextRes: ResolvedTheme = e.matches ? 'dark' : 'light';
+        setResolvedTheme(nextRes);
+        applyThemeToDom(nextRes);
       }
     };
     mediaQuery.addEventListener('change', handleMediaChange);
@@ -83,25 +94,31 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('storage', handleStorage);
       mediaQuery.removeEventListener('change', handleMediaChange);
     };
-  }, []);
+  }, [getSystemTheme, applyThemeToDom]);
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
-    applyTheme(newTheme);
     localStorage.setItem('nexora-theme', newTheme);
+    const resolved: ResolvedTheme = newTheme === 'system' ? getSystemTheme() : newTheme;
+    setResolvedTheme(resolved);
+    applyThemeToDom(resolved);
     window.dispatchEvent(new CustomEvent('nexora-theme-change', { detail: newTheme }));
   };
 
   const toggleTheme = () => {
-    const nextTheme: Theme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(nextTheme);
+    if (resolvedTheme === 'dark') {
+      setTheme('light');
+    } else {
+      setTheme('dark');
+    }
   };
 
   return (
     <ThemeContext.Provider
       value={{
         theme,
-        isNight: theme === 'dark',
+        resolvedTheme,
+        isNight: resolvedTheme === 'dark',
         toggleTheme,
         setTheme,
         mounted,

@@ -30,6 +30,7 @@ const faculty_routes_1 = __importDefault(require("./routes/faculty.routes"));
 const copilot_routes_1 = __importDefault(require("./routes/copilot.routes"));
 const mentor_routes_1 = __importDefault(require("./routes/mentor.routes"));
 const lite_routes_1 = __importDefault(require("./routes/lite.routes"));
+const mess_routes_1 = __importDefault(require("./routes/mess.routes"));
 const app = (0, express_1.default)();
 // Security & Parsing Middlewares
 app.use((0, helmet_1.default)({
@@ -76,6 +77,7 @@ app.use('/api/integrations', integration_routes_1.default);
 app.use('/api/copilot', copilot_routes_1.default);
 app.use('/api/mentors', mentor_routes_1.default);
 app.use('/api/lite', lite_routes_1.default);
+app.use('/api/mess-menu', mess_routes_1.default);
 // Centralized Error Handling
 app.use(error_middleware_1.errorHandler);
 exports.default = app;

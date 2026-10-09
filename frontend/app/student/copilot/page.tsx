@@ -17,20 +17,14 @@ import {
   MapPin,
   CheckCircle2,
   AlertCircle,
-  Shield,
-  Download,
   ChevronDown,
   ChevronUp,
   RefreshCw,
-  HelpCircle,
-  FileText,
-  User,
-  Check,
   RotateCcw,
   Zap,
   CornerDownLeft,
-  GraduationCap,
-  Info,
+  User,
+  ExternalLink,
 } from 'lucide-react';
 
 interface CopilotCard {
@@ -41,7 +35,9 @@ interface CopilotCard {
     | 'ACTION_GATE_PASS'
     | 'GUIDE_PROCEDURE'
     | 'STUDY_PLAN'
-    | 'RESOURCE_LIST';
+    | 'RESOURCE_LIST'
+    | 'REQUEST_LIST'
+    | 'DEADLINE_LIST';
   title: string;
   data: any;
 }
@@ -53,13 +49,13 @@ interface ChatMessage {
   timestamp: string;
   cards?: CopilotCard[];
   quickReplies?: string[];
+  isError?: boolean;
 }
 
 interface SuggestedPrompt {
   id: string;
   icon: React.ElementType;
   iconColor: string;
-  iconBg: string;
   category: string;
   prompt: string;
   description: string;
@@ -69,75 +65,66 @@ const SUGGESTED_PROMPTS: SuggestedPrompt[] = [
   {
     id: 'attendance',
     icon: CheckCircle2,
-    iconColor: 'text-emerald-400',
-    iconBg: 'bg-emerald-500/10 border-emerald-500/30',
-    category: 'Academic Telemetry',
+    iconColor: 'text-emerald-500',
+    category: 'Attendance',
     prompt: 'Show my attendance status',
-    description: 'Check overall percentage, subject breakdown, and 75% margin calculation',
+    description: 'Check overall percentage, subject breakdown, and 75% cutoff calculation',
   },
   {
     id: 'classes',
     icon: Clock,
-    iconColor: 'text-cyan-400',
-    iconBg: 'bg-cyan-500/10 border-cyan-500/30',
-    category: 'Timetable & Routine',
+    iconColor: 'text-cyan-500',
+    category: 'Routine',
     prompt: 'What classes do I have today?',
-    description: 'Inspect your period schedule, lecture hall locations, and faculty roster',
+    description: 'Inspect period schedule, lecture hall locations, and faculty roster',
   },
   {
     id: 'gatepass',
     icon: Key,
-    iconColor: 'text-amber-400',
-    iconBg: 'bg-amber-500/10 border-amber-500/30',
-    category: 'Perimeter Security',
+    iconColor: 'text-amber-500',
+    category: 'Security',
     prompt: 'How do I apply for a gate pass?',
-    description: 'Generate campus exit authorization with dynamic HMAC QR code & offline PIN',
+    description: 'Generate campus exit authorization with dynamic QR code & offline PIN',
   },
   {
     id: 'maintenance',
     icon: Wrench,
-    iconColor: 'text-rose-400',
-    iconBg: 'bg-rose-500/10 border-rose-500/30',
-    category: 'Hostel Operations',
+    iconColor: 'text-rose-500',
+    category: 'Hostel',
     prompt: 'Help me report a maintenance issue',
-    description: 'Automatically route broken fixtures (fan, tap, light) to specialist staff',
+    description: 'Route broken fixtures (fan, tap, light) to specialist staff',
   },
   {
     id: 'deadlines',
     icon: Calendar,
-    iconColor: 'text-purple-400',
-    iconBg: 'bg-purple-500/10 border-purple-500/30',
-    category: 'Deadlines & Events',
+    iconColor: 'text-purple-500',
+    category: 'Deadlines',
     prompt: 'What academic deadlines are coming up?',
-    description: 'Review semester registrations, exam fee dates, and project submissions',
+    description: 'Review semester registrations, fee dates, and project submissions',
   },
   {
     id: 'studyplan',
     icon: BookOpen,
-    iconColor: 'text-violet-400',
-    iconBg: 'bg-violet-500/10 border-violet-500/30',
-    category: 'Exam Preparation',
+    iconColor: 'text-indigo-500',
+    category: 'Exams',
     prompt: 'Generate a 10-day DBMS study plan',
-    description: 'Create an interactive daily roadmap tailored to BPUT syllabus & PYQs',
+    description: 'Create an interactive daily roadmap tailored to syllabus topics',
   },
 ];
 
 /**
  * Enhanced Markdown text renderer for structured AI output
- * Handles bolding, inline code, headings, lists, and quotes cleanly.
  */
 function FormattedMessageText({ text }: { text: string }) {
   if (!text) return null;
 
-  // Split into paragraphs by double newlines or single newlines
   const paragraphs = text.split(/\n\n+/);
 
   return (
-    <div className="space-y-2.5 text-xs sm:text-sm text-gray-200 leading-relaxed font-sans">
+    <div className="space-y-2.5 text-xs sm:text-sm text-foreground leading-relaxed font-sans">
       {paragraphs.map((para, pIdx) => {
         const lines = para.split('\n');
 
-        // Check if paragraph is a list
         const isBulletList = lines.every((l) => l.trim().startsWith('- ') || l.trim().startsWith('* '));
         const isNumberedList = lines.every((l) => /^\d+\.\s/.test(l.trim()));
 
@@ -148,7 +135,7 @@ function FormattedMessageText({ text }: { text: string }) {
                 const content = line.replace(/^[-*]\s+/, '');
                 return (
                   <li key={lIdx} className="flex items-start gap-2.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-violet-400 mt-2 shrink-0 shadow-xs shadow-violet-400/50" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
                     <span className="flex-1">{renderInlineMarkdown(content)}</span>
                   </li>
                 );
@@ -166,7 +153,7 @@ function FormattedMessageText({ text }: { text: string }) {
                 const content = match ? match[2] : line;
                 return (
                   <li key={lIdx} className="flex items-start gap-2.5">
-                    <span className="w-5 h-5 rounded-full bg-violet-950/80 border border-violet-500/40 text-violet-300 text-[10px] font-mono font-bold flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="w-5 h-5 rounded-full bg-primary/10 border border-primary/25 text-primary text-[10px] font-mono font-bold flex items-center justify-center shrink-0 mt-0.5">
                       {num}
                     </span>
                     <span className="flex-1">{renderInlineMarkdown(content)}</span>
@@ -177,38 +164,34 @@ function FormattedMessageText({ text }: { text: string }) {
           );
         }
 
-        // Regular paragraph or line-by-line block
         return (
           <div key={pIdx} className="space-y-1">
             {lines.map((line, lIdx) => {
               const trimmed = line.trim();
 
-              // Heading 3
               if (trimmed.startsWith('### ')) {
                 return (
-                  <h4 key={lIdx} className="text-sm sm:text-base font-bold text-white pt-2 pb-1 flex items-center gap-1.5">
-                    <span className="w-1 h-3.5 bg-violet-500 rounded-full" />
+                  <h4 key={lIdx} className="text-sm sm:text-base font-bold text-foreground pt-2 pb-1 flex items-center gap-1.5">
+                    <span className="w-1 h-3.5 bg-primary rounded-full" />
                     {renderInlineMarkdown(trimmed.replace(/^###\s+/, ''))}
                   </h4>
                 );
               }
 
-              // Heading 2
               if (trimmed.startsWith('## ')) {
                 return (
-                  <h3 key={lIdx} className="text-base font-extrabold text-white pt-2.5 pb-1 flex items-center gap-2">
-                    <span className="w-1.5 h-4 bg-violet-500 rounded-full" />
+                  <h3 key={lIdx} className="text-base font-extrabold text-foreground pt-2.5 pb-1 flex items-center gap-2">
+                    <span className="w-1.5 h-4 bg-primary rounded-full" />
                     {renderInlineMarkdown(trimmed.replace(/^##\s+/, ''))}
                   </h3>
                 );
               }
 
-              // Blockquote
               if (trimmed.startsWith('> ')) {
                 return (
                   <blockquote
                     key={lIdx}
-                    className="border-l-2 border-violet-500/60 pl-3 py-1 my-1 text-xs text-gray-300 italic bg-violet-500/5 rounded-r-lg"
+                    className="border-l-2 border-primary/60 pl-3 py-1 my-1 text-xs text-muted-foreground italic bg-primary/5 rounded-r-lg"
                   >
                     {renderInlineMarkdown(trimmed.replace(/^>\s+/, ''))}
                   </blockquote>
@@ -228,11 +211,7 @@ function FormattedMessageText({ text }: { text: string }) {
   );
 }
 
-/**
- * Handles inline markdown: **bold**, `code`, *italic*
- */
 function renderInlineMarkdown(str: string): React.ReactNode {
-  // Tokenize by inline code and bold
   const tokens = str.split(/(`[^`]+`|\*\*[^*]+\*\*)/g);
 
   return tokens.map((tok, i) => {
@@ -240,7 +219,7 @@ function renderInlineMarkdown(str: string): React.ReactNode {
       return (
         <code
           key={i}
-          className="px-1.5 py-0.5 rounded-md bg-[#1a2136] border border-[#2b3859] font-mono text-[11px] sm:text-xs text-violet-300 font-semibold mx-0.5"
+          className="px-1.5 py-0.5 rounded-md bg-surface-secondary border border-border font-mono text-[11px] sm:text-xs text-primary font-semibold mx-0.5"
         >
           {tok.slice(1, -1)}
         </code>
@@ -248,7 +227,7 @@ function renderInlineMarkdown(str: string): React.ReactNode {
     }
     if (tok.startsWith('**') && tok.endsWith('**')) {
       return (
-        <strong key={i} className="text-white font-semibold">
+        <strong key={i} className="text-foreground font-semibold">
           {tok.slice(2, -2)}
         </strong>
       );
@@ -264,7 +243,6 @@ export default function StudentCopilotPage() {
   const [loading, setLoading] = useState(false);
   const [expandedPlanDays, setExpandedPlanDays] = useState<Record<string, boolean>>({});
 
-  // Action execution state tracking by card identifier
   const [actionStatus, setActionStatus] = useState<
     Record<string, { loading: boolean; success: boolean; result?: any; error?: string }>
   >({});
@@ -299,7 +277,6 @@ export default function StudentCopilotPage() {
     setLoading(true);
 
     try {
-      // Build conversation history (last 6 exchanges)
       const history = messages.slice(-6).map((m) => ({
         role: m.sender === 'user' ? ('user' as const) : ('assistant' as const),
         content: m.text,
@@ -328,6 +305,7 @@ export default function StudentCopilotPage() {
             sender: 'copilot',
             text: res.error?.message || 'Sorry, I encountered an issue connecting to the campus operations engine. Please try again.',
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isError: true,
           },
         ]);
       }
@@ -339,6 +317,7 @@ export default function StudentCopilotPage() {
           sender: 'copilot',
           text: 'Network error communicating with the Nexora backend. Please verify your connection or try again.',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isError: true,
         },
       ]);
     } finally {
@@ -353,10 +332,7 @@ export default function StudentCopilotPage() {
     setInput('');
   };
 
-  // --------------------------------------------------------------------------
-  // WORKFLOW ACTION EXECUTORS (Triggering existing backend APIs)
-  // --------------------------------------------------------------------------
-
+  // Workflow Action Handlers
   const handleExecuteMaintenance = async (cardKey: string, payload: any) => {
     setActionStatus((prev) => ({ ...prev, [cardKey]: { loading: true, success: false } }));
 
@@ -477,145 +453,89 @@ export default function StudentCopilotPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-100px)] max-w-5xl mx-auto space-y-3.5">
-      {/* --------------------------------------------------------------------- */}
-      {/* 1. COPILOT AI IDENTITY & HEADER                                       */}
-      {/* --------------------------------------------------------------------- */}
-      <header className="bg-gradient-to-r from-[#121626] via-[#151a2e] to-[#121626] border border-[#232c44] rounded-2xl p-3.5 sm:p-4 shadow-xl shrink-0 flex items-center justify-between gap-3 backdrop-blur-md">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="relative shrink-0">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-violet-600 via-purple-700 to-indigo-900 border border-violet-400/40 text-white flex items-center justify-center shadow-lg shadow-violet-600/30">
-              <Sparkles size={20} className="text-violet-200 animate-pulse" />
-            </div>
-            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#121626]" title="AI Engine Online" />
+    <div className="flex flex-col h-[calc(100vh-100px)] max-w-5xl mx-auto space-y-3">
+      {/* 1. MINIMAL CONVERSATION HEADER */}
+      <header className="bg-surface border border-border rounded-2xl p-3 sm:p-3.5 shadow-xs shrink-0 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
+            <Sparkles size={18} />
           </div>
-
           <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-sm sm:text-base font-extrabold text-white tracking-tight">
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm sm:text-base font-bold text-foreground tracking-tight">
                 Nexora Copilot
               </h1>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-violet-950/80 border border-violet-500/40 text-violet-300">
-                AI Campus Agent
-              </span>
-              <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono text-emerald-400 bg-emerald-950/50 border border-emerald-500/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                Live Engine Active
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>Online</span>
               </span>
             </div>
-            <p className="text-[11px] text-gray-400 truncate mt-0.5 flex items-center gap-1.5">
-              <span>Campus Problem-Solving Layer</span>
-              <span className="text-gray-600">•</span>
-              <span className="hidden sm:inline">Directly connected to verified workflows &amp; institutional records</span>
+            <p className="text-[11px] text-muted-foreground truncate">
+              Connected to campus records &amp; operational workflows
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={handleResetChat}
-            className="text-xs font-medium text-gray-300 hover:text-white px-3 py-1.5 rounded-xl bg-[#181f33] hover:bg-[#1f2842] border border-[#2b3754] transition-all flex items-center gap-1.5 active:scale-95 shadow-sm"
-            title="Start new conversation"
-          >
-            <RotateCcw size={13} className="text-violet-400" />
-            <span className="hidden sm:inline">New Chat</span>
-          </button>
-        </div>
+        <button
+          onClick={handleResetChat}
+          className="text-xs font-medium text-foreground hover:text-primary px-3 py-1.5 rounded-xl bg-surface-secondary hover:bg-surface-hover border border-border transition-all flex items-center gap-1.5 active:scale-95 shadow-xs shrink-0"
+          title="Start new conversation"
+        >
+          <RotateCcw size={13} />
+          <span className="hidden sm:inline">New Chat</span>
+        </button>
       </header>
 
-      {/* --------------------------------------------------------------------- */}
-      {/* 2. MAIN CHAT / WELCOME VIEWPORT                                       */}
-      {/* --------------------------------------------------------------------- */}
+      {/* 2. MAIN CHAT / VIEWPORT */}
       <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin scroll-smooth min-h-0">
-        {/* WELCOME HERO SECTION (Displayed when no conversation exists) */}
+        {/* Empty State / Suggested Prompts */}
         {messages.length === 0 && (
-          <div className="space-y-4 py-2 sm:py-4 animate-message-in">
-            {/* Hero Card */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#16172e] via-[#121626] to-[#0c0f1a] border border-violet-500/25 p-5 sm:p-8 shadow-2xl">
-              {/* Background ambient lighting */}
-              <div className="absolute top-0 right-0 -mt-10 -mr-10 w-60 h-60 rounded-full bg-violet-600/10 blur-3xl pointer-events-none" />
-              <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-60 h-60 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
-
-              <div className="relative z-10 max-w-2xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-950/80 border border-violet-500/40 text-violet-300 text-xs font-mono font-semibold mb-3.5 shadow-sm">
-                  <Sparkles size={13} className="text-amber-400" />
-                  <span>Interactive Campus Operations AI</span>
-                </div>
-
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight leading-tight">
-                  How can I help you today,{' '}
-                  <span className="bg-gradient-to-r from-violet-400 via-purple-300 to-amber-300 bg-clip-text text-transparent">
-                    {studentFirstName}
-                  </span>
-                  ?
-                </h2>
-
-                <p className="text-xs sm:text-sm text-gray-300 mt-2.5 leading-relaxed">
-                  I am your centralized campus operations co-pilot. Instead of navigating multiple offices, physical paper chits, and fragmented notices, simply describe what you need. I will answer verified procedures, track your academic margins, or draft and submit actionable tickets directly to campus authorities.
-                </p>
-
-                {/* Capability Badges */}
-                <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-white/5 text-[11px] font-mono text-gray-300">
-                  <span className="px-2.5 py-1 rounded-lg bg-[#181f33] border border-[#2b3754] flex items-center gap-1.5">
-                    <Wrench size={12} className="text-amber-400" />
-                    <span>Maintenance Auto-Routing</span>
-                  </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-[#181f33] border border-[#2b3754] flex items-center gap-1.5">
-                    <Key size={12} className="text-cyan-400" />
-                    <span>Cryptographic Gate Passes</span>
-                  </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-[#181f33] border border-[#2b3754] flex items-center gap-1.5">
-                    <FileCheck size={12} className="text-emerald-400" />
-                    <span>Bonafide Certificates</span>
-                  </span>
-                  <span className="px-2.5 py-1 rounded-lg bg-[#181f33] border border-[#2b3754] flex items-center gap-1.5">
-                    <CheckCircle2 size={12} className="text-blue-400" />
-                    <span>75% Attendance Margins</span>
-                  </span>
-                </div>
+          <div className="space-y-4 py-2 sm:py-6 animate-message-in">
+            <div className="rounded-3xl bg-surface border border-border p-6 sm:p-8 shadow-xs text-center max-w-2xl mx-auto space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 text-primary mx-auto flex items-center justify-center shadow-xs">
+                <Sparkles size={24} />
               </div>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">
+                How can I help you today, {studentFirstName}?
+              </h2>
+              <p className="text-xs sm:text-sm text-muted-foreground max-w-lg mx-auto leading-relaxed">
+                Ask any campus question, check attendance margins, look up class routines, or draft tickets for maintenance and gate passes.
+              </p>
             </div>
 
-            {/* Suggested Quick Prompts Grid */}
-            <div className="space-y-2.5">
+            <div className="max-w-3xl mx-auto space-y-2">
               <div className="flex items-center justify-between px-1">
-                <div className="flex items-center gap-1.5 text-xs font-mono font-bold uppercase tracking-wider text-gray-400">
-                  <Zap size={13} className="text-amber-400" />
-                  <span>Recommended Questions &amp; Workflows</span>
-                </div>
-                <span className="text-[11px] font-mono text-gray-500">Tap to run</span>
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Zap size={12} className="text-primary" />
+                  <span>Suggested Prompts</span>
+                </span>
+                <span className="text-[10px] font-mono text-muted-foreground">Click to ask</span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {SUGGESTED_PROMPTS.map((item) => {
                   const Icon = item.icon;
                   return (
                     <button
                       key={item.id}
                       onClick={() => handleSendMessage(item.prompt)}
-                      className="group p-3.5 rounded-2xl bg-[#121626]/80 hover:bg-[#181f33] border border-[#232c44] hover:border-violet-500/50 text-left transition-all duration-200 active:scale-98 flex flex-col justify-between shadow-md hover:shadow-lg hover:shadow-violet-950/30"
+                      className="p-3.5 rounded-2xl bg-surface hover:bg-surface-secondary border border-border hover:border-primary/50 text-left transition-all duration-150 active:scale-[0.99] flex flex-col justify-between shadow-xs group"
                     >
                       <div>
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <span className={`w-8 h-8 rounded-xl ${item.iconBg} flex items-center justify-center ${item.iconColor} shrink-0 transition-transform group-hover:scale-105`}>
-                            <Icon size={16} />
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <span className="w-7 h-7 rounded-lg bg-surface-secondary flex items-center justify-center text-primary shrink-0">
+                            <Icon size={14} className={item.iconColor} />
                           </span>
-                          <span className="text-[10px] font-mono text-gray-400 uppercase tracking-tight">
+                          <span className="text-[10px] font-mono text-muted-foreground uppercase">
                             {item.category}
                           </span>
                         </div>
-                        <h3 className="text-xs sm:text-sm font-bold text-white group-hover:text-violet-300 transition-colors">
+                        <h3 className="text-xs sm:text-sm font-bold text-foreground group-hover:text-primary transition-colors">
                           &ldquo;{item.prompt}&rdquo;
                         </h3>
-                        <p className="text-[11px] text-gray-400 mt-1 leading-snug">
+                        <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
                           {item.description}
                         </p>
-                      </div>
-
-                      <div className="flex items-center justify-end mt-3 pt-2 border-t border-white/5 text-[11px] font-mono font-bold text-violet-400 group-hover:text-violet-300">
-                        <span className="flex items-center gap-1">
-                          Ask Copilot <ArrowRight size={12} className="transition-transform group-hover:translate-x-1" />
-                        </span>
                       </div>
                     </button>
                   );
@@ -625,53 +545,69 @@ export default function StudentCopilotPage() {
           </div>
         )}
 
-        {/* ACTIVE CONVERSATION STREAM */}
+        {/* Message Stream */}
         {messages.map((msg) => (
           <div
             key={msg.id}
             className={`flex flex-col ${
               msg.sender === 'user' ? 'items-end' : 'items-start'
-            } space-y-2 animate-message-in`}
+            } space-y-1.5 animate-message-in`}
           >
-            {/* Message Bubble Card */}
             <div
-              className={`max-w-3xl rounded-2xl p-4 sm:p-5 text-xs sm:text-sm leading-relaxed transition-all ${
+              className={`max-w-3xl rounded-2xl p-4 sm:p-5 text-xs sm:text-sm leading-relaxed transition-all shadow-xs ${
                 msg.sender === 'user'
-                  ? 'bg-gradient-to-br from-[#1c233c] to-[#161c32] border border-violet-500/30 text-white rounded-tr-xs shadow-lg ml-8 sm:ml-12'
-                  : 'bg-[#121626] border border-[#232c44] text-gray-200 rounded-tl-xs mr-8 sm:mr-12 shadow-xl'
+                  ? 'bg-primary text-primary-foreground rounded-tr-xs ml-8 sm:ml-12 font-medium'
+                  : msg.isError
+                  ? 'bg-rose-500/10 border border-rose-500/30 text-rose-800 dark:text-rose-200 rounded-tl-xs mr-8 sm:mr-12'
+                  : 'bg-surface border border-border text-foreground rounded-tl-xs mr-8 sm:mr-12'
               }`}
             >
               {/* Header Info */}
-              <div className="flex items-center justify-between gap-4 mb-2.5 pb-2 border-b border-white/5 text-[11px] font-mono text-gray-400">
+              <div className={`flex items-center justify-between gap-4 mb-2 pb-1.5 border-b text-[11px] font-mono ${
+                msg.sender === 'user' ? 'border-primary-foreground/20 text-primary-foreground/80' : 'border-border text-muted-foreground'
+              }`}>
                 <span className="font-bold flex items-center gap-1.5">
                   {msg.sender === 'user' ? (
                     <>
-                      <div className="w-5 h-5 rounded-md bg-blue-500/20 text-blue-400 flex items-center justify-center">
-                        <User size={12} />
-                      </div>
-                      <span className="text-white">{user?.fullName || user?.username || 'You'}</span>
+                      <User size={12} />
+                      <span>{user?.fullName || user?.username || 'You'}</span>
                     </>
                   ) : (
                     <>
-                      <div className="w-5 h-5 rounded-md bg-violet-600/30 text-violet-300 flex items-center justify-center">
-                        <Sparkles size={12} />
-                      </div>
-                      <span className="text-violet-300 font-extrabold tracking-tight">Nexora Copilot</span>
-                      <span className="hidden sm:inline px-1.5 py-0.2 rounded text-[9px] bg-violet-950 text-violet-400 border border-violet-500/30">
-                        AI Verified
-                      </span>
+                      <Sparkles size={12} className="text-primary" />
+                      <span className="text-primary font-bold">Nexora Copilot</span>
                     </>
                   )}
                 </span>
                 <span>{msg.timestamp}</span>
               </div>
 
-              {/* Formatted Markdown Message Text */}
-              <FormattedMessageText text={msg.text} />
+              {/* Formatted Markdown */}
+              {msg.sender === 'user' ? (
+                <div className="text-primary-foreground text-xs sm:text-sm">{msg.text}</div>
+              ) : (
+                <FormattedMessageText text={msg.text} />
+              )}
 
-              {/* Render Structured Cards if attached */}
+              {/* Retry button for errors */}
+              {msg.isError && (
+                <div className="mt-3 pt-2 border-t border-rose-500/20 flex justify-end">
+                  <button
+                    onClick={() => {
+                      const lastUserMsg = [...messages].reverse().find((m) => m.sender === 'user');
+                      if (lastUserMsg) handleSendMessage(lastUserMsg.text);
+                    }}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700 transition"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Retry</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Structured Action Cards */}
               {msg.cards && msg.cards.length > 0 && (
-                <div className="mt-4 space-y-3 pt-3 border-t border-[#1e253b]">
+                <div className="mt-4 space-y-3 pt-3 border-t border-border">
                   {msg.cards.map((card, cIdx) => {
                     const cardKey = `${msg.id}-card-${cIdx}`;
                     const currentStatus = actionStatus[cardKey];
@@ -681,83 +617,56 @@ export default function StudentCopilotPage() {
                       return (
                         <div
                           key={cardKey}
-                          className="p-4 rounded-xl bg-gradient-to-br from-[#161a29] to-[#121624] border border-amber-500/40 space-y-3 shadow-lg"
+                          className="p-4 rounded-xl bg-surface-secondary border border-border space-y-2.5 text-xs text-foreground"
                         >
                           <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-950/80 text-amber-300 border border-amber-600/50">
-                              <Wrench size={12} />
-                              <span>{card.data.category} Maintenance Workflow</span>
-                            </div>
-                            <span
-                              className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
-                                card.data.priority === 'URGENT'
-                                  ? 'bg-rose-950 text-rose-300 border border-rose-700'
-                                  : 'bg-[#1e2538] text-gray-300 border border-[#2d3851]'
-                              }`}
-                            >
-                              {card.data.priority} Priority
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                              <Wrench size={11} />
+                              <span>{card.data.category} Maintenance Ticket</span>
+                            </span>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-surface border border-border text-foreground font-semibold">
+                              {card.data.priority}
                             </span>
                           </div>
 
-                          <div>
-                            <div className="text-sm font-bold text-white">
-                              {card.data.title}
-                            </div>
-                            <div className="text-xs text-gray-300 mt-1">
-                              &ldquo;{card.data.description}&rdquo;
-                            </div>
-                            <div className="text-[11px] font-mono text-gray-400 mt-2 flex items-center gap-1.5">
-                              <MapPin size={12} className="text-amber-400" />
-                              <span>
-                                Target Location: <strong className="text-gray-200">{card.data.location}</strong>
-                              </span>
-                            </div>
+                          <div className="font-bold text-sm text-foreground">{card.data.title}</div>
+                          <div className="text-xs text-muted-foreground">{card.data.description}</div>
+                          <div className="text-[11px] font-mono text-muted-foreground flex items-center gap-1">
+                            <MapPin size={11} className="text-primary" />
+                            <span>Location: <strong className="text-foreground">{card.data.location}</strong></span>
                           </div>
 
                           {currentStatus?.success ? (
-                            <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-600 text-emerald-300 text-xs flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-2.5">
-                                <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                                 <div>
-                                  <div className="font-bold">
-                                    Ticket Logged: {currentStatus.result.requestNumber}
-                                  </div>
-                                  <div className="text-[11px] text-emerald-400/80">
-                                    Assigned: {currentStatus.result.routing?.assignedTo || 'Technician Queue'}
-                                  </div>
+                                  <div className="font-bold">Ticket Logged: {currentStatus.result.requestNumber}</div>
+                                  <div className="text-[10px] opacity-80">Assigned: {currentStatus.result.routing?.assignedTo || 'Technician Queue'}</div>
                                 </div>
                               </div>
                               <Link
                                 href={`/student/requests/${currentStatus.result.id}`}
-                                className="px-3 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 shrink-0 transition"
+                                className="px-3 py-1 rounded-lg bg-emerald-600 text-white font-bold text-[11px] flex items-center gap-1 shrink-0"
                               >
-                                View Ticket <ArrowRight size={12} />
+                                View &rarr;
                               </Link>
                             </div>
                           ) : (
                             <div>
                               {currentStatus?.error && (
-                                <div className="mb-2 p-2.5 rounded-lg bg-rose-950/80 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
-                                  <AlertCircle size={14} className="shrink-0" />
+                                <div className="mb-2 p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-1.5">
+                                  <AlertCircle size={13} />
                                   <span>{currentStatus.error}</span>
                                 </div>
                               )}
                               <button
                                 onClick={() => handleExecuteMaintenance(cardKey, card.data)}
                                 disabled={currentStatus?.loading}
-                                className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs shadow-md transition active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50"
+                                className="w-full py-2 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 disabled:opacity-50"
                               >
-                                {currentStatus?.loading ? (
-                                  <>
-                                    <RefreshCw size={14} className="animate-spin" />
-                                    <span>Routing &amp; Creating Ticket...</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Wrench size={14} />
-                                    <span>Confirm &amp; Create Maintenance Request</span>
-                                  </>
-                                )}
+                                {currentStatus?.loading ? <RefreshCw size={13} className="animate-spin" /> : <Wrench size={13} />}
+                                <span>Confirm &amp; Dispatch Ticket</span>
                               </button>
                             </div>
                           )}
@@ -770,74 +679,50 @@ export default function StudentCopilotPage() {
                       return (
                         <div
                           key={cardKey}
-                          className="p-4 rounded-xl bg-gradient-to-br from-[#141b29] to-[#111724] border border-emerald-500/40 space-y-3 shadow-lg"
+                          className="p-4 rounded-xl bg-surface-secondary border border-border space-y-2.5 text-xs text-foreground"
                         >
-                          <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-600/50">
-                              <FileCheck size={12} />
-                              <span>Academic Certification Workflow</span>
-                            </div>
-                            <span className="text-[10px] font-mono text-gray-400">
-                              Turnaround: 24–48h
-                            </span>
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                            <FileCheck size={11} />
+                            <span>Bonafide Certificate Request</span>
                           </div>
-
-                          <div>
-                            <div className="text-sm font-bold text-white">
-                              Official Bonafide Certificate
-                            </div>
-                            <div className="text-xs text-gray-300 mt-1">
-                              Purpose: <strong className="text-emerald-400">{card.data.purpose}</strong>
-                            </div>
-                            <div className="text-[11px] font-mono text-gray-400 mt-1">
-                              Student: {card.data.studentName} ({card.data.rollNumber}) • {card.data.branch}
-                            </div>
+                          <div className="font-bold text-sm text-foreground">
+                            Purpose: {card.data.purpose || 'Scholarship'}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground font-mono">
+                            Digital PDF with institutional seal &amp; public QR registry
                           </div>
 
                           {currentStatus?.success ? (
-                            <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-600 text-emerald-300 text-xs flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-2.5">
-                                <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+                            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
                                 <div>
-                                  <div className="font-bold">
-                                    Request Submitted: {currentStatus.result.requestNumber}
-                                  </div>
-                                  <div className="text-[11px] text-emerald-400/80">
-                                    Forwarded to Academic Office for digital signature
-                                  </div>
+                                  <div className="font-bold">Request Logged: {currentStatus.result.requestNumber}</div>
+                                  <div className="text-[10px] opacity-80">Desk: Academic Records Office</div>
                                 </div>
                               </div>
                               <Link
-                                href="/student/documents"
-                                className="px-3 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 shrink-0 transition"
+                                href={`/student/requests/${currentStatus.result.id}`}
+                                className="px-3 py-1 rounded-lg bg-emerald-600 text-white font-bold text-[11px]"
                               >
-                                View Documents <ArrowRight size={12} />
+                                View &rarr;
                               </Link>
                             </div>
                           ) : (
                             <div>
                               {currentStatus?.error && (
-                                <div className="mb-2 p-2.5 rounded-lg bg-rose-950/80 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
-                                  <AlertCircle size={14} className="shrink-0" />
+                                <div className="mb-2 p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-1.5">
+                                  <AlertCircle size={13} />
                                   <span>{currentStatus.error}</span>
                                 </div>
                               )}
                               <button
                                 onClick={() => handleExecuteBonafide(cardKey, card.data)}
                                 disabled={currentStatus?.loading}
-                                className="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs shadow-md transition active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50"
+                                className="w-full py-2 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 disabled:opacity-50"
                               >
-                                {currentStatus?.loading ? (
-                                  <>
-                                    <RefreshCw size={14} className="animate-spin" />
-                                    <span>Submitting Application...</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <FileCheck size={14} />
-                                    <span>Confirm &amp; Submit Bonafide Request</span>
-                                  </>
-                                )}
+                                {currentStatus?.loading ? <RefreshCw size={13} className="animate-spin" /> : <FileCheck size={13} />}
+                                <span>Submit Bonafide Request</span>
                               </button>
                             </div>
                           )}
@@ -845,81 +730,39 @@ export default function StudentCopilotPage() {
                       );
                     }
 
-                    // 3. ACTION: HOSTEL LEAVE
+                    // 3. ACTION: LEAVE
                     if (card.cardType === 'ACTION_LEAVE') {
                       return (
                         <div
                           key={cardKey}
-                          className="p-4 rounded-xl bg-gradient-to-br from-[#18162b] to-[#121424] border border-purple-500/40 space-y-3 shadow-lg"
+                          className="p-4 rounded-xl bg-surface-secondary border border-border space-y-2.5 text-xs text-foreground"
                         >
-                          <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-purple-950/80 text-purple-300 border border-purple-600/50">
-                              <Calendar size={12} />
-                              <span>Hostel Leave Workflow</span>
-                            </div>
-                            <span className="text-[10px] font-mono text-gray-400">
-                              Warden Approval Required
-                            </span>
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                            <Calendar size={11} />
+                            <span>Hostel Outstation Leave</span>
                           </div>
-
-                          <div className="space-y-1">
-                            <div className="text-sm font-bold text-white">
-                              {card.data.startDate} to {card.data.endDate}
-                            </div>
-                            <div className="text-xs text-gray-300">
-                              Reason: &ldquo;{card.data.reason}&rdquo;
-                            </div>
-                            <div className="text-[11px] font-mono text-gray-400">
-                              Emergency Contact: {card.data.emergencyContact} • Parent Consent: Verified
-                            </div>
+                          <div className="font-bold text-sm text-foreground">
+                            {new Date(card.data.startDate).toLocaleDateString([], { month: 'short', day: 'numeric' })} –{' '}
+                            {new Date(card.data.endDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                           </div>
+                          <div className="text-xs text-muted-foreground">Reason: {card.data.reason}</div>
 
                           {currentStatus?.success ? (
-                            <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-600 text-emerald-300 text-xs flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-2.5">
-                                <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
-                                <div>
-                                  <div className="font-bold">
-                                    Leave Submitted: {currentStatus.result.requestNumber}
-                                  </div>
-                                  <div className="text-[11px] text-emerald-400/80">
-                                    Hostel Warden notified for review
-                                  </div>
-                                </div>
-                              </div>
-                              <Link
-                                href="/student/leave"
-                                className="px-3 py-1.5 rounded-lg bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1 shrink-0 transition"
-                              >
-                                View Leaves <ArrowRight size={12} />
+                            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between gap-3">
+                              <span className="font-bold">Leave Submitted to Warden</span>
+                              <Link href="/student/leave" className="px-3 py-1 rounded-lg bg-emerald-600 text-white font-bold text-[11px]">
+                                Track &rarr;
                               </Link>
                             </div>
                           ) : (
-                            <div>
-                              {currentStatus?.error && (
-                                <div className="mb-2 p-2.5 rounded-lg bg-rose-950/80 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
-                                  <AlertCircle size={14} className="shrink-0" />
-                                  <span>{currentStatus.error}</span>
-                                </div>
-                              )}
-                              <button
-                                onClick={() => handleExecuteLeave(cardKey, card.data)}
-                                disabled={currentStatus?.loading}
-                                className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md transition active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50"
-                              >
-                                {currentStatus?.loading ? (
-                                  <>
-                                    <RefreshCw size={14} className="animate-spin" />
-                                    <span>Submitting to Warden...</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Calendar size={14} />
-                                    <span>Confirm &amp; Submit Leave Request</span>
-                                  </>
-                                )}
-                              </button>
-                            </div>
+                            <button
+                              onClick={() => handleExecuteLeave(cardKey, card.data)}
+                              disabled={currentStatus?.loading}
+                              className="w-full py-2 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                            >
+                              {currentStatus?.loading ? <RefreshCw size={13} className="animate-spin" /> : <Calendar size={13} />}
+                              <span>Submit Leave Application</span>
+                            </button>
                           )}
                         </div>
                       );
@@ -930,253 +773,61 @@ export default function StudentCopilotPage() {
                       return (
                         <div
                           key={cardKey}
-                          className="p-4 rounded-xl bg-gradient-to-br from-[#131b29] to-[#0f1524] border border-cyan-500/40 space-y-3 shadow-lg"
+                          className="p-4 rounded-xl bg-surface-secondary border border-border space-y-2.5 text-xs text-foreground"
                         >
-                          <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-600/50">
-                              <Key size={12} />
-                              <span>Campus Exit Authorization</span>
-                            </div>
-                            <span className="text-[10px] font-mono text-gray-400">
-                              Auto PIN Generation
-                            </span>
+                          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30">
+                            <Key size={11} />
+                            <span>Campus Exit Gate Pass</span>
                           </div>
-
-                          <div className="space-y-1">
-                            <div className="text-sm font-bold text-white">
-                              Destination: {card.data.destination}
-                            </div>
-                            <div className="text-xs text-gray-300">
-                              Reason: &ldquo;{card.data.reason}&rdquo;
-                            </div>
-                            <div className="text-[11px] font-mono text-gray-400">
-                              Window: {new Date(card.data.departureTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – {new Date(card.data.expectedReturnTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </div>
-                          </div>
+                          <div className="font-bold text-sm text-foreground">Destination: {card.data.destination}</div>
+                          <div className="text-xs text-muted-foreground">Reason: {card.data.reason}</div>
 
                           {currentStatus?.success ? (
-                            <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-600 text-emerald-300 text-xs flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-2.5">
-                                <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
-                                <div>
-                                  <div className="font-bold">
-                                    Gate Pass #{currentStatus.result.requestNumber}
-                                  </div>
-                                  <div className="text-[11px] font-mono text-cyan-300">
-                                    Offline PIN: <strong>{currentStatus.result.gatePass?.passPin}</strong>
-                                  </div>
-                                </div>
-                              </div>
-                              <Link
-                                href="/student/gate-pass"
-                                className="px-3 py-1.5 rounded-lg bg-cyan-800 hover:bg-cyan-700 text-white font-bold text-[11px] flex items-center gap-1 shrink-0 transition"
-                              >
-                                View QR Pass <ArrowRight size={12} />
+                            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs flex items-center justify-between gap-3">
+                              <span className="font-bold">Pass Generated &bull; PIN: {currentStatus.result.passPin}</span>
+                              <Link href="/student/gate-pass" className="px-3 py-1 rounded-lg bg-emerald-600 text-white font-bold text-[11px]">
+                                View Pass &rarr;
                               </Link>
                             </div>
                           ) : (
-                            <div>
-                              {currentStatus?.error && (
-                                <div className="mb-2 p-2.5 rounded-lg bg-rose-950/80 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
-                                  <AlertCircle size={14} className="shrink-0" />
-                                  <span>{currentStatus.error}</span>
-                                </div>
-                              )}
-                              <button
-                                onClick={() => handleExecuteGatePass(cardKey, card.data)}
-                                disabled={currentStatus?.loading}
-                                className="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs shadow-md transition active:scale-98 flex items-center justify-center gap-2 disabled:opacity-50"
-                              >
-                                {currentStatus?.loading ? (
-                                  <>
-                                    <RefreshCw size={14} className="animate-spin" />
-                                    <span>Generating Pass...</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Key size={14} />
-                                    <span>Confirm &amp; Apply for Gate Pass</span>
-                                  </>
-                                )}
-                              </button>
-                            </div>
+                            <button
+                              onClick={() => handleExecuteGatePass(cardKey, card.data)}
+                              disabled={currentStatus?.loading}
+                              className="w-full py-2 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                            >
+                              {currentStatus?.loading ? <RefreshCw size={13} className="animate-spin" /> : <Key size={13} />}
+                              <span>Generate Gate Pass</span>
+                            </button>
                           )}
                         </div>
                       );
                     }
 
-                    // 5. GUIDE: PROCEDURE (ASK)
-                    if (card.cardType === 'GUIDE_PROCEDURE') {
-                      const proc = card.data;
-                      return (
-                        <div
-                          key={cardKey}
-                          className="p-4 rounded-xl bg-[#141928] border border-[#2b354d] space-y-3 shadow-lg"
-                        >
-                          <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#1e263a] text-[#d4af37] border border-[#d4af37]/30">
-                              <HelpCircle size={12} />
-                              <span>Verified Procedure • {proc.category}</span>
-                            </div>
-                            <span className="text-[10px] font-mono text-emerald-400">
-                              SLA: {proc.turnaroundTime}
-                            </span>
-                          </div>
-
-                          <div>
-                            <h3 className="text-sm font-bold text-white">
-                              {proc.title}
-                            </h3>
-                            <div className="text-[11px] text-gray-400 font-mono mt-0.5 flex items-center gap-2 flex-wrap">
-                              <span>Department: <strong className="text-gray-200">{proc.department}</strong></span>
-                              <span>•</span>
-                              <span>Location: {proc.location}</span>
-                            </div>
-                          </div>
-
-                          {/* Required Documents */}
-                          {proc.requiredDocuments && proc.requiredDocuments.length > 0 && (
-                            <div className="bg-[#0f121e] p-3 rounded-lg border border-[#1f2638] text-xs">
-                              <div className="font-semibold text-gray-200 text-[11px] mb-1.5 flex items-center gap-1.5">
-                                <FileText size={12} className="text-violet-400" />
-                                <span>Requirements &amp; Documents Needed:</span>
-                              </div>
-                              <ul className="space-y-1 text-gray-300 text-[11px]">
-                                {proc.requiredDocuments.map((doc: string, dIdx: number) => (
-                                  <li key={dIdx} className="flex items-start gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-violet-400 mt-1.5 shrink-0" />
-                                    <span>{doc}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Steps */}
-                          <div className="space-y-1.5 pt-1">
-                            <div className="font-semibold text-gray-200 text-xs">
-                              Official Procedure Steps:
-                            </div>
-                            <ol className="space-y-1.5 text-xs text-gray-300">
-                              {proc.steps.map((st: string, sIdx: number) => (
-                                <li key={sIdx} className="flex items-start gap-2.5">
-                                  <span className="w-5 h-5 rounded-full bg-[#1e2538] text-[#d4af37] text-[10px] font-mono font-bold flex items-center justify-center shrink-0 mt-0.5">
-                                    {sIdx + 1}
-                                  </span>
-                                  <span className="flex-1">{st}</span>
-                                </li>
-                              ))}
-                            </ol>
-                          </div>
-
-                          {proc.notes && (
-                            <div className="text-[11px] text-gray-400 italic pt-1.5 border-t border-[#202738] flex items-center gap-1.5">
-                              <Info size={12} className="text-gray-500 shrink-0" />
-                              <span>Note: {proc.notes}</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }
-
-                    // 6. STUDY PLAN (PLAN)
+                    // 5. STUDY PLAN
                     if (card.cardType === 'STUDY_PLAN') {
-                      const planData = card.data;
+                      const days = card.data.days || [];
                       return (
-                        <div
-                          key={cardKey}
-                          className="p-4 rounded-xl bg-gradient-to-br from-[#141928] to-[#101422] border border-[#d4af37]/40 space-y-4 shadow-xl"
-                        >
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#212b40] pb-3">
-                            <div>
-                              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#1b2234] text-[#d4af37] border border-[#d4af37]/40 mb-1">
-                                <BookOpen size={12} />
-                                <span>BPUT Academic Roadmap</span>
-                              </div>
-                              <h3 className="text-sm sm:text-base font-extrabold text-white">
-                                {planData.subject} ({planData.subjectCode})
-                              </h3>
-                            </div>
-
-                            <div className="flex items-center gap-2.5 text-xs font-mono">
-                              <span className="px-2.5 py-1 rounded-lg bg-[#1a2133] border border-[#29354e] text-white">
-                                <strong className="text-[#d4af37]">{planData.days}</strong> Days
-                              </span>
-                              <span className="px-2.5 py-1 rounded-lg bg-[#1a2133] border border-[#29354e] text-white">
-                                <strong className="text-cyan-300">{planData.hoursPerDay}h</strong> / Day
-                              </span>
-                            </div>
+                        <div key={cardKey} className="p-4 rounded-xl bg-surface-secondary border border-border space-y-3 text-xs">
+                          <div className="font-bold text-sm text-foreground flex items-center gap-2">
+                            <BookOpen size={15} className="text-primary" />
+                            <span>{card.title || 'Personalized Study Plan'}</span>
                           </div>
-
-                          {/* Day-by-Day Timeline */}
-                          <div className="space-y-2 max-h-96 overflow-y-auto pr-1 scrollbar-thin">
-                            {planData.plan.map((item: any) => {
-                              const dayKey = `${cardKey}-day-${item.dayNumber}`;
-                              const isExpanded =
-                                expandedPlanDays[dayKey] ??
-                                (item.dayNumber <= 2 || item.dayNumber >= planData.days - 1);
-
+                          <div className="space-y-2">
+                            {days.map((dayItem: any, dIdx: number) => {
+                              const dayKey = `${cardKey}-day-${dIdx}`;
+                              const isExpanded = expandedPlanDays[dayKey] ?? (dIdx === 0);
                               return (
-                                <div
-                                  key={item.dayNumber}
-                                  className="rounded-xl bg-[#181f33] border border-[#26324d] overflow-hidden transition-all"
-                                >
-                                  <div
-                                    onClick={() =>
-                                      setExpandedPlanDays((prev) => ({
-                                        ...prev,
-                                        [dayKey]: !isExpanded,
-                                      }))
-                                    }
-                                    className="p-3 flex items-center justify-between cursor-pointer hover:bg-[#1d263d] transition select-none"
+                                <div key={dayKey} className="rounded-lg bg-surface border border-border overflow-hidden">
+                                  <button
+                                    onClick={() => setExpandedPlanDays((prev) => ({ ...prev, [dayKey]: !isExpanded }))}
+                                    className="w-full p-2.5 text-left flex items-center justify-between hover:bg-surface-secondary/50 transition"
                                   >
-                                    <div className="flex items-center gap-2.5 min-w-0">
-                                      <span className="w-7 h-7 rounded-lg bg-[#222c42] border border-[#303e5c] text-[#d4af37] text-xs font-mono font-bold flex items-center justify-center shrink-0">
-                                        D{item.dayNumber}
-                                      </span>
-                                      <div className="min-w-0">
-                                        <div className="text-xs font-bold text-gray-100 truncate">
-                                          {item.focusTitle}
-                                        </div>
-                                        <div className="text-[10px] font-mono text-gray-400 truncate">
-                                          {item.phase}
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2 shrink-0">
-                                      <span
-                                        className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
-                                          item.taskType === 'PYQ_PRACTICE'
-                                            ? 'bg-amber-950 text-amber-300 border border-amber-700/60'
-                                            : item.taskType === 'REVISION'
-                                            ? 'bg-purple-950 text-purple-300 border border-purple-700/60'
-                                            : 'bg-blue-950 text-blue-300 border border-blue-700/60'
-                                        }`}
-                                      >
-                                        {item.taskType}
-                                      </span>
-                                      {isExpanded ? (
-                                        <ChevronUp size={14} className="text-gray-400" />
-                                      ) : (
-                                        <ChevronDown size={14} className="text-gray-400" />
-                                      )}
-                                    </div>
-                                  </div>
-
+                                    <span className="font-bold text-foreground">Day {dayItem.day}: {dayItem.topic}</span>
+                                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                  </button>
                                   {isExpanded && (
-                                    <div className="px-3.5 pb-3 pt-1 border-t border-[#222c42] bg-[#141928] text-xs space-y-1.5 animate-message-in">
-                                      <div className="text-[11px] font-semibold text-gray-300">
-                                        Core Focus Topics:
-                                      </div>
-                                      <ul className="space-y-1">
-                                        {item.topics.map((top: string, tIdx: number) => (
-                                          <li key={tIdx} className="flex items-start gap-2 text-gray-300 text-xs">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] mt-1.5 shrink-0" />
-                                            <span>{top}</span>
-                                          </li>
-                                        ))}
-                                      </ul>
+                                    <div className="p-2.5 pt-0 text-muted-foreground text-[11px] border-t border-border mt-1">
+                                      {dayItem.tasks}
                                     </div>
                                   )}
                                 </div>
@@ -1187,119 +838,48 @@ export default function StudentCopilotPage() {
                       );
                     }
 
-                    // 7. RESOURCE LIST
-                    if (card.cardType === 'RESOURCE_LIST') {
-                      return (
-                        <div
-                          key={cardKey}
-                          className="p-4 rounded-xl bg-gradient-to-br from-[#161b2b] to-[#121624] border border-cyan-500/40 space-y-3 shadow-lg"
-                        >
-                          <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-600/50">
-                              <BookOpen size={12} />
-                              <span>Verified Academic Materials</span>
-                            </div>
-                            <span className="text-[10px] font-mono text-cyan-400">
-                              {card.data.length} Resources Found
-                            </span>
-                          </div>
-
-                          <div className="divide-y divide-[#222c40]">
-                            {card.data.map((resItem: any) => (
-                              <div
-                                key={resItem.id}
-                                className="py-2.5 first:pt-0 last:pb-0 flex items-start justify-between gap-3 text-xs"
-                              >
-                                <div className="space-y-0.5">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="font-bold text-white">
-                                      {resItem.title}
-                                    </span>
-                                    <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#20293d] text-cyan-300 border border-[#2e3b57]">
-                                      {resItem.type}
-                                    </span>
-                                  </div>
-                                  <div className="text-[11px] text-gray-400">
-                                    {resItem.description}
-                                  </div>
-                                  {resItem.keyTopics && (
-                                    <div className="text-[10px] text-gray-500 font-mono">
-                                      Key Topics: {resItem.keyTopics.slice(0, 3).join(' • ')}
-                                    </div>
-                                  )}
-                                </div>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    alert(
-                                      `Downloading certified resource: ${resItem.title}\\nSaved to downloads/ directory.`
-                                    )
-                                  }
-                                  className="px-2.5 py-1 rounded-lg bg-[#1f283d] hover:bg-[#283552] border border-[#2e3b57] text-[#d4af37] font-mono font-bold text-[10px] flex items-center gap-1 shrink-0 transition"
-                                >
-                                  <Download size={11} />
-                                  <span>Download</span>
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    return null;
+                    // Default Fallback Card
+                    return (
+                      <div key={cardKey} className="p-3.5 rounded-xl bg-surface-secondary border border-border text-xs">
+                        <div className="font-bold text-foreground">{card.title}</div>
+                        <div className="text-muted-foreground mt-1">{JSON.stringify(card.data)}</div>
+                      </div>
+                    );
                   })}
                 </div>
               )}
-            </div>
 
-            {/* Quick Reply Suggestions Chips */}
-            {msg.quickReplies && msg.quickReplies.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 pt-1 pl-2">
-                {msg.quickReplies.map((qr, qrIdx) => (
-                  <button
-                    key={qrIdx}
-                    onClick={() => handleSendMessage(qr)}
-                    className="px-3 py-1 rounded-full bg-[#151a2a] hover:bg-[#1f263d] border border-[#252f48] hover:border-violet-500/50 text-gray-300 hover:text-white text-[11px] transition-all duration-150 active:scale-95 shadow-xs flex items-center gap-1"
-                  >
-                    <span>{qr}</span>
-                    <ArrowRight size={10} className="text-violet-400 opacity-60" />
-                  </button>
-                ))}
-              </div>
-            )}
+              {/* Quick Replies */}
+              {msg.quickReplies && msg.quickReplies.length > 0 && (
+                <div className="mt-3 pt-2.5 border-t border-border flex flex-wrap gap-1.5">
+                  {msg.quickReplies.map((reply, rIdx) => (
+                    <button
+                      key={rIdx}
+                      onClick={() => handleSendMessage(reply)}
+                      className="px-2.5 py-1 rounded-full bg-surface-secondary hover:bg-surface-hover border border-border text-foreground text-[11px] font-medium transition active:scale-95"
+                    >
+                      {reply}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ))}
 
-        {/* Thinking / Processing State */}
+        {/* Loading Indicator */}
         {loading && (
-          <div className="flex items-start space-x-2 text-xs text-gray-400 animate-message-in">
-            <div className="bg-[#121626] border border-[#232c44] rounded-2xl rounded-tl-xs p-4 flex items-center gap-3 shadow-xl">
-              <div className="relative flex items-center justify-center">
-                <span className="w-3 h-3 rounded-full bg-violet-500 animate-ping absolute" />
-                <span className="w-2.5 h-2.5 rounded-full bg-violet-400 relative" />
-              </div>
-              <div className="space-y-0.5">
-                <div className="font-semibold text-white flex items-center gap-1.5">
-                  <Sparkles size={13} className="text-violet-400 animate-spin" />
-                  <span>Nexora Copilot is thinking...</span>
-                </div>
-                <div className="text-[11px] text-gray-400 font-mono">
-                  Analyzing campus workflows &amp; compiling verified answer
-                </div>
-              </div>
-            </div>
+          <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-surface border border-border text-xs text-muted-foreground max-w-sm mr-auto animate-message-in">
+            <RefreshCw size={14} className="animate-spin text-primary" />
+            <span>Nexora Copilot is compiling verified response...</span>
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* --------------------------------------------------------------------- */}
-      {/* 3. MODERN FLOATING INPUT AREA                                         */}
-      {/* --------------------------------------------------------------------- */}
-      <div className="bg-gradient-to-r from-[#121626] via-[#151a2e] to-[#121626] border border-[#232c44] focus-within:border-violet-500/60 focus-within:ring-2 focus-within:ring-violet-500/20 rounded-2xl p-2 sm:p-2.5 shadow-2xl shrink-0 transition-all duration-200">
+      {/* 3. PROFESSIONAL COMPOSER INPUT */}
+      <div className="bg-surface border border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 rounded-2xl p-2 sm:p-2.5 shadow-xs shrink-0 transition-all duration-150">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -1313,36 +893,36 @@ export default function StudentCopilotPage() {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask anything (e.g., 'Report room fan broken', 'Need bonafide for loan', 'DBMS exam in 10 days')..."
+              placeholder="Ask Copilot anything (e.g. 'Show my attendance', 'How to apply for gate pass')..."
               disabled={loading}
-              className="w-full bg-[#161b2e] border border-[#26314c] rounded-xl px-4 py-2.5 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/60 transition disabled:opacity-60"
+              className="w-full bg-surface-secondary/60 hover:bg-surface-secondary border border-border rounded-xl px-4 py-2.5 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition disabled:opacity-60"
             />
           </div>
 
           <button
             type="submit"
             disabled={!input.trim() || loading}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-violet-600/25 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0"
+            className="px-4 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-bold text-xs shadow-xs transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 shrink-0"
+            aria-label="Send message"
           >
             <span>Ask</span>
             {loading ? (
               <RefreshCw size={13} className="animate-spin" />
             ) : (
-              <Send size={13} className="transition-transform group-hover:translate-x-0.5" />
+              <Send size={13} />
             )}
           </button>
         </form>
 
-        {/* Small "Powered by Nexora Campus AI" Footer */}
-        <div className="flex items-center justify-between px-2 pt-2 text-[10px] sm:text-[11px] font-mono text-gray-500 border-t border-white/5 mt-1.5">
+        <div className="flex items-center justify-between px-2 pt-2 text-[10px] sm:text-[11px] font-mono text-muted-foreground border-t border-border mt-1.5">
           <div className="flex items-center gap-1.5">
-            <Sparkles size={11} className="text-violet-400" />
-            <span>Powered by Nexora Campus AI</span>
+            <Sparkles size={11} className="text-primary" />
+            <span>Nexora Campus AI</span>
           </div>
-          <span className="hidden sm:inline text-gray-600">
+          <span className="hidden sm:inline">
             Grounded in BPUT institutional rules &amp; live workflows
           </span>
-          <span className="flex items-center gap-1 text-gray-500">
+          <span className="flex items-center gap-1">
             <CornerDownLeft size={10} />
             <span>Enter to send</span>
           </span>

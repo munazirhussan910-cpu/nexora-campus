@@ -41,6 +41,7 @@ model User {
   auditLogs          AuditLog[]              @relation("AuditActor")
   attendanceSessions AttendanceSession[]     @relation("TeacherAttendanceSessions")
   createdDeadlines   AcademicDeadline[]      @relation("DeadlineCreator")
+  updatedMessMenus   MessMenu[]              @relation("MessMenuUpdater")
 
   @@index([roleId])
   @@index([email])
@@ -102,6 +103,7 @@ model HostelBlock {
 
   rooms       Room[]
   issueAlerts IssueAlert[]
+  messMenus   MessMenu[]
 }
 
 model Room {
@@ -695,4 +697,24 @@ model GuidanceItem {
   @@index([category])
   @@index([isActive])
   @@index([targetYear])
+}
+
+model MessMenu {
+  id            String       @id @default(uuid())
+  hostelBlockId String
+  day           String       // MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY
+  meal          String       // BREAKFAST, LUNCH, DINNER
+  items         String       // e.g. "Masala Dosa, Sambar, Chutney, Tea / Coffee"
+  timings       String?      // e.g. "07:30 AM – 09:30 AM"
+  specialNotes  String?      // e.g. "Egg / Banana option available"
+  updatedBy     String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  hostelBlock   HostelBlock  @relation(fields: [hostelBlockId], references: [id], onDelete: Cascade)
+  updater       User?        @relation("MessMenuUpdater", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@unique([hostelBlockId, day, meal])
+  @@index([hostelBlockId])
+  @@index([day])
 }

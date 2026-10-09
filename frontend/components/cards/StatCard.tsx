@@ -20,85 +20,78 @@ export function StatCard({
 }: StatCardProps) {
   const colorMap = {
     purple: {
-      text: 'text-purple-300',
-      bg: 'bg-[#5B20A0]/15',
-      border: 'border-[#7A3DB8]/40',
-      glow: 'group-hover:border-[#7A3DB8]/60 group-hover:shadow-[0_4px_20px_-2px_rgba(91,32,160,0.25)]',
-      dot: 'bg-purple-400',
+      text: 'text-purple-600 dark:text-purple-300',
+      bg: 'bg-purple-50 dark:bg-purple-950/30',
+      border: 'border-purple-200 dark:border-purple-800/40',
+      dot: 'bg-purple-500 dark:bg-purple-400',
     },
     cyan: {
-      text: 'text-cyan-300',
-      bg: 'bg-[#18C5D8]/15',
-      border: 'border-[#18C5D8]/40',
-      glow: 'group-hover:border-[#18C5D8]/60 group-hover:shadow-[0_4px_20px_-2px_rgba(24,197,216,0.2)]',
-      dot: 'bg-cyan-400',
+      text: 'text-cyan-700 dark:text-cyan-300',
+      bg: 'bg-cyan-50 dark:bg-cyan-950/30',
+      border: 'border-cyan-200 dark:border-cyan-800/40',
+      dot: 'bg-cyan-500 dark:bg-cyan-400',
     },
     emerald: {
-      text: 'text-emerald-300',
-      bg: 'bg-emerald-500/15',
-      border: 'border-emerald-500/35',
-      glow: 'group-hover:border-emerald-500/60 group-hover:shadow-[0_4px_20px_-2px_rgba(16,185,129,0.2)]',
-      dot: 'bg-emerald-400',
+      text: 'text-emerald-700 dark:text-emerald-300',
+      bg: 'bg-emerald-50 dark:bg-emerald-950/30',
+      border: 'border-emerald-200 dark:border-emerald-800/40',
+      dot: 'bg-emerald-500 dark:bg-emerald-400',
     },
     amber: {
-      text: 'text-amber-300',
-      bg: 'bg-amber-500/15',
-      border: 'border-amber-500/35',
-      glow: 'group-hover:border-amber-500/60 group-hover:shadow-[0_4px_20px_-2px_rgba(245,158,11,0.2)]',
-      dot: 'bg-amber-400',
+      text: 'text-amber-700 dark:text-amber-300',
+      bg: 'bg-amber-50 dark:bg-amber-950/30',
+      border: 'border-amber-200 dark:border-amber-800/40',
+      dot: 'bg-amber-500 dark:bg-amber-400',
     },
     blue: {
-      text: 'text-blue-300',
-      bg: 'bg-blue-500/15',
-      border: 'border-blue-500/35',
-      glow: 'group-hover:border-blue-500/60 group-hover:shadow-[0_4px_20px_-2px_rgba(59,130,246,0.2)]',
-      dot: 'bg-blue-400',
+      text: 'text-blue-700 dark:text-blue-300',
+      bg: 'bg-blue-50 dark:bg-blue-950/30',
+      border: 'border-blue-200 dark:border-blue-800/40',
+      dot: 'bg-blue-500 dark:bg-blue-400',
     },
     rose: {
-      text: 'text-rose-300',
-      bg: 'bg-rose-500/15',
-      border: 'border-rose-500/35',
-      glow: 'group-hover:border-rose-500/60 group-hover:shadow-[0_4px_20px_-2px_rgba(244,63,94,0.2)]',
-      dot: 'bg-rose-400',
+      text: 'text-rose-700 dark:text-rose-300',
+      bg: 'bg-rose-50 dark:bg-rose-950/30',
+      border: 'border-rose-200 dark:border-rose-800/40',
+      dot: 'bg-rose-500 dark:bg-rose-400',
     },
     gold: {
-      text: 'text-[#d4af37]',
-      bg: 'bg-[#d4af37]/15',
-      border: 'border-[#d4af37]/35',
-      glow: 'group-hover:border-[#d4af37]/60 group-hover:shadow-[0_4px_20px_-2px_rgba(212,175,55,0.2)]',
-      dot: 'bg-[#d4af37]',
+      text: 'text-amber-700 dark:text-[#d4af37]',
+      bg: 'bg-amber-50 dark:bg-[#d4af37]/15',
+      border: 'border-amber-200 dark:border-[#d4af37]/35',
+      dot: 'bg-amber-500 dark:bg-[#d4af37]',
     },
   }[color];
 
   return (
     <div
-      className={`group relative bg-[#121624] border border-[#232b3f] hover:border-[#333e59] rounded-2xl p-4 sm:p-5 transition-all duration-200 flex flex-col justify-between hover:-translate-y-1 shadow-lg shadow-black/20 ${colorMap.glow}`}
+      className="group relative bg-surface border border-border hover:border-primary/40 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-4.5 transition-all duration-200 flex flex-col justify-between hover:-translate-y-0.5 shadow-xs hover:shadow-md"
     >
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+        <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate">
           {title}
         </span>
         <div
-          className={`p-2 sm:p-2.5 rounded-xl ${colorMap.bg} ${colorMap.text} border ${colorMap.border} transition-transform duration-200 group-hover:scale-105 shrink-0`}
+          className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl ${colorMap.bg} ${colorMap.text} border ${colorMap.border} transition-transform duration-200 group-hover:scale-105 shrink-0`}
         >
-          <Icon size={18} />
+          <Icon size={15} className="sm:w-[17px] sm:h-[17px]" />
         </div>
       </div>
 
       <div>
-        <div className="flex items-baseline justify-between gap-2">
-          <div className="text-2xl sm:text-3xl font-extrabold font-mono tracking-tight text-white">
+        <div className="flex items-baseline justify-between gap-1.5 flex-wrap">
+          <div className="text-xl sm:text-2xl lg:text-3xl font-black font-mono tracking-tight text-foreground">
             {value}
           </div>
           {trend && (
-            <span className="text-[11px] text-slate-400 font-medium font-mono">
+            <span className="text-[10px] sm:text-[11px] text-muted-foreground font-medium font-mono">
               {typeof trend === 'object' && trend !== null ? trend.label : trend}
             </span>
           )}
         </div>
 
         {subtitle && (
-          <div className="text-[11px] text-slate-400 mt-1.5 truncate">
+          <div className="text-[10px] sm:text-[11px] text-muted-foreground mt-1 truncate">
             {subtitle}
           </div>
         )}

@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { seedMessMenu } from './seed_mess_menu';
 
 const prisma = new PrismaClient();
 
@@ -75,6 +76,8 @@ async function main() {
     { code: 'academic.routine.manage', description: 'Manage academic routines and timetables' },
     { code: 'academic.deadline.manage', description: 'Manage university and campus academic deadlines' },
     { code: 'academic.guidance.manage', description: 'Manage student guidance workflows' },
+    { code: 'mess.view', description: 'View hostel mess menu' },
+    { code: 'mess.manage', description: 'Create and update hostel mess menu' },
   ];
 
   const permMap: Record<string, string> = {};
@@ -100,6 +103,7 @@ async function main() {
       'leave.create',
       'bonafide.create',
       'notices.view',
+      'mess.view',
     ],
     STAFF: [
       'requests.view.own',
@@ -120,6 +124,8 @@ async function main() {
       'notices.view',
       'notices.create',
       'students.manage',
+      'mess.view',
+      'mess.manage',
     ],
     SECURITY: [
       'gatepass.verify',
@@ -1502,6 +1508,9 @@ async function main() {
   for (const g of guidanceData) {
     await prisma.guidanceItem.create({ data: g });
   }
+
+  // 17. Seed Hostel Mess Menu
+  await seedMessMenu();
 
   console.log('✅ Nexora Campus Database Seed Complete!');
   console.log('📊 Demo Accounts Prepared:');

@@ -18,9 +18,7 @@ import {
   ArrowRight,
   MapPin,
   User,
-  Shield,
   Briefcase,
-  Layers,
 } from 'lucide-react';
 
 export default function StaffDashboardPage() {
@@ -49,34 +47,37 @@ export default function StaffDashboardPage() {
   const completedTasks = tasks.filter((t) => ['RESOLVED', 'CONFIRMED', 'CLOSED'].includes(t.status));
 
   return (
-    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto pb-12 animate-tab-fade">
       {/* Technician Welcome Header */}
-      <div className="bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xl shadow-black/15">
+      <div className="bg-surface border border-border dark:bg-[#121624] dark:border-[#232b3f] dark:shadow-xl dark:shadow-black/15 rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#1b2234] border border-amber-500/35 text-amber-400 text-[10px] font-mono font-bold uppercase tracking-wider mb-2 shadow-xs">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:bg-[#1b2234] dark:border-amber-500/35 dark:text-amber-400 text-[10px] font-mono font-bold uppercase tracking-wider mb-2">
               <Wrench size={12} />
               <span>Facility Maintenance &amp; Repair Desk</span>
             </div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-foreground tracking-tight">
               Hello, {user?.fullName || 'Ramesh Kumar'}!
             </h1>
-            <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-gray-400 mt-2 font-mono">
-              <span className="text-gray-300">
-                Unit: <strong className="text-white font-bold">{user?.department || 'Maintenance'} ({user?.specialization || 'PLUMBING'})</strong>
-              </span>
-              <span className="text-gray-600">•</span>
+            <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-muted-foreground mt-2 font-mono">
               <span>
-                Emp ID: <strong className="text-gray-300">{user?.employeeId || 'STF-PLUMB-01'}</strong>
+                Unit: <strong className="text-foreground font-bold">{user?.department || 'Maintenance'} ({user?.specialization || 'PLUMBING'})</strong>
               </span>
-              <span className="text-gray-600">•</span>
-              <span className="text-emerald-400 font-semibold">On Duty</span>
+              <span className="opacity-40">•</span>
+              <span>
+                Emp ID: <strong className="text-foreground">{user?.employeeId || 'STF-PLUMB-01'}</strong>
+              </span>
+              <span className="opacity-40">•</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>On Duty</span>
+              </span>
             </div>
           </div>
 
           <Link
             href="/staff/tasks"
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs shadow-md shadow-amber-950/20 active:scale-95 transition-all duration-150 shrink-0"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground dark:bg-amber-500 dark:hover:bg-amber-400 dark:text-black dark:shadow-md dark:shadow-amber-950/20 font-bold text-xs shadow-xs active:scale-95 transition-all duration-150 shrink-0"
           >
             <Briefcase size={15} />
             <span>View Work Queue ({tasks.length})</span>
@@ -121,17 +122,17 @@ export default function StaffDashboardPage() {
       )}
 
       {/* Active Work Queue List */}
-      <div className="bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xl shadow-black/15 space-y-4">
-        <div className="flex items-center justify-between border-b border-[#21273a] pb-4">
+      <div className="bg-surface border border-border rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-border pb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#182030] text-amber-400 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center">
               <Wrench size={16} />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight">
+              <h2 className="text-sm sm:text-base font-bold text-foreground tracking-tight">
                 Active Assigned Tasks (Priority Queue)
               </h2>
-              <p className="text-[11px] text-gray-400">
+              <p className="text-[11px] text-muted-foreground">
                 Actionable repair orders requiring on-site verification and dispatch
               </p>
             </div>
@@ -139,7 +140,7 @@ export default function StaffDashboardPage() {
 
           <Link
             href="/staff/tasks"
-            className="text-xs text-[#d4af37] hover:text-[#e4c257] font-semibold inline-flex items-center gap-1 group transition"
+            className="text-xs text-primary hover:underline font-semibold inline-flex items-center gap-1 group transition"
           >
             <span>Full Task Board</span>
             <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
@@ -155,46 +156,46 @@ export default function StaffDashboardPage() {
             icon={Wrench}
           />
         ) : (
-          <div className="divide-y divide-[#202638]">
+          <div className="divide-y divide-border">
             {tasks.slice(0, 6).map((task) => (
               <div
                 key={task.id}
-                className="py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs hover:bg-[#161a29] transition-colors rounded-xl px-2"
+                className="py-4 sm:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs hover:bg-surface-secondary/50 transition-colors rounded-xl px-2"
               >
                 <div className="space-y-1.5 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono font-bold text-sm text-amber-300">
+                    <span className="font-mono font-bold text-sm text-foreground">
                       {task.requestNumber}
                     </span>
                     <StatusBadge status={task.status} size="sm" />
                     <PriorityBadge priority={task.priority} />
-                    <span className="text-gray-300 font-medium px-2 py-0.5 rounded-full bg-[#181d2e] border border-[#273146] text-[10px] font-mono">
+                    <span className="text-muted-foreground font-medium px-2 py-0.5 rounded-full bg-surface-secondary border border-border text-[10px] font-mono">
                       {task.complaint?.category || 'General'}
                     </span>
                   </div>
 
-                  <h3 className="text-sm font-bold text-white tracking-tight leading-snug">
+                  <h3 className="text-sm font-bold text-foreground tracking-tight leading-snug">
                     {task.title}
                   </h3>
 
-                  <div className="flex items-center gap-3 text-[11px] text-gray-400 font-mono flex-wrap">
-                    <span className="flex items-center gap-1 text-gray-300">
-                      <MapPin size={12} className="text-amber-400" />
+                  <div className="flex items-center gap-3 text-[11px] text-muted-foreground font-mono flex-wrap">
+                    <span className="flex items-center gap-1 text-foreground">
+                      <MapPin size={12} className="text-primary" />
                       <strong>{task.location || 'Hostel Room'}</strong>
                     </span>
                     <span>•</span>
-                    <span className="flex items-center gap-1 text-gray-400">
-                      <User size={12} className="text-gray-500" />
+                    <span className="flex items-center gap-1">
+                      <User size={12} className="opacity-70" />
                       Requester: {task.requester?.student?.fullName || task.requester?.username}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#22293d]">
+                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border">
                   <SLAIndicator sla={task.sla} compact />
                   <Link
                     href={`/staff/tasks/${task.id}`}
-                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#182030] hover:bg-[#202b40] text-[#d4af37] hover:text-[#e4c257] border border-[#d4af37]/35 font-bold transition-all shadow-xs active:scale-95"
+                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-surface hover:bg-surface-secondary text-primary border border-border hover:border-primary font-bold transition-all shadow-xs active:scale-95"
                   >
                     <span>Open Task</span>
                     <ArrowRight size={13} />

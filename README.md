@@ -1017,4 +1017,4 @@ License not currently specified.
 
 ## 24. Credits
 
-Developed for the **BPUT Hackathon 2026** by the Nexora Campus Engineering Team.
+Developed for the **BPUT Hackathon 2026** by the Team **CIPHER**.

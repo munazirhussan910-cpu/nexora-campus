@@ -53,7 +53,7 @@ export default function UniversalProfileRedirectPage() {
   }, [user, loading, router]);
 
   return (
-    <div className="min-h-screen bg-[#0a0d14] flex items-center justify-center p-6 text-sm text-gray-400">
+    <div className="min-h-screen bg-background flex items-center justify-center p-6 text-sm text-muted-foreground">
       <div className="flex items-center gap-3">
         <div className="w-5 h-5 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
         <span>Loading your profile...</span>

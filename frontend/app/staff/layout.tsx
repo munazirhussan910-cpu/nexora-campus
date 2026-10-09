@@ -19,7 +19,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
 
   return (
     <PortalGuard allowedRoles={['STAFF', 'ADMIN']} portalTitle="Maintenance Operations">
-      <div className="min-h-screen bg-[#0a0d14] flex flex-col overflow-x-hidden text-[#edeef2]">
+      <div className="min-h-screen bg-background flex flex-col overflow-x-hidden text-foreground">
         <Navbar
           portalName="MAINTENANCE OPERATIONS"
           onMenuClick={() => setIsMobileMenuOpen((prev) => !prev)}

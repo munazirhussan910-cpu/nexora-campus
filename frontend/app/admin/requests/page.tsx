@@ -5,7 +5,6 @@ import { apiRequest } from '@/lib/api';
 import { StatusBadge } from '@/components/status/StatusBadge';
 import { PriorityBadge } from '@/components/status/PriorityBadge';
 import { SLAIndicator } from '@/components/status/SLAIndicator';
-import { Timeline } from '@/components/tables/Timeline';
 import {
   Search,
   Filter,
@@ -19,12 +18,14 @@ import {
   UserCheck,
   AlertCircle,
   CheckCircle2,
+  RefreshCw,
 } from 'lucide-react';
 
 export default function AdminRequestsPage() {
   const [requests, setRequests] = useState<any[]>([]);
   const [staffList, setStaffList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -39,16 +40,24 @@ export default function AdminRequestsPage() {
   const [reassignMsg, setReassignMsg] = useState('');
   const [submittingReassign, setSubmittingReassign] = useState(false);
 
-  const fetchRequests = async () => {
-    setLoading(true);
-    const [reqRes, staffRes] = await Promise.all([
-      apiRequest('/requests'),
-      apiRequest('/admin/staff'),
-    ]);
+  const fetchRequests = async (manual = false) => {
+    if (manual) setRefreshing(true);
+    else setLoading(true);
 
-    if (reqRes.success && reqRes.data) setRequests(reqRes.data);
-    if (staffRes.success && staffRes.data) setStaffList(staffRes.data);
-    setLoading(false);
+    try {
+      const [reqRes, staffRes] = await Promise.all([
+        apiRequest('/requests'),
+        apiRequest('/admin/staff'),
+      ]);
+
+      if (reqRes.success && reqRes.data) setRequests(reqRes.data);
+      if (staffRes.success && staffRes.data) setStaffList(staffRes.data);
+    } catch (e) {
+      console.error('Failed to fetch requests', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   };
 
   useEffect(() => {
@@ -98,24 +107,43 @@ export default function AdminRequestsPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="space-y-5 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#21273a] pb-4">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">Campus Requests Management</h1>
-          <p className="text-xs text-gray-400">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-widest text-primary font-semibold">
+              Operations Dispatch
+            </span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+            Campus Requests Management
+          </h1>
+          <p className="text-xs text-slate-400 mt-0.5">
             Global operational view across complaints, gate passes, bonafide certificates, and leave requests.
           </p>
         </div>
+
+        <button
+          type="button"
+          onClick={() => fetchRequests(true)}
+          disabled={loading || refreshing}
+          className="self-start sm:self-auto inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-secondary border border-border hover:border-primary/60 text-xs font-semibold text-foreground hover:bg-surface-secondary/80 transition active:scale-95 disabled:opacity-50"
+        >
+          <RefreshCw size={13} className={refreshing ? 'animate-spin text-primary' : ''} />
+          <span>Sync Requests</span>
+        </button>
       </div>
 
       {/* Multi-filter Bar */}
-      <div className="bg-[#141722] border border-[#282f42] rounded-2xl p-4 flex flex-wrap gap-3 items-center justify-between text-xs">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="bg-surface border border-border shadow-xs rounded-xl sm:rounded-2xl p-3.5 sm:p-4.5 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between text-xs shadow-md">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-2.5">
           {/* Status filter */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-[#1c2130] border border-[#2e3447] rounded-lg px-3 py-1.5 text-white"
+            className="w-full bg-surface border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-xl px-3 py-2 text-foreground font-medium focus:outline-hidden cursor-pointer"
           >
             <option value="ALL">All Statuses</option>
             <option value="SUBMITTED">SUBMITTED</option>
@@ -133,7 +161,7 @@ export default function AdminRequestsPage() {
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="bg-[#1c2130] border border-[#2e3447] rounded-lg px-3 py-1.5 text-white"
+            className="w-full bg-surface border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-xl px-3 py-2 text-foreground font-medium focus:outline-hidden cursor-pointer"
           >
             <option value="ALL">All Request Types</option>
             <option value="COMPLAINT">COMPLAINT</option>
@@ -146,7 +174,7 @@ export default function AdminRequestsPage() {
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className="bg-[#1c2130] border border-[#2e3447] rounded-lg px-3 py-1.5 text-white"
+            className="w-full bg-surface border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-xl px-3 py-2 text-foreground font-medium focus:outline-hidden cursor-pointer"
           >
             <option value="ALL">All Priorities</option>
             <option value="URGENT">URGENT</option>
@@ -156,57 +184,101 @@ export default function AdminRequestsPage() {
           </select>
         </div>
 
-        <div className="relative w-full sm:w-72">
-          <Search size={14} className="absolute left-3 top-2.5 text-gray-500" />
+        <div className="relative w-full lg:w-80">
+          <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by ID, title, student, room..."
-            className="w-full bg-[#1c2130] border border-[#2e3447] rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-gold"
+            className="w-full bg-surface border border-border rounded-xl pl-9 pr-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-hidden focus:border-primary focus:ring-1 focus:ring-primary transition"
           />
         </div>
       </div>
 
-      {/* Requests Table */}
-      <div className="bg-[#141722] border border-[#282f42] rounded-2xl overflow-hidden shadow-xl">
+      {/* Requests List */}
+      <div className="bg-surface border border-border shadow-xs rounded-xl sm:rounded-2xl overflow-hidden shadow-xl">
+        <div className="px-4 py-3 border-b border-[#212739] flex items-center justify-between text-xs">
+          <span className="text-slate-400 font-mono">
+            Showing <strong className="text-white">{filteredRequests.length}</strong> of{' '}
+            {requests.length} requests
+          </span>
+          <span className="text-[11px] font-mono text-primary">Live Operational Queue</span>
+        </div>
+
         {loading ? (
-          <div className="py-12 text-center text-xs text-gray-500">Loading requests...</div>
+          <div className="py-16 text-center text-xs text-slate-500 flex flex-col items-center justify-center gap-2">
+            <RefreshCw size={18} className="animate-spin text-primary" />
+            <span>Loading requests stream...</span>
+          </div>
         ) : filteredRequests.length === 0 ? (
-          <div className="py-12 text-center text-xs text-gray-500">No requests match the selected filters.</div>
+          <div className="py-16 text-center text-xs text-slate-500 space-y-1">
+            <Layers size={24} className="text-slate-600 mx-auto mb-2" />
+            <div className="font-semibold text-slate-400">No requests match the selected filters.</div>
+            <div className="text-[11px] text-slate-600">Try adjusting your search query or status criteria.</div>
+          </div>
         ) : (
-          <div className="divide-y divide-[#282f42]">
+          <div className="divide-y divide-[#1e2434]">
             {filteredRequests.map((r) => (
               <div
                 key={r.id}
-                className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#181b26] transition text-xs"
+                className="p-3.5 sm:p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-surface-secondary/50 transition-colors text-xs"
               >
-                <div className="space-y-1">
+                <div className="space-y-1.5 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono font-bold text-gold">{r.requestNumber}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-[#202535] text-gray-300 border border-[#2d364d]">
-                      {r.requestType?.name}
+                    <span className="font-mono font-extrabold text-primary text-xs sm:text-sm">
+                      {r.requestNumber}
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1c2234] text-slate-300 border border-[#2a3449]">
+                      {r.requestType?.name || r.requestType?.code}
                     </span>
                     <StatusBadge status={r.status} size="sm" />
                     <PriorityBadge priority={r.priority} />
+                    <span className="text-slate-400 text-[11px] font-mono flex items-center gap-1">
+                      <MapPin size={11} className="text-slate-500 shrink-0" />
+                      <span>{r.location || 'Campus Wide'}</span>
+                    </span>
                   </div>
 
-                  <h3 className="text-xs font-semibold text-gray-100">{r.title}</h3>
+                  <h3 className="text-xs sm:text-sm font-semibold text-slate-100 truncate">
+                    {r.title}
+                  </h3>
 
-                  <div className="flex items-center gap-3 text-[11px] text-gray-400">
-                    <span>Requester: <strong>{r.requester?.student?.fullName || r.requester?.username}</strong></span>
+                  <div className="flex items-center gap-3 text-[11px] text-slate-400 font-mono flex-wrap">
+                    <span>
+                      Requester:{' '}
+                      <strong className="text-slate-300 font-sans">
+                        {r.requester?.student?.fullName || r.requester?.username}
+                      </strong>
+                    </span>
                     <span>•</span>
-                    <span>Location: <strong>{r.location || 'Campus'}</strong></span>
-                    <span>•</span>
-                    <span>Staff: <strong>{r.assignedStaff?.staff?.fullName || 'Unassigned'}</strong></span>
+                    <span>
+                      Assigned:{' '}
+                      <strong className={r.assignedStaff ? 'text-cyan-300 font-sans' : 'text-amber-400 font-sans'}>
+                        {r.assignedStaff?.staff?.fullName || 'Pending Assignment'}
+                      </strong>
+                    </span>
+                    {r.createdAt && (
+                      <>
+                        <span>•</span>
+                        <span className="text-slate-500">
+                          {new Date(r.createdAt).toLocaleDateString()}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#1c2234]">
                   <SLAIndicator sla={r.sla} compact />
                   <button
-                    onClick={() => { setSelectedReq(r); setTargetStaffId(''); setReassignMsg(''); }}
-                    className="px-3 py-1.5 rounded-lg bg-[#1f2638] hover:bg-[#28324a] text-gold border border-[#3d4661] transition font-bold"
+                    type="button"
+                    onClick={() => {
+                      setSelectedReq(r);
+                      setTargetStaffId('');
+                      setReassignMsg('');
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-surface-secondary hover:bg-surface-secondary/80 text-primary border border-border hover:border-primary/60 transition font-bold text-xs active:scale-95 shadow-xs"
                   >
                     Manage / Reassign
                   </button>
@@ -219,76 +291,108 @@ export default function AdminRequestsPage() {
 
       {/* Manage & Reassignment Modal */}
       {selectedReq && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#141722] border border-[#3d4661] rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-[#282f42] pb-3">
-              <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-gold">{selectedReq.requestNumber}</span>
-                <span className="font-semibold text-white text-sm">{selectedReq.title}</span>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-surface border border-border shadow-2xl rounded-2xl max-w-xl w-full p-4 sm:p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#212739] pb-3">
+              <div className="flex items-center gap-2 truncate">
+                <span className="font-mono font-extrabold text-primary">
+                  {selectedReq.requestNumber}
+                </span>
+                <span className="font-bold text-white text-sm truncate">
+                  {selectedReq.title}
+                </span>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedReq(null)}
-                className="text-gray-400 hover:text-white p-1 rounded-lg"
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-[#1a2133] transition shrink-0"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <div className="text-xs text-gray-300 space-y-2 bg-[#181b26] p-3 rounded-xl border border-[#282f42]">
-              <div><strong>Requester:</strong> {selectedReq.requester?.student?.fullName} ({selectedReq.requester?.student?.rollNumber})</div>
-              <div><strong>Location:</strong> {selectedReq.location}</div>
-              <div><strong>Current Assigned Staff:</strong> {selectedReq.assignedStaff?.staff?.fullName || 'None'}</div>
-              <div><strong>Status:</strong> {selectedReq.status}</div>
+            <div className="text-xs text-slate-300 space-y-2 bg-[#171d2c] p-3.5 rounded-xl border border-[#263148]">
+              <div>
+                <strong className="text-slate-400">Requester:</strong>{' '}
+                {selectedReq.requester?.student?.fullName} ({selectedReq.requester?.student?.rollNumber || 'Student'})
+              </div>
+              <div>
+                <strong className="text-slate-400">Location:</strong> {selectedReq.location || 'Campus Wide'}
+              </div>
+              <div>
+                <strong className="text-slate-400">Current Assigned Staff:</strong>{' '}
+                <span className={selectedReq.assignedStaff ? 'text-cyan-300' : 'text-amber-400 font-bold'}>
+                  {selectedReq.assignedStaff?.staff?.fullName || 'None'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <strong className="text-slate-400">Status:</strong>
+                <StatusBadge status={selectedReq.status} size="sm" />
+              </div>
             </div>
 
             {reassignMsg && (
-              <div className="p-3 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-xs">
-                {reassignMsg}
+              <div
+                className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
+                  reassignMsg.includes('Failed')
+                    ? 'bg-rose-950/70 border-rose-500/40 text-rose-300'
+                    : 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300'
+                }`}
+              >
+                {reassignMsg.includes('Failed') ? <AlertCircle size={15} /> : <CheckCircle2 size={15} />}
+                <span>{reassignMsg}</span>
               </div>
             )}
 
-            <form onSubmit={handleReassign} className="space-y-3 text-xs pt-1">
-              <h4 className="font-bold text-gray-200">Reassign to Maintenance Staff</h4>
+            <form onSubmit={handleReassign} className="space-y-3.5 text-xs pt-1">
+              <h4 className="font-bold text-slate-100 flex items-center gap-1.5">
+                <UserCheck size={14} className="text-primary" />
+                <span>Reassign to Maintenance Staff</span>
+              </h4>
 
               <div>
-                <label className="block text-gray-400 mb-1">Select Technician</label>
+                <label className="block text-slate-400 font-mono text-[11px] mb-1">
+                  Select Technician
+                </label>
                 <select
                   required
                   value={targetStaffId}
                   onChange={(e) => setTargetStaffId(e.target.value)}
-                  className="w-full bg-[#1c2130] border border-[#2e3447] rounded-lg p-2.5 text-xs text-white"
+                  className="w-full bg-surface-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-xl p-2.5 text-xs text-foreground focus:outline-hidden cursor-pointer"
                 >
                   <option value="">-- Choose Staff Member --</option>
                   {staffList.map((s) => (
                     <option key={s.id} value={s.userId}>
-                      {s.fullName} ({s.specialization} • {s.activeTasks} active tasks)
+                      {s.fullName} ({s.specialization} • {s.activeTasks || 0} active tasks)
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-gray-400 mb-1">Reassignment Reason / Note</label>
+                <label className="block text-slate-400 font-mono text-[11px] mb-1">
+                  Reassignment Reason / Operational Note
+                </label>
                 <textarea
                   value={reassignComment}
                   onChange={(e) => setReassignComment(e.target.value)}
-                  placeholder="e.g. Workload balancing, reallocated from primary technician..."
-                  className="w-full bg-[#1c2130] border border-[#2e3447] rounded-lg p-2.5 text-xs text-white h-16"
+                  placeholder="e.g. Workload re-balancing, delegated from primary maintenance technician..."
+                  className="w-full bg-surface-secondary border border-border focus:border-primary focus:ring-1 focus:ring-primary rounded-xl p-2.5 text-xs text-foreground h-20 focus:outline-hidden resize-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#212739]">
                 <button
                   type="button"
                   onClick={() => setSelectedReq(null)}
-                  className="px-4 py-2 rounded-lg bg-[#1f2434] text-gray-300"
+                  className="px-4 py-2 rounded-xl bg-[#181e2e] hover:bg-[#20273a] text-slate-300 font-semibold transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingReassign || !targetStaffId}
-                  className="px-5 py-2 rounded-lg bg-gold text-black font-bold hover:bg-[#c49f2e] disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-extrabold shadow-xs transition disabled:opacity-50"
                 >
                   {submittingReassign ? 'Reassigning...' : 'Confirm Reassignment'}
                 </button>
