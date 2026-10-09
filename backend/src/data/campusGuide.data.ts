@@ -11,6 +11,11 @@ export interface CampusProcedure {
   directActionIntent?: string;
   actionButtonLabel?: string;
   notes?: string;
+  source?: string;
+  lastUpdated?: string;
+  verificationStatus?: 'OFFICIAL' | 'VERIFIED' | 'PROVISIONAL';
+  audience?: string[];
+  suitableForStudents?: boolean;
 }
 
 export const VERIFIED_CAMPUS_PROCEDURES: CampusProcedure[] = [
@@ -44,6 +49,11 @@ export const VERIFIED_CAMPUS_PROCEDURES: CampusProcedure[] = [
     directActionIntent: 'REQUEST_BONAFIDE',
     actionButtonLabel: 'Start Bonafide Request',
     notes: 'Physical stamp can be stamped at Academic Office Window 3 if hard-copy submission is specifically mandated by bank/embassy.',
+    source: 'Nexora Academic Affairs Cell Guidelines (Section 3)',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'ACADEMIC_OFFICER', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'proc-hostel-leave',
@@ -76,6 +86,11 @@ export const VERIFIED_CAMPUS_PROCEDURES: CampusProcedure[] = [
     directActionIntent: 'APPLY_HOSTEL_LEAVE',
     actionButtonLabel: 'Apply for Hostel Leave',
     notes: 'Leaves exceeding 5 continuous academic days also require intimation to your respective HOD.',
+    source: 'Nexora Hostel Administration & Warden Operational Manual',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'WARDEN', 'SECURITY', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'proc-gate-pass',
@@ -107,6 +122,11 @@ export const VERIFIED_CAMPUS_PROCEDURES: CampusProcedure[] = [
     directActionIntent: 'CREATE_GATE_PASS',
     actionButtonLabel: 'Apply Gate Pass',
     notes: 'Default campus curfew requires return by 8:30 PM for residential students unless special permission is granted.',
+    source: 'Nexora Campus Security & Gate Operations Protocol',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'WARDEN', 'SECURITY', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'proc-hostel-maintenance',
@@ -140,6 +160,11 @@ export const VERIFIED_CAMPUS_PROCEDURES: CampusProcedure[] = [
     directActionIntent: 'CREATE_MAINTENANCE_REQUEST',
     actionButtonLabel: 'Report Room Problem',
     notes: 'Emergency water overflows or electrical sparking are automatically flagged URGENT with a 4-hour SLA.',
+    source: 'Nexora Estate Management & Maintenance SLA Charter',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'STAFF', 'WARDEN', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'proc-lost-id',
@@ -172,6 +197,11 @@ export const VERIFIED_CAMPUS_PROCEDURES: CampusProcedure[] = [
       'Collect newly printed RFID Smart Card from the Academic Section upon notification.',
     ],
     notes: 'Never lend your temporary pass to another student; biometric/turnstile checks apply.',
+    source: 'Nexora Campus Security & Proctorial Regulations (Clause 4)',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'SECURITY', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'proc-semester-registration',
@@ -199,6 +229,11 @@ export const VERIFIED_CAMPUS_PROCEDURES: CampusProcedure[] = [
       'Faculty Advisor signs off on course enrollment and generates registered course card.',
     ],
     notes: 'Late fee of ₹500 applies for registrations submitted after the university cutoff date.',
+    source: 'BPUT Academic Regulations Section 5',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'FACULTY', 'ACADEMIC_OFFICER', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'proc-grade-grievance',
@@ -228,6 +263,11 @@ export const VERIFIED_CAMPUS_PROCEDURES: CampusProcedure[] = [
       'Updated grade sheet is updated on University portal.',
     ],
     notes: 'Marks may increase, decrease, or remain unchanged based on re-evaluation committee review.',
+    source: 'BPUT Examination Regulations Section 11',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'FACULTY', 'ACADEMIC_OFFICER', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'proc-medical-emergency',
@@ -254,6 +294,11 @@ export const VERIFIED_CAMPUS_PROCEDURES: CampusProcedure[] = [
       'Referral to Capital Hospital / AIIMS Bhubaneswar arranged via university ambulance if required.',
     ],
     notes: 'Always keep your emergency contact number updated in your Nexora profile.',
+    source: 'Nexora Health & Safety Protocol',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'STAFF', 'WARDEN', 'SECURITY', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'proc-library-clearance',
@@ -279,6 +324,11 @@ export const VERIFIED_CAMPUS_PROCEDURES: CampusProcedure[] = [
       'Digital no-dues clearance is updated automatically in Nexora.',
     ],
     notes: 'Overdue fine of ₹1 per day per volume applies after grace period.',
+    source: 'Central University Library Manual',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'FACULTY', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'proc-wifi-it',
@@ -304,6 +354,11 @@ export const VERIFIED_CAMPUS_PROCEDURES: CampusProcedure[] = [
       'Institutional Google Workspace accounts (@nexora.edu) are provisioned during orientation.',
     ],
     notes: 'Campus bandwidth is capped at 1 Gbps backbone; peer-to-peer torrent traffic is strictly blocked by firewall.',
+    source: 'Nexora IT Infrastructure Charter',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'FACULTY', 'STAFF', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'proc-anti-ragging',
@@ -329,6 +384,11 @@ export const VERIFIED_CAMPUS_PROCEDURES: CampusProcedure[] = [
       'Immediate disciplinary action including hostel rustication and police intimation for violations.',
     ],
     notes: 'Campus premises and residential corridors are under 24x7 CCTV surveillance.',
+    source: 'National Anti-Ragging Directive & Nexora Code of Conduct',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'FACULTY', 'WARDEN', 'SECURITY', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'proc-hostel-room-change',
@@ -356,5 +416,30 @@ export const VERIFIED_CAMPUS_PROCEDURES: CampusProcedure[] = [
       'Collect new room keys from block caretaker.',
     ],
     notes: 'Unauthorized room swapping without official warden sign-off leads to a penalty of ₹1,000.',
+    source: 'Nexora Hostel Administration & Warden Operational Manual',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'WARDEN', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
 ];
+
+export function getProcedureById(id: string): CampusProcedure | undefined {
+  return VERIFIED_CAMPUS_PROCEDURES.find((p) => p.id === id);
+}
+
+export function searchCampusProcedures(query: string, category?: string): CampusProcedure[] {
+  const q = query.toLowerCase().trim();
+  return VERIFIED_CAMPUS_PROCEDURES.filter((p) => {
+    if (category && category !== 'All' && p.category.toLowerCase() !== category.toLowerCase()) {
+      return false;
+    }
+    if (!q) return true;
+    return (
+      p.title.toLowerCase().includes(q) ||
+      p.department.toLowerCase().includes(q) ||
+      p.keywords.some((k) => k.toLowerCase().includes(q)) ||
+      p.steps.some((s) => s.toLowerCase().includes(q))
+    );
+  });
+}

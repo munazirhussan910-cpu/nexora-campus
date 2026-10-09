@@ -29,10 +29,11 @@ export default function WardenDashboardPage() {
 
   const loadData = async () => {
     setLoading(true);
+    const blockName = user?.hostelBlock || 'Block B';
     const [gpRes, leaveRes, compRes] = await Promise.all([
       apiRequest('/gate-passes/pending'),
       apiRequest('/leaves/pending'),
-      apiRequest('/requests?type=COMPLAINT&hostel=Block B'),
+      apiRequest(`/requests?type=COMPLAINT&hostel=${encodeURIComponent(blockName)}`),
     ]);
 
     if (gpRes.success && gpRes.data) setPendingGatePasses(gpRes.data);

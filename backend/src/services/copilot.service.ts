@@ -1,10 +1,16 @@
 import { VERIFIED_CAMPUS_PROCEDURES, CampusProcedure } from '../data/campusGuide.data';
 import { VERIFIED_CAMPUS_RESOURCES, CampusResource } from '../data/campusResources.data';
-import { VERIFIED_CAMPUS_KNOWLEDGE, searchCampusKnowledge, CampusKnowledgeItem } from '../data/campusKnowledge.data';
+import {
+  VERIFIED_CAMPUS_KNOWLEDGE,
+  searchCampusKnowledge,
+  CampusKnowledgeItem,
+} from '../data/campusKnowledge.data';
 import { AuthUser } from '../types/auth';
 import { GeminiService } from './gemini.service';
 import { config } from '../config/env';
 import prisma from '../config/prisma';
+import { getWardenHostelBlock } from './warden.service';
+import { EmergencyService } from './emergency.service';
 
 export type CopilotIntent =
   | 'GENERAL_AI'
@@ -24,6 +30,15 @@ export type CopilotIntent =
   | 'CREATE_GATE_PASS'
   | 'REQUEST_TRACKING'
   | 'CAMPUS_STATUS'
+  | 'WARDEN_TELEMETRY'
+  | 'STAFF_TELEMETRY'
+  | 'SECURITY_TELEMETRY'
+  | 'ACADEMIC_OFFICER_TELEMETRY'
+  | 'FACULTY_TELEMETRY'
+  | 'ADMIN_TELEMETRY'
+  | 'PRIVACY_RESTRICTION'
+  | 'UNVERIFIED_POLICY'
+  | 'CLARIFICATION_NEEDED'
   | 'FALLBACK';
 
 export interface CopilotCard {
@@ -36,7 +51,9 @@ export interface CopilotCard {
     | 'STUDY_PLAN'
     | 'RESOURCE_LIST'
     | 'REQUEST_LIST'
-    | 'DEADLINE_LIST';
+    | 'DEADLINE_LIST'
+    | 'TELEMETRY_STAT_CARD'
+    | 'VERIFIED_RECORD';
   title: string;
   data: any;
 }
@@ -63,7 +80,23 @@ export class CopilotService {
     const text = userMessage.trim();
     const lower = text.toLowerCase();
 
-    // 0. Extract multi-turn context (subject, timeline, weak areas)
+    // 0a. Security Defense: Prompt injection & adversarial directive prevention
+    if (this.isPromptInjection(lower)) {
+      return this.handleSecurityRefusal();
+    }
+
+    // 0b. Privacy Defense: Cross-student private record isolation
+    if (this.isCrossStudentAccessAttempt(text, lower, user)) {
+      return this.handlePrivacyRefusal(user);
+    }
+
+    // 0c. Usability: Ambiguous short keywords clarification
+    const ambiguity = this.checkAmbiguity(lower);
+    if (ambiguity) {
+      return ambiguity;
+    }
+
+    // 0d. Multi-turn context extraction (subject, timeline, weak areas)
     const multiTurnContext = this.extractMultiTurnContext(history, text, lower);
 
     // 1. Detect inquiry domains
@@ -72,7 +105,26 @@ export class CopilotService {
     const isRequestTracking = this.isRequestTrackingIntent(lower);
     const isDeadlinesOrNotices = this.isDeadlinesNoticesIntent(lower);
 
-    // 2. Pre-fetch real student telemetry from database if needed
+    // Role-specific intent detection
+    const isWarden = this.isWardenIntent(lower);
+    const isStaff = this.isStaffIntent(lower);
+    const isSecurity = this.isSecurityIntent(lower);
+    const isAcademicOfficer = this.isAcademicOfficerIntent(lower);
+    const isFaculty = this.isFacultyIntent(lower);
+    const isAdmin = this.isAdminIntent(lower);
+
+    // Role Restriction Defense: Prevent unauthorized students from requesting administrative command logs
+    if (
+      user.role === 'STUDENT' &&
+      (lower.includes('all warden leaves') ||
+        lower.includes('show security logs') ||
+        lower.includes('admin command center metrics') ||
+        lower.includes('all students attendance'))
+    ) {
+      return this.handleRoleRestrictedRefusal('STUDENT', 'administrative operations');
+    }
+
+    // 2. Pre-fetch real telemetry from database based on user's authorized role
     let telemetryContext = '';
     try {
       telemetryContext = await this.getTelemetryContext(
@@ -106,30 +158,58 @@ export class CopilotService {
 
     // 4. Local Deterministic & Heuristic Engine (Zero-Failure Fallback)
 
-    // 4a. Real-time Student Attendance Query
+    // 4a. Role-specific live telemetry handlers
+    if (user.role === 'WARDEN' && (isWarden || lower.includes('status') || lower.includes('leave') || lower.includes('hostel'))) {
+      return await this.handleWardenInquiry(user, lower);
+    }
+
+    if (user.role === 'STAFF' && (isStaff || lower.includes('task') || lower.includes('complaint') || lower.includes('work') || lower.includes('repair'))) {
+      return await this.handleStaffInquiry(user, lower);
+    }
+
+    if (user.role === 'SECURITY' && (isSecurity || lower.includes('gate') || lower.includes('pass') || lower.includes('depart') || lower.includes('alert') || lower.includes('sos'))) {
+      return await this.handleSecurityInquiry(user, lower);
+    }
+
+    if (user.role === 'ACADEMIC_OFFICER' && (isAcademicOfficer || lower.includes('bonafide') || lower.includes('certificate') || lower.includes('pending'))) {
+      return await this.handleAcademicOfficerInquiry(user, lower);
+    }
+
+    if (user.role === 'FACULTY' && (isFaculty || lower.includes('schedule') || lower.includes('class') || lower.includes('routine') || lower.includes('teaching'))) {
+      return await this.handleFacultyInquiry(user, lower);
+    }
+
+    if (user.role === 'ADMIN' && (isAdmin || lower.includes('command') || lower.includes('metric') || lower.includes('overdue'))) {
+      return await this.handleAdminInquiry(user, lower);
+    }
+
+    // 4b. Real-time Student Attendance Query
     if (isAttendance) {
       return await this.handleAttendanceQuery(user, lower, text);
     }
 
-    // 4b. Real-time Student Timetable & Routine Query (or study timetable follow-up)
+    // 4c. Real-time Student Timetable & Routine Query (or study timetable follow-up)
     if (isTimetable) {
-      if (multiTurnContext.isExamStudyContext && (lower.includes('make') || lower.includes('plan') || lower.includes('create') || lower.includes('schedule'))) {
+      if (
+        multiTurnContext.isExamStudyContext &&
+        (lower.includes('make') || lower.includes('plan') || lower.includes('create') || lower.includes('schedule'))
+      ) {
         return this.handleStudyPlan(text, lower, user, multiTurnContext);
       }
       return await this.handleTimetableQuery(user, lower);
     }
 
-    // 4c. Real-time Student Request Tracking
+    // 4d. Real-time Student Request Tracking
     if (isRequestTracking) {
       return await this.handleRequestTracking(user, lower);
     }
 
-    // 4d. Real-time Academic Deadlines & Published Notices
+    // 4e. Real-time Academic Deadlines & Published Notices
     if (isDeadlinesOrNotices) {
       return await this.handleDeadlinesAndNotices(user, lower);
     }
 
-    // 4e. Actionable Workflow Intents (SOLVE)
+    // 4f. Actionable Workflow Intents (SOLVE)
     if (this.isMaintenanceIntent(lower)) {
       return this.handleMaintenanceAction(text, lower, user);
     }
@@ -146,60 +226,416 @@ export class CopilotService {
       return this.handleGatePassAction(text, lower, user);
     }
 
-    // 4f. Structured Study Plan Requests (PLAN)
-    if (this.isStudyPlanIntent(lower) || (multiTurnContext.isExamStudyContext && (multiTurnContext.detectedDays || multiTurnContext.detectedWeakness))) {
+    // 4g. Structured Study Plan Requests (PLAN)
+    if (
+      this.isStudyPlanIntent(lower) ||
+      (multiTurnContext.isExamStudyContext &&
+        (multiTurnContext.detectedDays || multiTurnContext.detectedWeakness))
+    ) {
       return this.handleStudyPlan(text, lower, user, multiTurnContext);
     }
 
-    // 4g. Resource / PYQ / Notes Search
+    // 4h. Resource / PYQ / Notes Search
     if (this.isResourceSearchIntent(lower)) {
       return this.handleResourceSearch(text, lower, user);
     }
 
-    // 4h. Conversational Follow-ups & Greetings
+    // 4i. Conversational Follow-ups & Greetings
     if (this.isConversationalFollowUp(lower, history)) {
       return this.handleConversational(text, lower, user, history, multiTurnContext);
     }
 
-    // 4i. General Academic Advice & 9+ CGPA Strategy
+    // 4j. General Academic Advice & 9+ CGPA Strategy
     if (this.isGeneralAcademicIntent(lower)) {
       return this.handleGeneralAcademicAdvice(text, lower, user, history);
     }
 
-    // 4j. Programming & Coding Assistance
+    // 4k. Programming & Coding Assistance
     if (this.isProgrammingIntent(lower)) {
       return this.handleProgrammingHelp(text, lower, user);
     }
 
-    // 4k. Career Guidance & Placement Preparation
+    // 4l. Career Guidance & Placement Preparation
     if (this.isCareerGuidanceIntent(lower)) {
       return this.handleCareerGuidance(text, lower, user);
     }
 
-    // 4l. Verified Campus Procedures (ASK - CAMPUS GUIDE)
+    // 4m. Verified Campus Procedures (ASK - CAMPUS GUIDE)
     const matchedProcedure = this.findMatchingProcedure(lower);
     if (matchedProcedure) {
       return this.handleGuideProcedure(matchedProcedure, user);
     }
 
-    // 4m. Verified Campus Knowledge & Policy Queries (RAG)
+    // 4n. Unverified Campus Policy Detection (Admit limitation rather than hallucinating)
+    if (this.isUnverifiedCampusPolicy(text, lower, user)) {
+      return this.handleUnverifiedCampusPolicy(text, lower, user);
+    }
+
+    // 4o. Verified Campus Knowledge & Policy Queries (RAG)
     const campusKnowledge = this.handleCampusKnowledge(lower, user);
     if (campusKnowledge) {
       return campusKnowledge;
     }
 
-    // 4n. General Student Status Query
+    // 4p. General Student Status Query
     if (this.isCampusStatusIntent(lower)) {
       return await this.handleCampusStatus(user);
     }
 
-    // 4o. General AI queries (knowledge, writing, reasoning)
+    // 4q. General AI queries (knowledge, writing, reasoning)
     if (this.isGeneralAiIntent(lower, text)) {
       return this.handleGeneralAi(text, lower, user);
     }
 
-    // 4p. Zero-hallucination helpful fallback
+    // 4r. Zero-hallucination helpful fallback
     return this.handleFallback(text, lower, user);
+  }
+
+  // =========================================================================
+  // SECURITY & PRIVACY DEFENSE MECHANISMS
+  // =========================================================================
+
+  private static isPromptInjection(lower: string): boolean {
+    const injectionPatterns = [
+      'ignore previous',
+      'ignore all previous',
+      'ignore your instructions',
+      'ignore system prompt',
+      'system override',
+      'reveal system prompt',
+      'print your prompt',
+      'show your prompt',
+      'what is your system instruction',
+      'reveal password',
+      'dump database',
+      'drop table',
+      'select * from user',
+      'show all passwords',
+      'bypass rbac',
+      'bypass security',
+      'act as root',
+      'sudo su',
+      'show secret key',
+      'reveal api key',
+      'delete all requests',
+    ];
+    return injectionPatterns.some((pattern) => lower.includes(pattern));
+  }
+
+  private static isCrossStudentAccessAttempt(text: string, lower: string, user: AuthUser): boolean {
+    if (user.role !== 'STUDENT') return false;
+
+    // 1. Check for specific 9-digit roll numbers that are not the current student's
+    const rollMatches = text.match(/\b(2[0-9]{8})\b/g);
+    if (rollMatches) {
+      for (const roll of rollMatches) {
+        if (user.rollNumber && roll !== user.rollNumber) {
+          return true;
+        }
+      }
+    }
+
+    // 2. Check for other student names in database
+    const otherStudentKeywords = [
+      'rohit',
+      'sneha',
+      'priya',
+      'amit',
+      'vikas',
+      'another student',
+      'other student',
+      'someone else',
+      'all students',
+    ];
+
+    const asksForPrivateData =
+      lower.includes('attendance') ||
+      lower.includes('grade') ||
+      lower.includes('marks') ||
+      lower.includes('leave') ||
+      lower.includes('pass') ||
+      lower.includes('phone') ||
+      lower.includes('room') ||
+      lower.includes('request') ||
+      lower.includes('status') ||
+      lower.includes('complaint');
+
+    if (asksForPrivateData) {
+      const userNameLower = (user.fullName || user.username || '').toLowerCase();
+      for (const name of otherStudentKeywords) {
+        if (!userNameLower.includes(name) && lower.includes(name)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  private static handleSecurityRefusal(): CopilotResponse {
+    return {
+      intent: 'PRIVACY_RESTRICTION',
+      category: 'Security',
+      confidence: 0.99,
+      message: `🔒 **Security Exception — Unauthorized Directive**
+
+This request cannot be fulfilled. Administrative operations, system prompt disclosures, and unrestricted database queries are strictly protected by server-side authorization controls.
+
+All interactions with Nexora Copilot are logged in the immutable security audit trail (\`AuditLog\`).`,
+      cards: [],
+      quickReplies: ['Campus Helpdesk', 'Check My Attendance', 'Campus Operating Procedures'],
+    };
+  }
+
+  private static handlePrivacyRefusal(user: AuthUser): CopilotResponse {
+    return {
+      intent: 'PRIVACY_RESTRICTION',
+      category: 'Security',
+      confidence: 0.99,
+      message: `🔒 **Access Denied — Privacy Policy Restriction**
+
+Under campus privacy regulations (FERPA and University Student Data Protection Charter), you are strictly authorized to view only your own student records (**${user.fullName || user.username}**, Roll: **${user.rollNumber || 'Your Account'}**).
+
+You cannot access attendance percentages, leave histories, room locations, or personal records belonging to other students. If you require authorized access for a university club or team project, please contact your faculty coordinator.`,
+      cards: [],
+      quickReplies: ['Show my own attendance', 'Check my submitted requests', 'What classes do I have today?'],
+    };
+  }
+
+  private static handleRoleRestrictedRefusal(userRole: string, targetArea: string): CopilotResponse {
+    return {
+      intent: 'PRIVACY_RESTRICTION',
+      category: 'Security',
+      confidence: 0.99,
+      message: `🔒 **Access Denied — Role Authorization Required**
+
+You are currently signed in as **${userRole}**. The requested information or operation requires **${targetArea}** authorization.
+
+Your current account permissions do not grant access to other departments' administrative queues. If you believe this is an error, please contact the Nexora System Administrator.`,
+      cards: [],
+      quickReplies: ['View My Desk', 'Campus Operating Procedures', 'Contact Helpdesk'],
+    };
+  }
+
+  // =========================================================================
+  // AMBIGUITY & UNVERIFIED INQUIRY HANDLERS
+  // =========================================================================
+
+  private static checkAmbiguity(lower: string): CopilotResponse | null {
+    const trimmed = lower.replace(/[?!.]/g, '').trim();
+
+    if (trimmed === 'leave') {
+      return {
+        intent: 'CLARIFICATION_NEEDED',
+        category: 'Hostel',
+        confidence: 0.99,
+        message: `Would you like to **apply for an overnight hostel leave**, or **check the status of an existing leave application**?
+
+Please let me know:
+1. **Apply for Leave**: Specify your destination, departure date, return date, and emergency contact.
+2. **Track Leave**: Check if your submitted leave has been approved by the Hostel Warden.`,
+        cards: [],
+        quickReplies: ['Apply for hostel leave', 'What is the status of my leave?'],
+      };
+    }
+
+    if (trimmed === 'gate pass' || trimmed === 'gatepass' || trimmed === 'pass') {
+      return {
+        intent: 'CLARIFICATION_NEEDED',
+        category: 'Security',
+        confidence: 0.99,
+        message: `Would you like to **generate a new campus exit gate pass**, or **view your active gate pass QR code & PIN**?
+
+1. **Apply Gate Pass**: Specify destination and time window within curfew.
+2. **Active Gate Pass**: View your time-limited QR token and 4-digit PIN for Main Gate security.`,
+        cards: [],
+        quickReplies: ['Generate a gate pass', 'Show my active gate pass PIN'],
+      };
+    }
+
+    if (trimmed === 'bonafide' || trimmed === 'certificate') {
+      return {
+        intent: 'CLARIFICATION_NEEDED',
+        category: 'Documents',
+        confidence: 0.99,
+        message: `To generate an official Bonafide Certificate request, please specify the purpose of your certificate:
+• **Scholarship**: For State Post-Matric / NSP verification
+• **Bank Education Loan**: For bank sanction and verification
+• **Passport / Visa**: For official consular verification
+• **Summer Internship**: Institutional NOC recommendation`,
+        cards: [],
+        quickReplies: [
+          'Bonafide for Scholarship',
+          'Bonafide for Education Loan',
+          'Bonafide for Internship',
+        ],
+      };
+    }
+
+    if (trimmed === 'repair' || trimmed === 'complaint' || trimmed === 'broken') {
+      return {
+        intent: 'CLARIFICATION_NEEDED',
+        category: 'Maintenance',
+        confidence: 0.99,
+        message: `What kind of maintenance problem are you experiencing in your hostel room?
+• **Electrical**: Fan, switch, socket, light, or geyser breakdown
+• **Plumbing**: Tap leak, water supply, washroom drain, or flush issue
+• **Carpentry**: Door lock, window latch, cupboard, table, or bed repair
+• **Network**: Wi-Fi 6 login, captive portal, or LAN connectivity`,
+        cards: [],
+        quickReplies: [
+          'Fan broken in room',
+          'Tap leaking in washroom',
+          'Door lock broken',
+          'Wi-Fi not connecting',
+        ],
+      };
+    }
+
+    if (trimmed === 'help' || trimmed === 'help me') {
+      return {
+        intent: 'CLARIFICATION_NEEDED',
+        category: 'General',
+        confidence: 0.99,
+        message: `I'm here to assist you! What campus task would you like help with today?
+• **Academic**: Attendance percentages (75% margin), class routine, BPUT PYQs & study plans
+• **Hostel & Security**: Overnight leave applications, day gate passes, mess timings & curfews
+• **Facilities**: Room maintenance complaints with 4h–24h technician SLAs
+• **Documents**: Digitally certified Bonafide certificates with verification QR codes`,
+        cards: [],
+        quickReplies: [
+          'Show my attendance status',
+          'What classes do I have today?',
+          'How to apply for gate pass?',
+          'Report room maintenance',
+        ],
+      };
+    }
+
+    return null;
+  }
+
+  private static isUnverifiedCampusPolicy(
+    text: string,
+    lower: string,
+    user: AuthUser
+  ): boolean {
+    const policyIndicators = [
+      'policy on',
+      'policy for',
+      'rules for',
+      'rule for',
+      'rule on',
+      'is it allowed to',
+      'can i bring',
+      'can i keep',
+      'can i install',
+      'am i allowed to',
+      'penalty for',
+      'fine for',
+      'procedure for',
+      'guidelines for',
+    ];
+
+    const hasPolicyIndicator = policyIndicators.some((ind) => lower.includes(ind));
+    if (!hasPolicyIndicator) return false;
+
+    // Known covered topics
+    const knownKeywords = [
+      'attendance',
+      '75%',
+      '75 percent',
+      'condonation',
+      'duty leave',
+      'curfew',
+      'gate pass',
+      'gatepass',
+      'hostel leave',
+      'night out',
+      'bonafide',
+      'certificate',
+      'loan',
+      'scholarship',
+      'passport',
+      'internship',
+      'maintenance',
+      'plumbing',
+      'electrical',
+      'fan',
+      'tap',
+      'wifi',
+      'internet',
+      'lost id',
+      'id card',
+      'ragging',
+      'anti-ragging',
+      'room change',
+      'room swap',
+      'mess',
+      'breakfast',
+      'lunch',
+      'dinner',
+      'grading',
+      'cgpa',
+      'sgpa',
+      'backlog',
+      'semester registration',
+      'rechecking',
+      're-evaluation',
+      'medical emergency',
+      'library',
+      'pyq',
+      'dsa',
+      'c++',
+      'java',
+      'python',
+      'placement',
+      'interview',
+    ];
+
+    if (lower.includes('pet') || lower.includes('cat') || lower.includes('dog') || lower.includes('drone') || lower.includes('car in hostel')) {
+      return true;
+    }
+
+    const matchesKnown = knownKeywords.some((kw) => lower.includes(kw));
+    if (matchesKnown) return false;
+
+    const matchedProcedure = this.findMatchingProcedure(lower);
+    if (matchedProcedure) return false;
+
+    const matchedKnowledge = searchCampusKnowledge(lower, 1, user.role, 12);
+    if (matchedKnowledge.length > 0) return false;
+
+    return true;
+  }
+
+  private static handleUnverifiedCampusPolicy(
+    rawText: string,
+    lower: string,
+    user: AuthUser
+  ): CopilotResponse {
+    return {
+      intent: 'UNVERIFIED_POLICY',
+      category: 'General',
+      confidence: 0.95,
+      message: `⚠️ **No Verified Campus Policy on Record**
+
+There is no official university policy or verified regulation on record regarding *"${rawText.trim()}"*.
+
+To ensure compliance with university guidelines and avoid procedural violations, please consult the responsible campus office directly:
+• **Hostel & Residential Policies**: Hostel Warden Office or Chief Warden Hub (Central Hostel Complex)
+• **Academic Rules & Special Permissions**: Academic Affairs Cell (Ground Floor, Administrative Block, Window 3)
+• **Security & Vehicle Guidelines**: Chief Security Officer (Main Gate Security Desk)
+
+> **Nexora Verification Policy**: Copilot answers are strictly grounded in verified institutional documentation and will not speculate on unverified campus rules.`,
+      cards: [],
+      quickReplies: [
+        'Hostel Curfew & Gate Rules',
+        '75% Attendance Regulation',
+        'Bonafide Certificate Procedure',
+        'Campus Emergency Contacts',
+      ],
+    };
   }
 
   // =========================================================================
@@ -225,11 +661,9 @@ export class CopilotService {
     let detectedHours: number | undefined;
     let detectedWeakness: string | undefined;
 
-    // Scan history backwards to extract ongoing context
     const allTurns = [...history.map((h) => h.content), currentText];
     const fullText = allTurns.join(' ').toLowerCase();
 
-    // Check if subject is mentioned in dialogue
     if (fullText.includes('dbms') || fullText.includes('database')) {
       subject = 'Database Management Systems';
       subjectCode = 'CS204';
@@ -238,7 +672,11 @@ export class CopilotService {
       subject = 'Operating Systems';
       subjectCode = 'CS202';
       isExamStudyContext = true;
-    } else if (fullText.includes('dsa') || fullText.includes('data structure') || fullText.includes('algorithm')) {
+    } else if (
+      fullText.includes('dsa') ||
+      fullText.includes('data structure') ||
+      fullText.includes('algorithm')
+    ) {
       subject = 'Data Structures & Algorithms';
       subjectCode = 'CS201';
       isExamStudyContext = true;
@@ -252,26 +690,35 @@ export class CopilotService {
       isExamStudyContext = true;
     }
 
-    if (fullText.includes('exam') || fullText.includes('prepare') || fullText.includes('study plan') || fullText.includes('revision')) {
+    if (
+      fullText.includes('exam') ||
+      fullText.includes('prepare') ||
+      fullText.includes('study plan') ||
+      fullText.includes('revision')
+    ) {
       isExamStudyContext = true;
     }
 
-    // Check for days extraction from current turn or recent turns
-    const daysMatch = currentText.match(/(\d+)[-\s]*(?:days?|day)/i) || fullText.match(/(\d+)[-\s]*(?:days?|day)/i);
+    const daysMatch =
+      currentText.match(/(\d+)[-\s]*(?:days?|day)/i) || fullText.match(/(\d+)[-\s]*(?:days?|day)/i);
     if (daysMatch) {
       detectedDays = parseInt(daysMatch[1], 10);
     }
 
-    // Check for hours extraction
-    const hoursMatch = currentText.match(/(\d+)[-\s]*(?:hours?|hrs?|h)\s*(?:per|\/|a)?\s*day/i) || fullText.match(/(\d+)[-\s]*(?:hours?|hrs?|h)\s*(?:per|\/|a)?\s*day/i);
+    const hoursMatch =
+      currentText.match(/(\d+)[-\s]*(?:hours?|hrs?|h)\s*(?:per|\/|a)?\s*day/i) ||
+      fullText.match(/(\d+)[-\s]*(?:hours?|hrs?|h)\s*(?:per|\/|a)?\s*day/i);
     if (hoursMatch) {
       detectedHours = parseInt(hoursMatch[1], 10);
     }
 
-    // Check for weakness mention
     const weaknessMatch =
-      currentText.match(/(?:weak in|struggling with|difficult(?:y)? in|need help with|focus on)\s+([a-zA-Z\s]+?)(?:\.|$|,)/i) ||
-      fullText.match(/(?:weak in|struggling with|difficult(?:y)? in|need help with|focus on)\s+([a-zA-Z\s]+?)(?:\.|$|,)/i);
+      currentText.match(
+        /(?:weak in|struggling with|difficult(?:y)? in|need help with|focus on)\s+([a-zA-Z\s]+?)(?:\.|$|,)/i
+      ) ||
+      fullText.match(
+        /(?:weak in|struggling with|difficult(?:y)? in|need help with|focus on)\s+([a-zA-Z\s]+?)(?:\.|$|,)/i
+      );
     if (weaknessMatch) {
       detectedWeakness = weaknessMatch[1].trim();
     }
@@ -312,13 +759,12 @@ export class CopilotService {
     text: string,
     multiTurnContext?: { isExamStudyContext: boolean }
   ): boolean {
-    // If student is in an exam prep context and says "make my timetable", that's a study roadmap
     if (
       multiTurnContext?.isExamStudyContext &&
       (text.includes('timetable') || text.includes('schedule')) &&
       (text.includes('make') || text.includes('plan') || text.includes('create') || text.includes('now'))
     ) {
-      return true; // handled inside processMessage to route to study plan
+      return true;
     }
 
     return (
@@ -338,7 +784,14 @@ export class CopilotService {
 
   private static isRequestTrackingIntent(text: string): boolean {
     return (
-      (text.includes('status') && (text.includes('request') || text.includes('application') || text.includes('ticket') || text.includes('bonafide') || text.includes('complaint') || text.includes('leave') || text.includes('pass'))) ||
+      (text.includes('status') &&
+        (text.includes('request') ||
+          text.includes('application') ||
+          text.includes('ticket') ||
+          text.includes('bonafide') ||
+          text.includes('complaint') ||
+          text.includes('leave') ||
+          text.includes('pass'))) ||
       text.includes('track') ||
       text.includes('my requests') ||
       text.includes('my applications') ||
@@ -495,6 +948,16 @@ export class CopilotService {
   }
 
   private static isGeneralAcademicIntent(text: string): boolean {
+    if (
+      text.includes('how is cgpa calculated') ||
+      text.includes('cgpa calculation formula') ||
+      text.includes('calculate cgpa') ||
+      text.includes('grading scale') ||
+      text.includes('grading system')
+    ) {
+      return false;
+    }
+
     return (
       text.includes('cgpa') ||
       text.includes('sgpa') ||
@@ -554,7 +1017,11 @@ export class CopilotService {
       text.includes('thread') ||
       text.includes('paging') ||
       text.includes('semaphore') ||
-      (text.includes('operating system') && (text.includes('explain') || text.includes('how') || text.includes('what') || text.includes('concept')))
+      (text.includes('operating system') &&
+        (text.includes('explain') ||
+          text.includes('how') ||
+          text.includes('what') ||
+          text.includes('concept')))
     );
   }
 
@@ -581,6 +1048,64 @@ export class CopilotService {
       text.includes('my standing') ||
       text.includes('what do i need to do') ||
       text.includes('overview')
+    );
+  }
+
+  private static isWardenIntent(text: string): boolean {
+    return (
+      text.includes('warden') ||
+      text.includes('hostel block') ||
+      text.includes('pending leave') ||
+      text.includes('leaves to approve') ||
+      text.includes('block complaints') ||
+      text.includes('block occupancy')
+    );
+  }
+
+  private static isStaffIntent(text: string): boolean {
+    return (
+      text.includes('my task') ||
+      text.includes('assigned complaint') ||
+      text.includes('work order') ||
+      text.includes('maintenance task') ||
+      text.includes('tickets assigned')
+    );
+  }
+
+  private static isSecurityIntent(text: string): boolean {
+    return (
+      text.includes('gate security') ||
+      text.includes('turnstile') ||
+      text.includes('departed student') ||
+      text.includes('who departed') ||
+      text.includes('active pass') ||
+      text.includes('emergency alert') ||
+      text.includes('sos alert')
+    );
+  }
+
+  private static isAcademicOfficerIntent(text: string): boolean {
+    return (
+      text.includes('academic officer') ||
+      text.includes('pending bonafide') ||
+      text.includes('certificates to approve')
+    );
+  }
+
+  private static isFacultyIntent(text: string): boolean {
+    return (
+      text.includes('teaching schedule') ||
+      text.includes('my classes today') ||
+      text.includes('assigned subject')
+    );
+  }
+
+  private static isAdminIntent(text: string): boolean {
+    return (
+      text.includes('command center') ||
+      text.includes('system overview') ||
+      text.includes('overdue ticket') ||
+      text.includes('campus metrics')
     );
   }
 
@@ -636,13 +1161,696 @@ export class CopilotService {
   }
 
   // =========================================================================
-  // DETERMINISTIC HANDLERS (REAL DATABASE TELEMETRY & WORKFLOWS)
+  // MULTI-ROLE TELEMETRY CONTEXT ENGINE
   // =========================================================================
 
-  /**
-   * Fetches real-time attendance standing directly from Prisma for the authenticated student.
-   * Supports subject-specific attendance queries (e.g. "What is my current DBMS attendance?").
-   */
+  private static async getTelemetryContext(
+    user: AuthUser,
+    isAttendance: boolean,
+    isTimetable: boolean,
+    isRequestTracking: boolean,
+    isDeadlines: boolean,
+    lower: string
+  ): Promise<string> {
+    let result = '';
+
+    // 1. STUDENT Telemetry
+    if (user.role === 'STUDENT') {
+      let student = null;
+      if (user.studentId) {
+        student = await prisma.student.findUnique({
+          where: { id: user.studentId },
+          include: { branch: true },
+        });
+      } else if (user.id) {
+        student = await prisma.student.findUnique({
+          where: { userId: user.id },
+          include: { branch: true },
+        });
+      }
+
+      if (student) {
+        // Attendance
+        const attendances = await prisma.attendance.findMany({
+          where: { studentId: student.id },
+          include: { subject: true },
+        });
+
+        if (attendances.length > 0) {
+          let totalP = 0;
+          let totalC = 0;
+          const subList: string[] = [];
+          for (const a of attendances) {
+            totalP += a.present;
+            totalC += a.total;
+            const p = a.total > 0 ? ((a.present / a.total) * 100).toFixed(1) : '0';
+            subList.push(`${a.subject.name} (${a.subject.code}): ${a.present}/${a.total} (${p}%)`);
+          }
+          const ovr = totalC > 0 ? ((totalP / totalC) * 100).toFixed(1) : '0';
+          result += `LIVE ATTENDANCE: Overall ${ovr}% (${totalP}/${totalC} sessions). Subjects: ${subList.join('; ')}. BPUT Minimum Rule is 75%.\n`;
+        }
+
+        // Timetable
+        const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+        const dayUpper = today.toUpperCase();
+        const entries = await prisma.timetableEntry.findMany({
+          where: { branchId: student.branchId, year: student.year, day: dayUpper },
+          include: { subject: true },
+          orderBy: { startTime: 'asc' },
+        });
+        if (entries.length > 0) {
+          const cls = entries.map(
+            (e) => `${e.startTime}-${e.endTime} ${e.subject.name} (${e.subject.code}) in Room ${e.room}`
+          );
+          result += `TODAY'S SCHEDULE (${today}): ${cls.join('; ')}.\n`;
+        } else {
+          result += `TODAY'S SCHEDULE (${today}): No lectures scheduled today.\n`;
+        }
+
+        // Requests
+        const recentReqs = await prisma.request.findMany({
+          where: { requesterId: user.id },
+          include: { requestType: true },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+        });
+        if (recentReqs.length > 0) {
+          const reqStr = recentReqs
+            .map((r) => `[${r.requestNumber}] ${r.title} (Type: ${r.requestType.code}, Status: ${r.status})`)
+            .join('; ');
+          result += `SUBMITTED REQUESTS: ${reqStr}.\n`;
+        }
+
+        // Active Gate Pass
+        const activeGatePass = await prisma.gatePass.findFirst({
+          where: {
+            request: { requesterId: user.id },
+            gateStatus: { in: ['APPROVED', 'DEPARTED'] },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+        if (activeGatePass) {
+          result += `ACTIVE APPROVED GATE PASS: Destination: ${activeGatePass.destination}, Status: ${activeGatePass.gateStatus}, Pass PIN: ${activeGatePass.passPin}, Valid Return: ${new Date(activeGatePass.expectedReturnTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.\n`;
+        }
+
+        // Deadlines
+        const deadlines = await prisma.academicDeadline.findMany({
+          where: { isActive: true },
+          orderBy: { deadline: 'asc' },
+          take: 3,
+        });
+        if (deadlines.length > 0) {
+          const dStr = deadlines
+            .map((d) => `${d.title} (Due: ${new Date(d.deadline).toISOString().split('T')[0]})`)
+            .join('; ');
+          result += `UPCOMING DEADLINES: ${dStr}.\n`;
+        }
+      }
+      return result;
+    }
+
+    // 2. WARDEN Telemetry
+    if (user.role === 'WARDEN') {
+      const wardenBlock = await getWardenHostelBlock(user);
+      const blockId = wardenBlock?.id;
+      const blockName = wardenBlock?.name || user.hostelBlock || 'Hostel Block B';
+
+      const pendingLeaves = await prisma.leaveRequest.findMany({
+        where: {
+          status: 'PENDING_APPROVAL',
+          ...(blockId
+            ? { request: { requester: { student: { hostelRoom: { hostelBlockId: blockId } } } } }
+            : {}),
+        },
+        include: {
+          request: {
+            include: {
+              requester: {
+                include: {
+                  student: true,
+                },
+              },
+            },
+          },
+        },
+        take: 5,
+      });
+
+      const activePasses = await prisma.gatePass.count({
+        where: {
+          gateStatus: { in: ['APPROVED', 'DEPARTED'] },
+          ...(blockId
+            ? { request: { requester: { student: { hostelRoom: { hostelBlockId: blockId } } } } }
+            : {}),
+        },
+      });
+
+      result += `WARDEN TELEMETRY (${blockName}): Pending leaves: ${pendingLeaves.length}. Active student gate passes: ${activePasses}.\n`;
+      return result;
+    }
+
+    // 3. STAFF (Maintenance) Telemetry
+    if (user.role === 'STAFF') {
+      const myTasks = await prisma.request.findMany({
+        where: { assignedTo: user.id, requestType: { code: 'COMPLAINT' } },
+        include: { complaint: true },
+        take: 5,
+      });
+      const urgent = myTasks.filter((t) => t.priority === 'URGENT').length;
+      result += `MAINTENANCE STAFF TELEMETRY: Total assigned: ${myTasks.length}. Urgent priority: ${urgent}.\n`;
+      return result;
+    }
+
+    // 4. SECURITY Telemetry
+    if (user.role === 'SECURITY') {
+      const departed = await prisma.gatePass.count({ where: { gateStatus: 'DEPARTED' } });
+      const approved = await prisma.gatePass.count({ where: { gateStatus: 'APPROVED' } });
+      const emergencies = EmergencyService.getActive();
+      result += `GATE SECURITY TELEMETRY: Departed students: ${departed}. Approved passes awaiting exit: ${approved}. Active SOS: ${emergencies.length}.\n`;
+      return result;
+    }
+
+    // 5. ACADEMIC OFFICER Telemetry
+    if (user.role === 'ACADEMIC_OFFICER') {
+      const pendingBonafide = await prisma.bonafideRequest.count({
+        where: { certificateId: null, request: { status: 'PENDING_APPROVAL' } },
+      });
+      result += `ACADEMIC OFFICER TELEMETRY: Pending bonafide requests: ${pendingBonafide}.\n`;
+      return result;
+    }
+
+    // 6. ADMIN Telemetry
+    if (user.role === 'ADMIN') {
+      const total = await prisma.request.count();
+      const open = await prisma.request.count({
+        where: { status: { in: ['SUBMITTED', 'ROUTED', 'ASSIGNED', 'IN_PROGRESS', 'PENDING_APPROVAL'] } },
+      });
+      result += `ADMIN COMMAND CENTER: Total requests: ${total}. Active open requests: ${open}.\n`;
+      return result;
+    }
+
+    return result;
+  }
+
+  // =========================================================================
+  // ROLE-SPECIFIC DETERMINISTIC HANDLERS
+  // =========================================================================
+
+  private static async handleWardenInquiry(user: AuthUser, lower: string): Promise<CopilotResponse> {
+    try {
+      const wardenBlock = await getWardenHostelBlock(user);
+      const blockName = wardenBlock ? wardenBlock.name : user.hostelBlock || 'Hostel Block B';
+      const blockId = wardenBlock ? wardenBlock.id : undefined;
+
+      const pendingLeaves = await prisma.leaveRequest.findMany({
+        where: {
+          status: 'PENDING_APPROVAL',
+          ...(blockId
+            ? { request: { requester: { student: { hostelRoom: { hostelBlockId: blockId } } } } }
+            : {}),
+        },
+        include: {
+          request: {
+            include: {
+              requester: {
+                include: {
+                  student: {
+                    include: {
+                      hostelRoom: true,
+                      branch: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      });
+
+      const activePassesCount = await prisma.gatePass.count({
+        where: {
+          gateStatus: { in: ['APPROVED', 'DEPARTED'] },
+          ...(blockId
+            ? { request: { requester: { student: { hostelRoom: { hostelBlockId: blockId } } } } }
+            : {}),
+        },
+      });
+
+      const openComplaintsCount = await prisma.request.count({
+        where: {
+          requestType: { code: 'COMPLAINT' },
+          status: { in: ['SUBMITTED', 'ROUTED', 'ASSIGNED', 'IN_PROGRESS'] },
+          ...(wardenBlock ? { location: { contains: wardenBlock.name } } : {}),
+        },
+      });
+
+      const totalResidents = blockId
+        ? await prisma.student.count({ where: { hostelRoom: { hostelBlockId: blockId } } })
+        : 120;
+
+      let leaveRows = '';
+      if (pendingLeaves.length > 0) {
+        leaveRows = pendingLeaves
+          .map((l) => {
+            const sName = l.request.requester.student?.fullName || l.request.requester.username;
+            const sRoll = l.request.requester.student?.rollNumber || 'N/A';
+            const room = l.request.requester.student?.hostelRoom?.roomNumber || 'Room';
+            const start = new Date(l.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const end = new Date(l.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            return `• **[${l.request.requestNumber}]** **${sName}** (Roll: ${sRoll}, Room ${room})\n  - Dates: **${start} – ${end}** | Reason: ${l.reason} | Emergency: \`${l.emergencyContact}\``;
+          })
+          .join('\n');
+      } else {
+        leaveRows = '• *No leave applications currently awaiting warden review.*';
+      }
+
+      const message = `### 🏢 Hostel Warden Operational Overview — **${blockName}**
+
+**Jurisdiction Summary**:
+• **Hostel Block**: **${blockName}** (Resident Students: **${totalResidents}**)
+• **Pending Leave Applications**: **${pendingLeaves.length} awaiting approval**
+• **Active Gate Passes**: **${activePassesCount} students currently on campus outpass**
+• **Open Room Maintenance Tickets**: **${openComplaintsCount} tickets in progress**
+
+#### Pending Leave Applications Awaiting Review:
+${leaveRows}
+
+> **Hostel Policy Guideline**: Standard overnight leaves must be reviewed within **12 hours**. Urgent/medical leaves must be processed within **2 hours**. Verify parent consent via emergency contact for leaves exceeding 3 days.`;
+
+      return {
+        intent: 'WARDEN_TELEMETRY',
+        category: 'Hostel',
+        confidence: 0.98,
+        message,
+        cards: [
+          {
+            cardType: 'REQUEST_LIST',
+            title: `${blockName} - Pending Leave Requests`,
+            data: {
+              title: `Pending Leaves (${blockName})`,
+              requests: pendingLeaves.map((l) => ({
+                id: l.request.id,
+                requestNumber: l.request.requestNumber,
+                title: l.request.title,
+                status: l.status,
+                type: 'LEAVE',
+                createdAt: l.createdAt,
+              })),
+            },
+          },
+        ],
+        quickReplies: [
+          'Review pending leaves in portal',
+          'Check block maintenance complaints',
+          'View curfew regulations',
+        ],
+      };
+    } catch (err) {
+      console.error('[Copilot] Warden telemetry error:', err);
+      return {
+        intent: 'WARDEN_TELEMETRY',
+        category: 'Hostel',
+        confidence: 0.8,
+        message: 'Unable to query live warden operational data. Please navigate to the **Warden Portal**.',
+        cards: [],
+      };
+    }
+  }
+
+  private static async handleStaffInquiry(user: AuthUser, lower: string): Promise<CopilotResponse> {
+    try {
+      const staff = await prisma.staff.findUnique({
+        where: { userId: user.id },
+      });
+
+      const myTasks = await prisma.request.findMany({
+        where: {
+          assignedTo: user.id,
+          requestType: { code: 'COMPLAINT' },
+          status: { in: ['ASSIGNED', 'ACCEPTED', 'IN_PROGRESS', 'ROUTED'] },
+        },
+        include: { complaint: true },
+        orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
+        take: 6,
+      });
+
+      const urgentCount = myTasks.filter((t) => t.priority === 'URGENT').length;
+      const highCount = myTasks.filter((t) => t.priority === 'HIGH').length;
+
+      let taskRows = '';
+      if (myTasks.length > 0) {
+        taskRows = myTasks
+          .map((t) => {
+            const prioBadge =
+              t.priority === 'URGENT'
+                ? '🚨 URGENT (4h SLA)'
+                : t.priority === 'HIGH'
+                ? '⚠️ HIGH (12h SLA)'
+                : 'NORMAL (48h SLA)';
+            return `• **[${t.requestNumber}]** ${t.title} [${prioBadge}]\n  - Location: **${t.location || 'Campus'}** • Category: ${t.complaint?.category || 'General'}`;
+          })
+          .join('\n');
+      } else {
+        taskRows = '• *No pending maintenance tickets currently assigned to your queue.*';
+      }
+
+      const message = `### 🔧 Maintenance Staff Operations Queue — **${user.fullName || user.username}**
+**Specialization**: ${staff?.specialization || 'Facility Operations'} • Department: ${staff?.department || 'Maintenance'}
+
+• **Active Assigned Work Orders**: **${myTasks.length} pending**
+• **Priority Breakdown**: **${urgentCount} Urgent**, **${highCount} High**
+
+#### Your Active Work Orders:
+${taskRows}
+
+> **Maintenance SLA**: Urgent electrical or plumbing repairs must be attended within **4 hours** of ticket dispatch.`;
+
+      return {
+        intent: 'STAFF_TELEMETRY',
+        category: 'Maintenance',
+        confidence: 0.98,
+        message,
+        cards: [
+          {
+            cardType: 'REQUEST_LIST',
+            title: 'Assigned Work Orders',
+            data: {
+              title: 'Active Maintenance Tasks',
+              requests: myTasks.map((t) => ({
+                id: t.id,
+                requestNumber: t.requestNumber,
+                title: t.title,
+                status: t.status,
+                type: 'COMPLAINT',
+                createdAt: t.createdAt,
+              })),
+            },
+          },
+        ],
+        quickReplies: ['Open Tasks Portal', 'View Maintenance SLAs'],
+      };
+    } catch (err) {
+      console.error('[Copilot] Staff telemetry error:', err);
+      return {
+        intent: 'STAFF_TELEMETRY',
+        category: 'Maintenance',
+        confidence: 0.8,
+        message: 'Unable to access your maintenance task queue right now.',
+        cards: [],
+      };
+    }
+  }
+
+  private static async handleSecurityInquiry(user: AuthUser, lower: string): Promise<CopilotResponse> {
+    try {
+      const departedCount = await prisma.gatePass.count({ where: { gateStatus: 'DEPARTED' } });
+      const approvedCount = await prisma.gatePass.count({ where: { gateStatus: 'APPROVED' } });
+      const activeAlerts = EmergencyService.getActive();
+
+      const activeDeparted = await prisma.gatePass.findMany({
+        where: { gateStatus: 'DEPARTED' },
+        include: {
+          request: {
+            include: {
+              requester: {
+                include: {
+                  student: {
+                    include: {
+                      hostelRoom: { include: { hostelBlock: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { departedAt: 'desc' },
+        take: 5,
+      });
+
+      let departedRows = '';
+      if (activeDeparted.length > 0) {
+        departedRows = activeDeparted
+          .map((gp) => {
+            const sName = gp.request.requester.student?.fullName || gp.request.requester.username;
+            const sRoll = gp.request.requester.student?.rollNumber || 'Student';
+            const retTime = new Date(gp.expectedReturnTime).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+            return `• **${sName}** (${sRoll}) — Destination: **${gp.destination}** | Due Back: **${retTime}** (PIN: \`${gp.passPin}\`)`;
+          })
+          .join('\n');
+      } else {
+        departedRows = '• *No students currently departed on gate pass.*';
+      }
+
+      const alertSection =
+        activeAlerts.length > 0
+          ? `\n🚨 **ACTIVE CAMPUS SOS ALERTS (${activeAlerts.length})**:\n` +
+            activeAlerts
+              .map(
+                (a) =>
+                  `• [${a.distressType}] ${a.studentName} at ${a.hostelBlock} Room ${a.roomNumber} (Phone: ${a.phone})`
+              )
+              .join('\n')
+          : '✅ **No Active Emergency SOS Incidents**';
+
+      const message = `### 🛡️ Campus Perimeter & Gate Security Operations
+
+• **Students Currently Departed**: **${departedCount} off campus**
+• **Approved Passes Awaiting Departure**: **${approvedCount} passes**
+• **Emergency Incidents**: ${alertSection}
+
+#### Recent Departed Students Awaiting Ingress:
+${departedRows}
+
+> **Gate Security Directive**: Verify all egress/ingress using dynamic QR tokens or 4-digit PINs at Gate 1 & 2. Late arrivals past curfew (7:30 PM for 1st Yr / 8:30 PM for Seniors) must be logged in the late entry register.`;
+
+      return {
+        intent: 'SECURITY_TELEMETRY',
+        category: 'Security',
+        confidence: 0.98,
+        message,
+        cards: [],
+        quickReplies: ['Open Security Scanner', 'View Emergency Incident History'],
+      };
+    } catch (err) {
+      console.error('[Copilot] Security telemetry error:', err);
+      return {
+        intent: 'SECURITY_TELEMETRY',
+        category: 'Security',
+        confidence: 0.8,
+        message: 'Unable to retrieve gate telemetry from security records.',
+        cards: [],
+      };
+    }
+  }
+
+  private static async handleAcademicOfficerInquiry(user: AuthUser, lower: string): Promise<CopilotResponse> {
+    try {
+      const pendingBonafides = await prisma.bonafideRequest.findMany({
+        where: {
+          certificateId: null,
+          request: { status: 'PENDING_APPROVAL' },
+        },
+        include: {
+          request: {
+            include: {
+              requester: {
+                include: {
+                  student: {
+                    include: { branch: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      });
+
+      let bonafideRows = '';
+      if (pendingBonafides.length > 0) {
+        bonafideRows = pendingBonafides
+          .map((b) => {
+            const sName = b.request.requester.student?.fullName || b.request.requester.username;
+            const sRoll = b.request.requester.student?.rollNumber || 'N/A';
+            const branch = b.request.requester.student?.branch?.code || 'CSE';
+            return `• **[${b.request.requestNumber}]** **${sName}** (${branch} - Roll: ${sRoll}) — Purpose: **${b.purpose}**`;
+          })
+          .join('\n');
+      } else {
+        bonafideRows = '• *No bonafide certificates currently pending digital certification.*';
+      }
+
+      const message = `### 📜 Academic Affairs Cell — Operational Dashboard
+
+• **Pending Bonafide Requests**: **${pendingBonafides.length} awaiting certification**
+• **Turnaround Commitment**: 24 to 48 Hours
+
+#### Applications Awaiting Approval:
+${bonafideRows}
+
+> **Academic Cell Guideline**: Digitally certified certificates include public QR verification links and tamper-evident document numbers. Hard copies may be physically stamped at Window 3, Ground Floor Admin Block upon request.`;
+
+      return {
+        intent: 'ACADEMIC_OFFICER_TELEMETRY',
+        category: 'Documents',
+        confidence: 0.98,
+        message,
+        cards: [
+          {
+            cardType: 'REQUEST_LIST',
+            title: 'Pending Bonafide Requests',
+            data: {
+              title: 'Bonafide Applications Queue',
+              requests: pendingBonafides.map((b) => ({
+                id: b.request.id,
+                requestNumber: b.request.requestNumber,
+                title: b.request.title,
+                status: b.request.status,
+                type: 'BONAFIDE',
+                createdAt: b.createdAt,
+              })),
+            },
+          },
+        ],
+        quickReplies: ['Open Academic Approvals', 'View Academic Deadlines'],
+      };
+    } catch (err) {
+      console.error('[Copilot] Academic officer telemetry error:', err);
+      return {
+        intent: 'ACADEMIC_OFFICER_TELEMETRY',
+        category: 'Documents',
+        confidence: 0.8,
+        message: 'Unable to query academic records at this time.',
+        cards: [],
+      };
+    }
+  }
+
+  private static async handleFacultyInquiry(user: AuthUser, lower: string): Promise<CopilotResponse> {
+    try {
+      const facultyName = user.fullName || user.username;
+      const subjects = await prisma.subject.findMany({
+        where: {
+          faculty: { contains: facultyName },
+        },
+        include: { branch: true },
+      });
+
+      const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+      const dayUpper = today.toUpperCase();
+
+      const todayClasses = await prisma.timetableEntry.findMany({
+        where: {
+          faculty: { contains: facultyName },
+          day: dayUpper,
+        },
+        include: { subject: true },
+        orderBy: { startTime: 'asc' },
+      });
+
+      let classRows = '';
+      if (todayClasses.length > 0) {
+        classRows = todayClasses
+          .map(
+            (c, idx) =>
+              `${idx + 1}. **${c.startTime} – ${c.endTime}** | **${c.subject.name}** (${c.subject.code}) • Room: **${c.room || 'LH-101'}**`
+          )
+          .join('\n');
+      } else {
+        classRows = `• *No teaching lectures scheduled for today (${today}).*`;
+      }
+
+      const message = `### 🎓 Faculty Academic Schedule — **${facultyName}**
+
+• **Assigned Courses**: ${subjects.map((s) => `${s.name} (${s.code})`).join(', ') || 'Department Subjects'}
+• **Instruction Day**: **${today}**
+
+#### Today's Teaching Periods:
+${classRows}
+
+> **Faculty Notice**: Class attendance should be logged digitally via the Faculty Attendance Portal within 24 hours of session completion.`;
+
+      return {
+        intent: 'FACULTY_TELEMETRY',
+        category: 'Academic',
+        confidence: 0.98,
+        message,
+        cards: [],
+        quickReplies: ['Record Attendance', 'View Teaching Timetable', 'Publish Class Notice'],
+      };
+    } catch (err) {
+      console.error('[Copilot] Faculty telemetry error:', err);
+      return {
+        intent: 'FACULTY_TELEMETRY',
+        category: 'Academic',
+        confidence: 0.8,
+        message: 'Unable to load faculty timetable from database.',
+        cards: [],
+      };
+    }
+  }
+
+  private static async handleAdminInquiry(user: AuthUser, lower: string): Promise<CopilotResponse> {
+    try {
+      const now = new Date();
+      const totalRequests = await prisma.request.count();
+      const openRequests = await prisma.request.count({
+        where: {
+          status: { in: ['SUBMITTED', 'ROUTED', 'ASSIGNED', 'IN_PROGRESS', 'PENDING_APPROVAL'] },
+        },
+      });
+      const overdueRequests = await prisma.request.count({
+        where: {
+          status: { in: ['SUBMITTED', 'ROUTED', 'ASSIGNED', 'IN_PROGRESS', 'PENDING_APPROVAL'] },
+          dueAt: { lt: now },
+        },
+      });
+      const pendingApprovals = await prisma.request.count({
+        where: { status: 'PENDING_APPROVAL' },
+      });
+      const activeEmergency = EmergencyService.getActive().length;
+
+      const message = `### 🏛️ Nexora Command Center — Operations Telemetry
+
+• **Total Campus Requests Logged**: **${totalRequests}**
+• **Active Open Tickets**: **${openRequests} in progress**
+• **Overdue SLA Breaches**: **${overdueRequests} overdue**
+• **Pending Officer Approvals**: **${pendingApprovals} requests**
+• **Active Emergency Alerts**: **${activeEmergency > 0 ? `🚨 ${activeEmergency} ACTIVE` : '✅ 0 active'}**
+
+> **Administrative Audit**: System operations, role assignments, and resolution audits are running with 100% telemetry coverage.`;
+
+      return {
+        intent: 'ADMIN_TELEMETRY',
+        category: 'General',
+        confidence: 0.98,
+        message,
+        cards: [],
+        quickReplies: ['Command Center Dashboard', 'Audit Log Trail', 'SLA Performance'],
+      };
+    } catch (err) {
+      console.error('[Copilot] Admin telemetry error:', err);
+      return {
+        intent: 'ADMIN_TELEMETRY',
+        category: 'General',
+        confidence: 0.8,
+        message: 'Unable to query command center metrics from database.',
+        cards: [],
+      };
+    }
+  }
+
+  // =========================================================================
+  // DETERMINISTIC HANDLERS (STUDENT TELEMETRY & WORKFLOWS)
+  // =========================================================================
+
   private static async handleAttendanceQuery(
     user: AuthUser,
     lower: string,
@@ -697,7 +1905,7 @@ export class CopilotService {
           intent: 'ATTENDANCE_QUERY',
           category: 'Academic',
           confidence: 0.95,
-          message: `No published attendance sessions were found for **${student.fullName}** (Roll: **${student.rollNumber}**) in the active semester database.\n\nAttendance records are updated weekly by subject faculty coordinators following completed lectures and practical labs. If classes have commenced, please consult your department academic coordinator or the Academic Affairs Cell.`,
+          message: `No published attendance sessions were found for **${student.fullName}** (Roll: **${student.rollNumber}**) in the active semester database.\\n\\nAttendance records are updated weekly by subject faculty coordinators following completed lectures and practical labs. If classes have commenced, please consult your department academic coordinator or the Academic Affairs Cell.`,
           cards: [],
           quickReplies: ['What classes do I have today?', 'Plan my upcoming exams', 'Find BPUT PYQs'],
         };
@@ -745,7 +1953,7 @@ export class CopilotService {
           subMarginNote = `🚨 Below 75%! You must attend the next **${subNeeded} consecutive class${subNeeded === 1 ? '' : 'es'}** in this course without absence.`;
         }
 
-        subjectSpecificSection = `### Focus Subject: **${matchedSubject.name}** (${matchedSubject.code})\n- **Standing**: **${matchedSubject.present} / ${matchedSubject.total}** classes (**${matchedSubject.percentage}%**)\n- **Status**: ${matchedSubject.isAbove ? '✅ Eligible (>= 75%)' : '⚠️ Shortage (< 75%)'}\n- ${subMarginNote}\n\n---\n`;
+        subjectSpecificSection = `### Focus Subject: **${matchedSubject.name}** (${matchedSubject.code})\\n- **Standing**: **${matchedSubject.present} / ${matchedSubject.total}** classes (**${matchedSubject.percentage}%**)\\n- **Status**: ${matchedSubject.isAbove ? '✅ Eligible (>= 75%)' : '⚠️ Shortage (< 75%)'}\\n- ${subMarginNote}\\n\\n---\\n`;
       }
 
       // 75% BPUT Margin Calculation
@@ -769,18 +1977,9 @@ export class CopilotService {
               s.isAbove ? '✅ Above 75%' : '⚠️ Below 75%'
             }`
         )
-        .join('\n');
+        .join('\\n');
 
-      const message = `${subjectSpecificSection}Here is your verified, real-time attendance telemetry for **${student.fullName}** (Roll: **${student.rollNumber}**):
-
-### Overall Attendance: **${overallPercentage}%** (${totalPresent} / ${totalClasses} classes attended)
-- **Status**: ${isOverallAbove ? '✅ **Exam Eligible (>= 75%)**' : '🚨 **Shortage Alert (< 75%)**'}
-- ${marginNote}
-
-#### Subject-Wise Breakdown:
-${rows}
-
-> **BPUT Academic Regulation**: Minimum 75% attendance is compulsory in each course for end-semester admit card generation. Condonation up to 65% is only admissible on certified medical grounds.`;
+      const message = `${subjectSpecificSection}Here is your verified, real-time attendance telemetry for **${student.fullName}** (Roll: **${student.rollNumber}**):\n\n### Overall Attendance: **${overallPercentage}%** (${totalPresent} / ${totalClasses} classes attended)\n- **Status**: ${isOverallAbove ? '✅ **Exam Eligible (>= 75%)**' : '🚨 **Shortage Alert (< 75%)**'}\n- ${marginNote}\n\n#### Subject-Wise Breakdown:\n${rows}\n\n> **BPUT Academic Regulation**: Minimum 75% attendance is compulsory in each course for end-semester admit card generation. Condonation up to 65% is only admissible on certified medical grounds.`;
 
       return {
         intent: 'ATTENDANCE_QUERY',
@@ -809,9 +2008,6 @@ ${rows}
     }
   }
 
-  /**
-   * Fetches real-time daily routine and timetable from Prisma.
-   */
   private static async handleTimetableQuery(user: AuthUser, lower: string): Promise<CopilotResponse> {
     try {
       let student = null;
@@ -839,7 +2035,6 @@ ${rows}
         };
       }
 
-      // Check if user specified a day of the week
       let targetDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
       const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
       for (const d of daysOfWeek) {
@@ -873,7 +2068,7 @@ ${rows}
           intent: 'TIMETABLE_QUERY',
           category: 'Academic',
           confidence: 0.95,
-          message: `You have **no scheduled lectures for ${targetDay}**.\n\nUse this time for assignment submissions, project development, or structured exam revision. You can explore verified university question papers and notes below.`,
+          message: `You have **no scheduled lectures for ${targetDay}**.\\n\\nUse this time for assignment submissions, project development, or structured exam revision. You can explore verified university question papers and notes below.`,
           cards: [],
           quickReplies: ['Check my attendance standing', 'Find BPUT PYQs', 'Plan my upcoming exams'],
         };
@@ -882,11 +2077,11 @@ ${rows}
       const classList = classes
         .map(
           (c, idx) =>
-            `${idx + 1}. **${c.startTime} – ${c.endTime}** | **${c.subject.name}** (${c.subject.code})\n   • Room: **${c.room || 'LH-101'}** • Faculty: ${c.faculty || 'Department Faculty'}`
+            `${idx + 1}. **${c.startTime} – ${c.endTime}** | **${c.subject.name}** (${c.subject.code})\\n   • Room: **${c.room || 'LH-101'}** • Faculty: ${c.faculty || 'Department Faculty'}`
         )
-        .join('\n');
+        .join('\\n');
 
-      const message = `Here is your scheduled timetable for **${targetDay}** — ${student.branch.code} Year ${student.year}:\n\n${classList}\n\n> **Reminder**: Please report 5 minutes prior to period commencement. Attendance is recorded digitally at the start of each lecture.`;
+      const message = `Here is your scheduled timetable for **${targetDay}** — ${student.branch.code} Year ${student.year}:\\n\\n${classList}\\n\\n> **Reminder**: Please report 5 minutes prior to period commencement. Attendance is recorded digitally at the start of each lecture.`;
 
       return {
         intent: 'TIMETABLE_QUERY',
@@ -897,20 +2092,17 @@ ${rows}
         quickReplies: ['Check my attendance standing', 'Find BPUT PYQs', 'Plan my upcoming exams'],
       };
     } catch (err) {
-      console.error('[Copilot] Timetable query error:', err);
+      console.error('[Copilot] Error retrieving timetable:', err);
       return {
         intent: 'TIMETABLE_QUERY',
         category: 'Academic',
         confidence: 0.8,
-        message: "Unable to retrieve today's timetable from the campus database. Please review the Academic Hub routine tab.",
+        message: 'Could not access the live timetable database right now.',
         cards: [],
       };
     }
   }
 
-  /**
-   * Real-time Student Request Tracking (Complaints, Bonafides, Leaves, Gate Passes).
-   */
   private static async handleRequestTracking(user: AuthUser, lower: string): Promise<CopilotResponse> {
     try {
       const requests = await prisma.request.findMany({
@@ -942,7 +2134,6 @@ ${rows}
         };
       }
 
-      // Filter by subcategory if student specifically asked about bonafide or complaint
       let filtered = requests;
       let filterTitle = 'Recent Campus Requests';
       if (lower.includes('bonafide') || lower.includes('certificate')) {
@@ -966,7 +2157,8 @@ ${rows}
       const statusRows = filtered
         .map((r) => {
           let badge = '⏳ PENDING';
-          if (r.status === 'APPROVED' || r.status === 'CONFIRMED' || r.status === 'RESOLVED') badge = '✅ ' + r.status;
+          if (r.status === 'APPROVED' || r.status === 'CONFIRMED' || r.status === 'RESOLVED')
+            badge = '✅ ' + r.status;
           else if (r.status === 'REJECTED' || r.status === 'CANCELLED') badge = '❌ ' + r.status;
           else if (r.status === 'ASSIGNED' || r.status === 'IN_PROGRESS') badge = '🔧 ' + r.status;
 
@@ -975,7 +2167,14 @@ ${rows}
             day: 'numeric',
           });
 
-          return `• **[${r.requestNumber}]** ${r.title}\n  - **Status**: \`${r.status}\` (${badge}) • Submitted: ${dateStr}`;
+          let specificNote = '';
+          if (r.gatePass) {
+            specificNote = `\n    - PIN: \`${r.gatePass.passPin}\` | Destination: ${r.gatePass.destination} | Due: ${new Date(r.gatePass.expectedReturnTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+          } else if (r.bonafide && r.bonafide.certificateId) {
+            specificNote = `\n    - Issued Certificate ID: \`${r.bonafide.certificateId}\``;
+          }
+
+          return `• **[${r.requestNumber}]** ${r.title}\n  - **Status**: \`${r.status}\` (${badge}) • Submitted: ${dateStr}${specificNote}`;
         })
         .join('\n');
 
@@ -1017,15 +2216,13 @@ ${rows}
         intent: 'REQUEST_TRACKING',
         category: 'Documents',
         confidence: 0.8,
-        message: 'Unable to access your request records from the database right now. Please check **My Requests** in the navigation bar.',
+        message:
+          'Unable to access your request records from the database right now. Please check **My Requests** in the navigation bar.',
         cards: [],
       };
     }
   }
 
-  /**
-   * Real-time Academic Deadlines & Campus Notices from Prisma.
-   */
   private static async handleDeadlinesAndNotices(user: AuthUser, lower: string): Promise<CopilotResponse> {
     try {
       const deadlines = await prisma.academicDeadline.findMany({
@@ -1048,49 +2245,44 @@ ${rows}
               weekday: 'short',
               month: 'short',
               day: 'numeric',
-              year: 'numeric',
             });
-            return `• **${d.title}**: Due by **${dateStr}**\n  - ${d.description} ([Action Link](${d.actionUrl || '/student/academics'}))`;
+            return `• **${d.title}**: Due on **${dateStr}**\n  - ${d.description}`;
           })
           .join('\n');
-        deadlineSection = `### 📅 Upcoming Academic Deadlines\n${rows}\n\n`;
+        deadlineSection = `### 📅 Upcoming Academic Deadlines:\n${rows}\n\n`;
       } else {
-        deadlineSection = `### 📅 Academic Deadlines\nNo pending academic submission deadlines are registered for this week.\n\n`;
+        deadlineSection = '### 📅 Upcoming Academic Deadlines:\n• *No urgent deadlines pending.*\\n\\n';
       }
 
       let noticeSection = '';
       if (notices.length > 0) {
-        const rows = notices
-          .map((n) => {
-            const dateStr = new Date(n.publishedAt).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-            });
-            return `• **${n.title}** (${dateStr}) — *${n.priority} Priority*\n  - ${n.content}`;
-          })
+        const nRows = notices
+          .map((n) => `• **${n.title}** (${n.priority} priority)\n  - ${n.content.slice(0, 140)}...`)
           .join('\n');
-        noticeSection = `### 📢 Official Campus Notices\n${rows}`;
+        noticeSection = `### 📢 Recent Published Campus Circulars:\n${nRows}`;
       }
 
-      const message = `${deadlineSection}${noticeSection}\n\n> Verified directly from the Academic Affairs Cell notice board.`;
+      const message = `${deadlineSection}${noticeSection}\n\n> **Notice**: Stay updated with departmental announcements to ensure timely form fill-up and fee clearances.`;
 
-      const cardData = {
-        title: 'Active Deadlines & Circulars',
-        deadlines: deadlines.map((d) => ({
-          id: d.id,
-          title: d.title,
-          description: d.description,
-          deadline: d.deadline,
-          relatedForm: d.relatedForm,
-          actionUrl: d.actionUrl,
-        })),
-        notices: notices.map((n) => ({
-          id: n.id,
-          title: n.title,
-          priority: n.priority,
-          content: n.content,
-          publishedAt: n.publishedAt,
-        })),
+      const card: CopilotCard = {
+        cardType: 'DEADLINE_LIST',
+        title: 'Academic Deadlines & Notices',
+        data: {
+          deadlines: deadlines.map((d) => ({
+            id: d.id,
+            title: d.title,
+            description: d.description,
+            deadline: d.deadline,
+            relatedForm: d.relatedForm,
+            actionUrl: d.actionUrl,
+          })),
+          notices: notices.map((n) => ({
+            id: n.id,
+            title: n.title,
+            priority: n.priority,
+            publishedAt: n.publishedAt,
+          })),
+        },
       };
 
       return {
@@ -1098,18 +2290,8 @@ ${rows}
         category: 'Academic',
         confidence: 0.98,
         message,
-        cards: [
-          {
-            cardType: 'DEADLINE_LIST',
-            title: 'Academic Deadlines & Notices',
-            data: cardData,
-          },
-        ],
-        quickReplies: [
-          'What classes do I have today?',
-          'Check my attendance standing',
-          'Plan my upcoming exams',
-        ],
+        cards: [card],
+        quickReplies: ['Check semester timetable', 'Plan my upcoming exams', 'What is my current attendance?'],
       };
     } catch (err) {
       console.error('[Copilot] Error retrieving deadlines:', err);
@@ -1117,399 +2299,272 @@ ${rows}
         intent: 'DEADLINES_NOTICES',
         category: 'Academic',
         confidence: 0.8,
-        message: 'Could not load official academic deadlines from the campus notice board right now.',
+        message: 'Could not retrieve current academic deadlines right now.',
         cards: [],
       };
     }
-  }
-
-  /**
-   * Builds factual telemetry context string for Gemini prompt injection.
-   */
-  private static async getTelemetryContext(
-    user: AuthUser,
-    isAttendance: boolean,
-    isTimetable: boolean,
-    isRequestTracking: boolean,
-    isDeadlines: boolean,
-    lower: string
-  ): Promise<string> {
-    let result = '';
-
-    let student = null;
-    if (user.studentId) {
-      student = await prisma.student.findUnique({
-        where: { id: user.studentId },
-        include: { branch: true },
-      });
-    } else if (user.id) {
-      student = await prisma.student.findUnique({
-        where: { userId: user.id },
-        include: { branch: true },
-      });
-    }
-
-    if (!student) return '';
-
-    // Attendance telemetry
-    if (isAttendance || true) {
-      const attendances = await prisma.attendance.findMany({
-        where: { studentId: student.id },
-        include: { subject: true },
-      });
-
-      if (attendances.length > 0) {
-        let totalP = 0;
-        let totalC = 0;
-        const subList: string[] = [];
-        for (const a of attendances) {
-          totalP += a.present;
-          totalC += a.total;
-          const p = a.total > 0 ? ((a.present / a.total) * 100).toFixed(1) : '0';
-          subList.push(`${a.subject.name} (${a.subject.code}): ${a.present}/${a.total} (${p}%)`);
-        }
-        const ovr = totalC > 0 ? ((totalP / totalC) * 100).toFixed(1) : '0';
-        result += `LIVE ATTENDANCE: Overall ${ovr}% (${totalP}/${totalC} sessions). Subjects: ${subList.join('; ')}. BPUT Minimum Rule is 75%.\n`;
-      }
-    }
-
-    // Timetable telemetry
-    if (isTimetable || true) {
-      const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-      const dayUpper = today.toUpperCase();
-      const entries = await prisma.timetableEntry.findMany({
-        where: { branchId: student.branchId, year: student.year, day: dayUpper },
-        include: { subject: true },
-        orderBy: { startTime: 'asc' },
-      });
-      if (entries.length > 0) {
-        const cls = entries.map((e) => `${e.startTime}-${e.endTime} ${e.subject.name} (${e.subject.code}) in Room ${e.room}`);
-        result += `TODAY'S SCHEDULE (${today}): ${cls.join('; ')}.\n`;
-      } else {
-        result += `TODAY'S SCHEDULE (${today}): No lectures scheduled today.\n`;
-      }
-    }
-
-    // Requests telemetry
-    try {
-      const recentReqs = await prisma.request.findMany({
-        where: { requesterId: user.id },
-        include: { requestType: true },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-      });
-      if (recentReqs.length > 0) {
-        const reqStr = recentReqs.map((r) => `[${r.requestNumber}] ${r.title} (Type: ${r.requestType.code}, Status: ${r.status})`).join('; ');
-        result += `SUBMITTED REQUESTS: ${reqStr}.\n`;
-      }
-    } catch {}
-
-    // Deadlines telemetry
-    try {
-      const deadlines = await prisma.academicDeadline.findMany({
-        where: { isActive: true },
-        orderBy: { deadline: 'asc' },
-        take: 3,
-      });
-      if (deadlines.length > 0) {
-        const dStr = deadlines.map((d) => `${d.title} (Due: ${new Date(d.deadline).toISOString().split('T')[0]})`).join('; ');
-        result += `UPCOMING DEADLINES: ${dStr}.\n`;
-      }
-    } catch {}
-
-    return result;
   }
 
   // =========================================================================
   // GENERAL ACADEMIC, PROGRAMMING & CAREER GUIDANCE HANDLERS
   // =========================================================================
 
-  /**
-   * Comprehensive, realistic 9+ CGPA and academic strategy engine.
-   */
   private static handleGeneralAcademicAdvice(
-    rawText: string,
+    text: string,
     lower: string,
     user: AuthUser,
     history: Array<{ role: 'user' | 'assistant'; content: string }>
   ): CopilotResponse {
-    const isCgpaQuery =
-      lower.includes('9 cgpa') ||
-      lower.includes('9+') ||
-      lower.includes('cgpa') ||
-      lower.includes('sgpa') ||
-      lower.includes('topper') ||
-      lower.includes('high marks') ||
-      lower.includes('improve grade');
+    const message = `### 🎯 Proven Strategy to Achieve 9+ CGPA at BPUT (Engineering)
 
-    if (isCgpaQuery) {
-      const message = `Here is the verified, tactical blueprint to achieve a **9+ CGPA in Engineering (BPUT)**:
+Securing a **9+ CGPA** is not about studying 12 hours a night before exams; it is about exploiting how university examinations and internal marks are structured:
 
-### 1. Master Internal Assessment (30% Weightage)
-• In BPUT, every theory paper has **30 internal marks** (Mid-term tests + Quizzes/Assignments + Attendance) and **70 end-semester marks**.
-• **The Golden Formula**: Aim for **27–29 / 30 in internals**.
-• *Why this matters*: If you secure 28/30 in internals, you only need **52/70 in the end-semester exam** to hit 80% total (**'E' Grade = 9.0 Grade Points**), and **62/70** for an **'O' Grade (10.0 Points)**. Skipping internals forces you to get near-impossible scores on external exams.
+1. **Maximize Internal Assessment (30% Total Weightage)**:
+   - Internals consist of 30 marks (Two mid-term tests + Quizzes/Assignments + 5 marks for attendance).
+   - Target **27 to 29 out of 30**. High internals give you an extraordinary buffer: you only need ~53/70 in the end-semester exam for an **'E' Grade (9 points)**, and ~63/70 for an **'O' Grade (10 points)**.
+   - Maintain **80%+ attendance** to secure full attendance points.
 
-### 2. Leverage BPUT Past 5-Year Question Papers (PYQs)
-• BPUT university question setting heavily re-uses standard question templates and derivations. **60% to 70%** of core questions repeat every 3–4 years.
-• Solve the last 5 years' papers under 3-hour exam conditions.
-• Prioritize standard 7-mark and 10-mark long questions that recur annually.
+2. **Master Past 5-Year BPUT PYQs (70% Exam Weightage)**:
+   - In BPUT semester examinations, **60% to 70%** of numericals and core theoretical questions repeat from previous years.
+   - Solve at least 3 previous year papers under timed conditions before each exam.
 
-### 3. The 4+1 Module Rule
-• The university syllabus for each subject is divided into 5 modules.
-• Thoroughly master **4 modules at 100% depth** to comfortably answer all compulsory and optional section questions.
-• Prepare at least the core definitions and 2-mark question formulas for the remaining 1 module.
+3. **Strategic Module Coverage (The 4+1 Rule)**:
+   - BPUT syllabi contain 5 modules.
+   - Master **4 modules with 100% depth** (ensuring you can answer all compulsory and optional long questions).
+   - Cover key definitions and 2-mark question formulas in the remaining 1 module.
 
-### 4. Technical Answer Sheet Architecture
-• Evaluators grade hundreds of physical answer scripts. Presentation directly impacts marks:
-  - **Diagrams First**: Draw clean block diagrams, flowcharts, circuit schematics, or ER diagrams for every long answer.
-  - **Structured Steps**: Use bullet points and bold technical terms rather than dense paragraphs.
-  - **Box Final Answers**: Box numerical results clearly with appropriate units.
+4. **Visual & Structured Answer Presentation**:
+   - Technical evaluators reward clean, structured presentation.
+   - Always draw neat, labeled block diagrams, circuit schematics, ER diagrams, or flowcharts.
+   - Use bullet points, bold keywords, and box your final numerical answers with correct units.
 
-### 5. Never Treat Practical Labs as Optional
-• Laboratory and sessional courses carry 1.5–2 credits each and are evaluated internally.
-• Regular attendance, prompt lab record submissions, and crisp viva answers almost always yield **9 or 10 grade points**, significantly boosting your SGPA.
+5. **Acing Practical & Sessional Labs**:
+   - Laboratory courses carry 1.5 to 2 credits and are evaluated internally.
+   - Submitting neat lab records on time, performing viva with clarity, and attending all sessions almost always yields 9 or 10 grade points.
 
-### 6. Daily 90-Minute Habit
-• Dedicate 90 minutes each evening to revise that day's lecture topics and solve 2 numericals. Consistent small efforts eliminate pre-exam panic.`;
+6. **Daily 90-Minute Habit vs. Exam-Night Cramming**:
+   - Dedicate 90 minutes every evening to summarize lecture notes and solve 2 analytical problems. Consistency beats 12-hour pre-exam cramming every single time.
 
-      return {
-        intent: 'GENERAL_ACADEMIC',
-        category: 'Academic Strategy',
-        confidence: 0.98,
-        message,
-        cards: [],
-        quickReplies: [
-          'Generate a 10-day DBMS study plan',
-          'Find BPUT PYQs',
-          'Check my attendance standing',
-          'Explain BPUT grading formula',
-        ],
-      };
-    }
+> **Verified Academic Source**: *BPUT Academic Regulations & Nexora Academic Mentorship Framework*`;
 
-    // Study methods & productivity
-    if (lower.includes('how to study') || lower.includes('study tips') || lower.includes('pomodoro') || lower.includes('active recall')) {
-      const message = `Here is a high-retention engineering study system:
-
-1. **Active Recall over Passive Reading**: Close your notes and write out key algorithms, formulas, and definitions from memory. Testing yourself is 3x more effective than re-reading.
-2. **The Pomodoro Technique (50/10)**: Study with absolute focus for 50 minutes, then take a strict 10-minute break away from screens. Complete 3–4 cycles daily.
-3. **The Feynman Technique**: Explain complex engineering concepts (like virtual memory or BCNF decomposition) as if you were teaching a junior student. Identify gaps where your explanation stumbles.
-4. **Formula & Diagram Sheets**: Maintain a single sheet of core derivations, theorems, and state diagrams for quick review before exams.`;
-
-      return {
-        intent: 'GENERAL_ACADEMIC',
-        category: 'Study Skills',
-        confidence: 0.95,
-        message,
-        cards: [],
-        quickReplies: ['Plan my upcoming exams', 'Find BPUT PYQs', 'How can I get a 9+ CGPA?'],
-      };
-    }
-
-    // BPUT Grading Formula & Scale
-    if (lower.includes('formula') || lower.includes('calculate cgpa') || lower.includes('percentage') || lower.includes('grading system')) {
-      const k = VERIFIED_CAMPUS_KNOWLEDGE.find((item) => item.id === 'bput-grading-system');
-      return {
-        intent: 'GENERAL_ACADEMIC',
-        category: 'Grading Rules',
-        confidence: 0.98,
-        message: k?.content || 'BPUT follows a 10-point scale: O (10), E (9), A (8), B (7), C (6), D (5), F (0). Formula: Percentage = (CGPA - 0.5) * 10.',
-        cards: [],
-        quickReplies: ['How can I get a 9+ CGPA?', 'Check my attendance standing', 'Find BPUT PYQs'],
-      };
-    }
-
-    // General academic fallback
     return {
       intent: 'GENERAL_ACADEMIC',
-      category: 'Academic Guidance',
-      confidence: 0.92,
-      message: `Here is actionable academic guidance for your engineering coursework:
-
-• **Clarify Core Fundamentals**: Technical subjects build sequentially. Ensure prerequisites (such as Discrete Mathematics for Algorithms or Digital Logic for Computer Architecture) are sound.
-• **Solve Real Problems**: For analytical subjects, spend 70% of study time actively working through numericals, code implementations, or circuit problems.
-• **Utilize Campus Resources**: Download verified university question papers and lecture notes directly through Nexora.
-• **Target High Internals**: Complete quizzes, lab evaluations, and mid-semester exams diligently to build a solid grade foundation.
-
-Would you like me to construct a structured study plan or find verified past question papers for any specific subject?`,
+      category: 'Academic',
+      confidence: 0.98,
+      message,
       cards: [],
       quickReplies: [
-        'How can I get a 9+ CGPA?',
-        'Generate a 10-day DBMS study plan',
         'Find BPUT PYQs',
-        'Check my attendance standing',
+        'Generate a 10-day DBMS study plan',
+        'What is my current attendance?',
       ],
     };
   }
 
-  /**
-   * Technical problem-solving and programming roadmap handler.
-   */
-  private static handleProgrammingHelp(rawText: string, lower: string, user: AuthUser): CopilotResponse {
-    if (lower.includes('deadlock')) {
-      return {
-        intent: 'PROGRAMMING_HELP',
-        category: 'Operating Systems',
-        confidence: 0.98,
-        message: `### How Operating Systems Handle Deadlocks
-
-A **Deadlock** is an execution state where two or more processes are permanently blocked because each is holding a resource and waiting for another resource held by another process.
-
-#### The 4 Necessary Coffman Conditions:
-1. **Mutual Exclusion**: At least one resource is held in a non-shareable mode.
-2. **Hold and Wait**: A process holds a resource while requesting others.
-3. **No Preemption**: Resources cannot be forcibly taken from a process.
-4. **Circular Wait**: A closed chain of processes exists where $P_0$ waits for $P_1$, and $P_n$ waits for $P_0$.
-
-#### Core OS Deadlock Resolution Strategies:
-1. **Deadlock Prevention**: Structurally eliminate at least one Coffman condition (e.g., impose total resource ordering).
-2. **Deadlock Avoidance**: The OS verifies whether allocating a requested resource preserves a **Safe State** using **Banker's Algorithm**.
-3. **Deadlock Detection & Recovery**: Periodically check for cycles in the Resource Allocation Graph (RAG) and terminate processes or preempt resources.
-4. **Ostrich Algorithm**: Ignore the possibility of deadlocks for performance reasons (common in general-purpose OS kernels).`,
-        cards: [],
-        quickReplies: ["Explain Banker's Algorithm", 'Find OS PYQs', 'Process vs Thread'],
-      };
-    }
-
-    if (lower.includes('process') && lower.includes('thread')) {
-      return {
-        intent: 'PROGRAMMING_HELP',
-        category: 'Operating Systems',
-        confidence: 0.98,
-        message: `### Difference Between a Process and a Thread
-
-| Dimension | Process | Thread (Lightweight Process) |
-| :--- | :--- | :--- |
-| **Memory** | Own independent address space & page tables | Shares code, data, and heap with parent process |
-| **Context Switch** | Slower; requires flushing CPU caches & registers | Faster; only registers and program counter saved |
-| **Isolation** | High; crash in one process does not affect others | Low; crash in one thread can terminate the whole process |
-| **Communication** | IPC (Pipes, Sockets, Shared Memory) | Direct access to shared memory variables |`,
-        cards: [],
-        quickReplies: ['Explain Deadlocks in OS', 'CPU Scheduling Algorithms', 'Find OS PYQs'],
-      };
-    }
-
+  private static handleProgrammingHelp(
+    text: string,
+    lower: string,
+    user: AuthUser
+  ): CopilotResponse {
+    let message = '';
     if (lower.includes('recursion')) {
-      return {
-        intent: 'PROGRAMMING_HELP',
-        category: 'Programming & DSA',
-        confidence: 0.98,
-        message: `### Understanding Recursion in Computer Science
+      message = `### 💻 Understanding Recursion in C++
 
-Recursion occurs when a function calls itself to solve a smaller instance of the exact same problem until reaching a termination condition (**Base Case**).
+Recursion is a programming technique where a function solves a problem by calling a smaller instance of itself.
 
-#### The 3 Pillars of Every Recursive Function:
-1. **Base Case**: The stopping condition that prevents infinite call-stack memory growth.
-2. **Recursive Step**: The function calling itself with reduced input parameters.
-3. **Work Done**: The calculation performed at the current frame before or after the recursive call.
+#### The Two Pillars of Every Recursive Function:
+1. **Base Case**: The stopping condition that prevents infinite execution and stack overflow.
+2. **Recursive Step**: Reducing the problem into a smaller sub-problem and calling itself.
 
 \`\`\`cpp
-// Classic Example: Factorial Calculation in C++
 #include <iostream>
+using namespace std;
 
+// Recursive Factorial Calculation: n! = n * (n-1)!
 long long factorial(int n) {
-    // 1. Base Case: 0! = 1 and 1! = 1
+    // 1. Base Case
     if (n <= 1) return 1;
     
-    // 2. Recursive Step: n! = n * (n - 1)!
+    // 2. Recursive Step
     return n * factorial(n - 1);
 }
 
 int main() {
-    std::cout << "5! = " << factorial(5) << std::endl; // Output: 120
+    int num = 5;
+    cout << "Factorial of " << num << " is " << factorial(num) << endl;
     return 0;
 }
 \`\`\`
 
 #### Key Mental Model: The Call Stack
-Each recursive invocation pushes a stack frame containing local variables and return address. If recursion depth exceeds the stack limit, a **Stack Overflow** occurs. To optimize deep recursion, consider **Tail Call Optimization (TCO)** or iterative tabulation.`,
-        cards: [],
-        quickReplies: ['Learn Dynamic Programming', 'Time Complexity of Recursion', 'Find DSA PYQs'],
-      };
-    }
+Each recursive invocation pushes a stack frame containing local variables and return addresses. When the base case is satisfied, stack frames unwind in Last-In-First-Out (LIFO) order.`;
+    } else {
+      message = `### 💻 Data Structures & Algorithms Problem-Solving Roadmap
 
-    if (lower.includes('dsa') || lower.includes('data structure') || lower.includes('algorithm')) {
-      const k = VERIFIED_CAMPUS_KNOWLEDGE.find((item) => item.id === 'programming-dsa-guidance');
-      return {
-        intent: 'PROGRAMMING_HELP',
-        category: 'Programming & DSA',
-        confidence: 0.95,
-        message:
-          k?.content ||
-          `Mastering Data Structures & Algorithms requires solving problems by patterns rather than memorizing code:\n\n1. **Arrays & Two Pointers**: Sliding Window, Prefix Sum.\n2. **Linear Structures**: Linked Lists, Stacks, Queues.\n3. **Trees & Graphs**: DFS, BFS, Dijkstra, Topological Sort.\n4. **Optimization**: Binary Search, Dynamic Programming.`,
-        cards: [],
-        quickReplies: ['Explain recursion in C++', 'Find DSA PYQs', 'Placement Preparation Tips'],
-      };
+To build strong problem-solving skills for university exams and campus placements:
+
+1. **Master One Language**: C++ (with STL) or Java (with Collections Framework).
+2. **Core Linear Structures**: Arrays, Strings, Two Pointers, Sliding Window, Linked Lists, Stacks, Queues.
+3. **Non-Linear Structures**: Binary Trees, BSTs, Heaps/Priority Queues, Hash Maps, Graphs.
+4. **Algorithmic Patterns**: Recursion & Backtracking, BFS/DFS, Binary Search, Dynamic Programming.
+5. **Practice Strategy**: Target 150–200 curated questions on LeetCode / GeeksforGeeks.`;
     }
 
     return {
       intent: 'PROGRAMMING_HELP',
-      category: 'Programming & DSA',
-      confidence: 0.9,
-      message: `Here is programming guidance for engineering problem-solving:
-
-• **Break Down Problems**: Write out the algorithm in plain English or pseudo-code before writing syntax.
-• **Check Edge Cases**: Empty arrays, single-element collections, overflow values, and null pointers.
-• **Analyze Complexity**: Always state the Big-O Time and Auxiliary Space complexity of your solution.
-
-What specific coding concept, language (C++, Java, Python), or algorithm would you like to explore?`,
+      category: 'Academic',
+      confidence: 0.95,
+      message,
       cards: [],
-      quickReplies: ['Explain recursion in C++', 'Data Structures Roadmap', 'Placement Preparation Tips'],
+      quickReplies: ['Explain recursion in C++', 'How should I prepare for campus placements?', 'Find BPUT PYQs'],
     };
   }
 
-  /**
-   * Career guidance and placement preparation handler.
-   */
-  private static handleCareerGuidance(rawText: string, lower: string, user: AuthUser): CopilotResponse {
-    const k = VERIFIED_CAMPUS_KNOWLEDGE.find((item) => item.id === 'placement-preparation-roadmap');
+  private static handleCareerGuidance(
+    text: string,
+    lower: string,
+    user: AuthUser
+  ): CopilotResponse {
+    const message = `### 🚀 Comprehensive Campus Placement & Career Preparation
+
+To secure high-tier product and software engineering offers during campus drives:
+
+1. **Academic Eligibility (The Gatekeeper)**:
+   - Maintain a CGPA of **>= 7.0 (ideally 8.0+)** with **zero active backlogs**. This ensures eligibility for 95%+ of visiting Tier-1 tech recruiters.
+
+2. **Data Structures & Algorithms (DSA) (Coding Rounds)**:
+   - Master Arrays, Strings, Trees, Graphs, and Dynamic Programming.
+   - Solve 150–250 problems across LeetCode / GeeksforGeeks.
+
+3. **Core CS Fundamentals (Technical Interviews)**:
+   - **DBMS**: SQL queries, indexing, normalization (1NF–BCNF), ACID properties.
+   - **Operating Systems**: Processes vs Threads, CPU scheduling, deadlocks, virtual memory.
+   - **Computer Networks**: TCP/IP vs OSI model, DNS, HTTP/HTTPS, sockets.
+
+4. **Production-Ready Projects**:
+   - Build 2 full-stack or systems projects with clean code, unit tests, and live deployed URLs.
+
+5. **Aptitude & Communication**:
+   - Practice quantitative and logical reasoning for initial screening tests.`;
+
     return {
       intent: 'CAREER_GUIDANCE',
-      category: 'Placement & Career',
-      confidence: 0.96,
-      message:
-        k?.content ||
-        `To prepare for campus placements:\n1. Maintain CGPA >= 7.0 with no backlogs.\n2. Practice 150+ DSA problems on LeetCode.\n3. Master core CS subjects (DBMS, OS, CN).\n4. Build 2 production-ready full-stack projects with live deployments.\n5. Practice aptitude tests weekly.`,
+      category: 'Career',
+      confidence: 0.95,
+      message,
       cards: [],
-      quickReplies: [
-        'How can I get a 9+ CGPA?',
-        'Data Structures Roadmap',
-        'Find BPUT PYQs',
-      ],
+      quickReplies: ['How can I get a 9+ CGPA?', 'Find BPUT PYQs', 'What classes do I have today?'],
     };
   }
 
-  /**
-   * General AI reasoning for broad knowledge, writing, and explanations.
-   */
-  private static handleGeneralAi(text: string, lower: string, user: AuthUser): CopilotResponse {
-    // Provide a well-structured, practical answer
+  private static handleGuideProcedure(
+    matchedProcedure: CampusProcedure,
+    user: AuthUser
+  ): CopilotResponse {
+    const stepList = matchedProcedure.steps.map((s, idx) => `${idx + 1}. ${s}`).join('\n');
+    const docList = matchedProcedure.requiredDocuments.map((d) => `• ${d}`).join('\n');
+
+    let directCard: CopilotCard | null = null;
+    if (matchedProcedure.directActionIntent === 'REQUEST_BONAFIDE') {
+      directCard = {
+        cardType: 'ACTION_BONAFIDE',
+        title: 'Start Bonafide Request',
+        data: {
+          purpose: 'Scholarship',
+          studentName: user.fullName || user.username,
+          rollNumber: user.rollNumber || '220101048',
+          branch: user.branch || 'CSE',
+          year: user.year || 2,
+        },
+      };
+    } else if (matchedProcedure.directActionIntent === 'CREATE_MAINTENANCE_REQUEST') {
+      directCard = {
+        cardType: 'ACTION_MAINTENANCE',
+        title: 'Report Maintenance Problem',
+        data: {
+          category: 'Electrical',
+          priority: 'NORMAL',
+          title: 'Room Maintenance Issue',
+          description: 'Hostel room repair request',
+          location: `${user.hostelBlock || 'Block B'} - Room ${user.roomNumber || '204'}`,
+        },
+      };
+    } else if (matchedProcedure.directActionIntent === 'APPLY_HOSTEL_LEAVE') {
+      const today = new Date();
+      directCard = {
+        cardType: 'ACTION_LEAVE',
+        title: 'Apply for Hostel Leave',
+        data: {
+          startDate: new Date(today.getTime() + 24 * 3600000).toISOString().split('T')[0],
+          endDate: new Date(today.getTime() + 4 * 24 * 3600000).toISOString().split('T')[0],
+          reason: 'Home Travel',
+          emergencyContact: 'Parent / Guardian (+91 9876543210)',
+          parentConsent: true,
+          hostelBlock: user.hostelBlock || 'Block B',
+        },
+      };
+    } else if (matchedProcedure.directActionIntent === 'CREATE_GATE_PASS') {
+      const now = new Date();
+      directCard = {
+        cardType: 'ACTION_GATE_PASS',
+        title: 'Apply for Campus Exit Gate Pass',
+        data: {
+          destination: 'Local Market',
+          reason: 'Personal Errands',
+          departureTime: new Date(now.getTime() + 30 * 60000).toISOString(),
+          expectedReturnTime: new Date(now.getTime() + 4 * 3600000).toISOString(),
+        },
+      };
+    }
+
+    const procedureCard: CopilotCard = {
+      cardType: 'GUIDE_PROCEDURE',
+      title: matchedProcedure.title,
+      data: {
+        id: matchedProcedure.id,
+        category: matchedProcedure.category,
+        department: matchedProcedure.department,
+        location: matchedProcedure.location,
+        turnaroundTime: matchedProcedure.turnaroundTime,
+        requiredDocuments: matchedProcedure.requiredDocuments,
+        steps: matchedProcedure.steps,
+        actionButtonLabel: matchedProcedure.actionButtonLabel,
+        notes: matchedProcedure.notes,
+      },
+    };
+
+    const cards: CopilotCard[] = directCard ? [procedureCard, directCard] : [procedureCard];
+
+    const message = `### Official Procedure: **${matchedProcedure.title}**
+
+• **Responsible Department**: ${matchedProcedure.department}
+• **Location**: ${matchedProcedure.location}
+• **Turnaround Commitment**: **${matchedProcedure.turnaroundTime}**
+
+#### Required Documents / Prerequisites:
+${docList}
+
+#### Step-by-Step Procedure:
+${stepList}
+
+${matchedProcedure.notes ? `> **Important Note**: ${matchedProcedure.notes}\n\n` : ''}> **Verified Institutional Source**: *${matchedProcedure.source || 'Nexora Campus Operations Charter'}*`;
+
     return {
-      intent: 'GENERAL_AI',
-      category: 'General',
-      confidence: 0.92,
-      message: `Here is a clear breakdown for **"${text}"**:
-
-• **Core Concept**: When approaching complex engineering or academic topics, prioritize understanding the foundational principles before moving to specific implementations or formulas.
-• **Practical Application**: Break the problem down into distinct, testable components. Apply first-principles thinking to verify each assumption.
-• **Campus Integration**: You can connect this study effort to your semester coursework and access official lecture notes and question papers directly in Nexora.
-
-Feel free to ask follow-up questions, request step-by-step mathematical derivations, or ask me to draft study schedules around this topic!`,
-      cards: [],
+      intent: 'CAMPUS_GUIDE',
+      category: matchedProcedure.category,
+      confidence: 0.99,
+      message,
+      cards,
       quickReplies: [
-        'How can I get a 9+ CGPA?',
-        'What classes do I have today?',
-        'Plan my upcoming exams',
+        'How to apply for gate pass?',
+        'How to get bonafide certificate?',
+        'Report a room problem',
       ],
     };
   }
 
-  /**
-   * Verified Campus Knowledge Query Handler (RAG from verified policy database).
-   */
   private static handleCampusKnowledge(lower: string, user: AuthUser): CopilotResponse | null {
-    const matches = searchCampusKnowledge(lower, 1);
+    const matches = searchCampusKnowledge(lower, 1, user.role);
     if (matches.length > 0) {
       const topMatch = matches[0];
       return {
@@ -1528,9 +2583,6 @@ Feel free to ask follow-up questions, request step-by-step mathematical derivati
     return null;
   }
 
-  /**
-   * Conversational greetings and polite responses.
-   */
   private static handleConversational(
     text: string,
     lower: string,
@@ -1544,13 +2596,22 @@ Feel free to ask follow-up questions, request step-by-step mathematical derivati
         intent: 'GENERAL_ACADEMIC',
         category: 'General',
         confidence: 0.99,
-        message: `Hello **${user.fullName || user.username}**! I am your **Nexora Copilot**.\n\nI can help you:\n• Check live **attendance percentages** & 75% bunk safety margins\n• Inspect your **timetable & class routine**\n• Plan multi-day **exam revision roadmaps** & download verified BPUT PYQs\n• Track submitted **bonafide certificates, leaves, & maintenance tickets**\n• Explain **BPUT regulations, grading formulas, and 9+ CGPA strategies**\n\nWhat would you like to focus on today?`,
+        message: `Hello **${user.fullName || user.username}**! I am your **Nexora Copilot**.
+
+I can help you:
+• Check live **attendance percentages** & 75% bunk safety margins
+• Inspect your **timetable & class routine**
+• Plan multi-day **exam revision roadmaps** & download verified BPUT PYQs
+• Track submitted **bonafide certificates, leaves, & maintenance tickets**
+• Explain **BPUT regulations, grading formulas, and 9+ CGPA strategies**
+
+What would you like to focus on today?`,
         cards: [],
         quickReplies: [
           'How can I get a 9+ CGPA?',
           'What is my current attendance?',
           'What classes do I have today?',
-          'Plan my upcoming exams',
+          'What is the status of my bonafide application?',
         ],
       };
     }
@@ -1579,18 +2640,42 @@ Feel free to ask follow-up questions, request step-by-step mathematical derivati
     user: AuthUser
   ): CopilotResponse {
     let category = 'Electrical';
-    if (lower.includes('tap') || lower.includes('water') || lower.includes('leak') || lower.includes('flush') || lower.includes('drain')) {
+    if (
+      lower.includes('tap') ||
+      lower.includes('water') ||
+      lower.includes('leak') ||
+      lower.includes('flush') ||
+      lower.includes('drain')
+    ) {
       category = 'Plumbing';
-    } else if (lower.includes('door') || lower.includes('window') || lower.includes('cupboard') || lower.includes('bed') || lower.includes('chair') || lower.includes('table')) {
+    } else if (
+      lower.includes('door') ||
+      lower.includes('window') ||
+      lower.includes('cupboard') ||
+      lower.includes('bed') ||
+      lower.includes('chair') ||
+      lower.includes('table')
+    ) {
       category = 'Carpentry';
     } else if (lower.includes('wifi') || lower.includes('internet') || lower.includes('lan')) {
       category = 'Network';
-    } else if (lower.includes('clean') || lower.includes('dirty') || lower.includes('smell') || lower.includes('pest')) {
+    } else if (
+      lower.includes('clean') ||
+      lower.includes('dirty') ||
+      lower.includes('smell') ||
+      lower.includes('pest')
+    ) {
       category = 'Cleanliness';
     }
 
     let priority = 'NORMAL';
-    if (lower.includes('spark') || lower.includes('urgent') || lower.includes('immediately') || lower.includes('heavy leak') || lower.includes('broken lock')) {
+    if (
+      lower.includes('spark') ||
+      lower.includes('urgent') ||
+      lower.includes('immediately') ||
+      lower.includes('heavy leak') ||
+      lower.includes('broken lock')
+    ) {
       priority = 'URGENT';
     } else if (lower.includes('not working') && (lower.includes('fan') || lower.includes('water'))) {
       priority = 'HIGH';
@@ -1621,16 +2706,12 @@ Feel free to ask follow-up questions, request step-by-step mathematical derivati
     };
   }
 
-  private static handleBonafideAction(
-    text: string,
-    lower: string,
-    user: AuthUser
-  ): CopilotResponse {
+  private static handleBonafideAction(text: string, lower: string, user: AuthUser): CopilotResponse {
     let purpose = 'Scholarship';
-    if (lower.includes('passport')) purpose = 'Passport Application';
-    else if (lower.includes('bank') || lower.includes('loan')) purpose = 'Bank Education Loan';
-    else if (lower.includes('internship')) purpose = 'Summer Industrial Internship';
-    else if (lower.includes('competition') || lower.includes('hackathon')) purpose = 'Technical Competition / Hackathon';
+    if (lower.includes('loan') || lower.includes('bank')) purpose = 'Bank';
+    else if (lower.includes('internship') || lower.includes('company')) purpose = 'Internship';
+    else if (lower.includes('passport') || lower.includes('visa')) purpose = 'Passport';
+    else if (lower.includes('education') || lower.includes('higher studies')) purpose = 'Education';
 
     const card: CopilotCard = {
       cardType: 'ACTION_BONAFIDE',
@@ -1639,9 +2720,9 @@ Feel free to ask follow-up questions, request step-by-step mathematical derivati
         purpose,
         studentName: user.fullName || user.username,
         rollNumber: user.rollNumber || '220101048',
-        branch: user.branch || 'Computer Science & Engineering',
+        branch: user.branch || 'CSE',
         year: user.year || 2,
-        turnaround: '24–48 Hours',
+        availablePurposes: ['Scholarship', 'Bank', 'Internship', 'Education', 'Passport', 'Other'],
       },
     };
 
@@ -1649,32 +2730,31 @@ Feel free to ask follow-up questions, request step-by-step mathematical derivati
       intent: 'REQUEST_BONAFIDE',
       category: 'Documents',
       confidence: 0.98,
-      message: `I have prepared your official **Bonafide Certificate Application** for **${purpose}**. Once submitted, it will be automatically routed to the Academic Affairs Cell for digital verification and signature.`,
+      message: `I have prepared your digital **Bonafide Certificate Application** for **${purpose}**. Once approved by the Academic Affairs Cell, you will receive a tamper-evident digital certificate with a verification QR code.`,
       cards: [card],
-      quickReplies: ['Check my pending requests', 'Check academic deadlines'],
+      quickReplies: [
+        'How long does bonafide approval take?',
+        'Where can I download issued documents?',
+        'Check my request status',
+      ],
     };
   }
 
-  private static handleLeaveAction(
-    text: string,
-    lower: string,
-    user: AuthUser
-  ): CopilotResponse {
+  private static handleLeaveAction(text: string, lower: string, user: AuthUser): CopilotResponse {
     const today = new Date();
-    const startDate = new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const endDate = new Date(today.getTime() + 4 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const startDate = new Date(today.getTime() + 24 * 3600000).toISOString().split('T')[0];
+    const endDate = new Date(today.getTime() + 4 * 24 * 3600000).toISOString().split('T')[0];
 
     const card: CopilotCard = {
       cardType: 'ACTION_LEAVE',
-      title: 'Hostel Leave Application',
+      title: 'Hostel Outstation Leave Application',
       data: {
         startDate,
         endDate,
-        reason: text.length > 5 ? text : 'Home Visit & Festival Travel',
+        reason: text,
         emergencyContact: 'Parent / Guardian (+91 9876543210)',
-        hostelBlock: user.hostelBlock || 'Block B',
-        roomNumber: user.roomNumber || '204',
         parentConsent: true,
+        hostelBlock: user.hostelBlock || 'Block B',
       },
     };
 
@@ -1682,35 +2762,31 @@ Feel free to ask follow-up questions, request step-by-step mathematical derivati
       intent: 'APPLY_HOSTEL_LEAVE',
       category: 'Hostel',
       confidence: 0.98,
-      message: `I have drafted your **Hostel Leave Application** starting from tomorrow. Please review the departure and return dates below, ensure your emergency contact is accurate, and confirm to submit for Warden endorsement.`,
+      message: `I have drafted your **Hostel Leave Application**. Please verify the travel dates and ensure parental consent is confirmed prior to warden submission.`,
       cards: [card],
-      quickReplies: ['Check my pending requests', 'When is the hostel curfew?'],
+      quickReplies: ['Check my pending requests', 'Apply for a gate pass'],
     };
   }
 
-  private static handleGatePassAction(
-    text: string,
-    lower: string,
-    user: AuthUser
-  ): CopilotResponse {
-    let destination = 'Local Market (Jayadev Vihar)';
-    if (lower.includes('library')) destination = 'BPUT Central Library / Reading Hall';
-    else if (lower.includes('hospital') || lower.includes('clinic') || lower.includes('doctor')) destination = 'Campus Health Center / AIIMS Bhubaneswar';
-    else if (lower.includes('mall') || lower.includes('central')) destination = 'Bhubaneswar Central / Esplanade';
-
+  private static handleGatePassAction(text: string, lower: string, user: AuthUser): CopilotResponse {
     const now = new Date();
-    const departure = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
-    const returnTime = new Date(now.getTime() + 4 * 60 * 60 * 1000).toISOString();
+    const departureTime = new Date(now.getTime() + 30 * 60000).toISOString();
+    const expectedReturnTime = new Date(now.getTime() + 4 * 3600000).toISOString();
+
+    let destination = 'Local Market (Jayadev Vihar)';
+    if (lower.includes('station') || lower.includes('railway')) destination = 'Bhubaneswar Railway Station';
+    else if (lower.includes('hospital') || lower.includes('clinic')) destination = 'Campus Health Center / City Clinic';
+    else if (lower.includes('coaching') || lower.includes('library')) destination = 'City Central Library';
 
     const card: CopilotCard = {
       cardType: 'ACTION_GATE_PASS',
-      title: 'Campus Exit Gate Pass',
+      title: 'Digital Gate Pass Request',
       data: {
         destination,
-        reason: text.length > 5 ? text : 'Personal Essential Outing',
-        departureTime: departure,
-        expectedReturnTime: returnTime,
-        gate: 'Gate 1 (Main Academic Entrance)',
+        reason: text,
+        departureTime,
+        expectedReturnTime,
+        curfewNotice: 'Return required before 8:30 PM curfew (7:30 PM for 1st Year).',
       },
     };
 
@@ -1718,44 +2794,9 @@ Feel free to ask follow-up questions, request step-by-step mathematical derivati
       intent: 'CREATE_GATE_PASS',
       category: 'Security',
       confidence: 0.98,
-      message: `I have prepared your digital **Campus Exit Gate Pass** to **${destination}**. Confirming this will generate a cryptographically signed HMAC QR code and a 4-digit security PIN for gate verification.`,
+      message: `I have prepared a **Campus Exit Gate Pass** for **${destination}**. Once authorized, a dynamic QR code and 4-digit verification PIN will be generated for main gate security scanning.`,
       cards: [card],
-      quickReplies: ['When is the hostel curfew?', 'Check my attendance standing'],
-    };
-  }
-
-  private static handleGuideProcedure(
-    proc: CampusProcedure,
-    user: AuthUser
-  ): CopilotResponse {
-    const card: CopilotCard = {
-      cardType: 'GUIDE_PROCEDURE',
-      title: proc.title,
-      data: {
-        id: proc.id,
-        category: proc.category,
-        title: proc.title,
-        department: proc.department,
-        location: proc.location,
-        turnaroundTime: proc.turnaroundTime,
-        requiredDocuments: Array.isArray(proc.requiredDocuments) ? proc.requiredDocuments : [],
-        steps: Array.isArray(proc.steps) ? proc.steps : [],
-        notes: proc.notes,
-        directActionIntent: proc.directActionIntent,
-      },
-    };
-
-    return {
-      intent: 'CAMPUS_GUIDE',
-      category: proc.category,
-      confidence: 0.98,
-      message: `Here is the verified operating procedure for **${proc.title}** from the **${proc.department}**:\n\n• **Location**: ${proc.location}\n• **Turnaround Time**: ${proc.turnaroundTime}\n• **Key Requirements**: ${proc.requiredDocuments.join(', ')}\n\nFollow the step-by-step guidance below to complete this process smoothly.`,
-      cards: [card],
-      quickReplies: [
-        'What is my current attendance?',
-        'Plan my upcoming exams',
-        'Find BPUT PYQs',
-      ],
+      quickReplies: ['Check my gate pass status', 'Apply for hostel leave', 'When is the hostel curfew?'],
     };
   }
 
@@ -1765,12 +2806,13 @@ Feel free to ask follow-up questions, request step-by-step mathematical derivati
     user: AuthUser,
     multiTurnContext?: any
   ): CopilotResponse {
-    let subject = multiTurnContext?.subject || 'Database Management Systems';
-    let subjectCode = multiTurnContext?.subjectCode || 'CS204';
-    let days = multiTurnContext?.detectedDays || 10;
-    let hoursPerDay = multiTurnContext?.detectedHours || 3;
+    let subject = 'Database Management Systems';
+    let subjectCode = 'CS204';
 
-    if (lower.includes('os') || lower.includes('operating system')) {
+    if (multiTurnContext?.subject && multiTurnContext?.subjectCode) {
+      subject = multiTurnContext.subject;
+      subjectCode = multiTurnContext.subjectCode;
+    } else if (lower.includes('os') || lower.includes('operating')) {
       subject = 'Operating Systems';
       subjectCode = 'CS202';
     } else if (lower.includes('digital') || lower.includes('electronics')) {
@@ -1784,83 +2826,61 @@ Feel free to ask follow-up questions, request step-by-step mathematical derivati
       subjectCode = 'CS301';
     }
 
-    // Parse days if explicitly stated
-    const dMatch = text.match(/(\d+)[-\s]*(?:days?|day)/i);
-    if (dMatch) {
-      const parsedDays = parseInt(dMatch[1], 10);
-      if (parsedDays >= 1 && parsedDays <= 60) days = parsedDays;
-    }
+    const days = multiTurnContext?.detectedDays || 10;
+    const hours = multiTurnContext?.detectedHours || 3;
+    const weakness = multiTurnContext?.detectedWeakness;
 
-    // Parse hours if explicitly stated
-    const hMatch = text.match(/(\d+)[-\s]*(?:hours?|hrs?|h)\s*(?:per|\/|a)?\s*day/i);
-    if (hMatch) {
-      const parsedHours = parseInt(hMatch[1], 10);
-      if (parsedHours >= 1 && parsedHours <= 12) hoursPerDay = parsedHours;
-    }
+    const plan = this.generateStructuredStudyPlan(subject, subjectCode, days, hours, weakness);
 
-    const plan = this.generateStructuredStudyPlan(
-      subject,
-      subjectCode,
-      days,
-      hoursPerDay,
-      multiTurnContext?.detectedWeakness
-    );
+    const relatedResources = VERIFIED_CAMPUS_RESOURCES.filter((r) => r.subjectCode === subjectCode);
 
-    const relatedResources = VERIFIED_CAMPUS_RESOURCES.filter(
-      (r) => r.subjectCode === subjectCode
-    );
-
-    const cards: CopilotCard[] = [
-      {
-        cardType: 'STUDY_PLAN',
-        title: `${subject} Exam Roadmap`,
-        data: {
-          subject,
-          subjectCode,
-          days,
-          hoursPerDay,
-          totalHours: days * hoursPerDay,
-          focusWeakness: multiTurnContext?.detectedWeakness,
-          plan,
-        },
+    const planCard: CopilotCard = {
+      cardType: 'STUDY_PLAN',
+      title: `${days}-Day ${subject} High-Yield Roadmap`,
+      data: {
+        subject,
+        subjectCode,
+        days,
+        hoursPerDay: hours,
+        totalHours: days * hours,
+        weaknessFocus: weakness,
+        plan,
       },
-    ];
+    };
 
+    const cards: CopilotCard[] = [planCard];
     if (relatedResources.length > 0) {
       cards.push({
         cardType: 'RESOURCE_LIST',
-        title: `Verified ${subject} Materials`,
+        title: `Official BPUT Resources for ${subjectCode}`,
         data: {
-          subject,
           subjectCode,
           resources: relatedResources,
         },
       });
     }
 
-    const weaknessNote = multiTurnContext?.detectedWeakness
-      ? `\n> 🎯 **Customized Focus**: Prioritizing your requested focus area: **${multiTurnContext.detectedWeakness}** in Phase 1 & 2.`
-      : '';
+    const message = `Here is your customized **${days}-day study roadmap for ${subject}** (${subjectCode}) at **${hours} hours/day** (Total: **${days * hours} hours**)${
+      weakness ? ` with specialized priority on **${weakness}**` : ''
+    }.\n\nThis roadmap is organized into 4 strategic phases:\n1. **Core Foundation & Concepts**\n2. **High-Yield Deep Dive**\n3. **BPUT Previous Year Questions (PYQs)**\n4. **Final Rapid Revision & Formula Sheets**\n\nYou can click on each day in the interactive roadmap card below to inspect topics and practice questions:`;
 
     return {
       intent: 'STUDY_PLAN',
       category: 'Academic',
       confidence: 0.98,
-      message: `I have generated a high-yield, **${days}-day academic study roadmap** for **${subject} (${subjectCode})** at **${hoursPerDay} hours/day** (${days * hoursPerDay} total study hours).${weaknessNote}\n\nThis roadmap is organized into progressive phases covering high-probability BPUT question patterns, theoretical derivations, and timed PYQ practice.`,
+      message,
       cards,
       quickReplies: [
-        'Find BPUT PYQs',
-        'Check my attendance standing',
+        'Find BPUT PYQs for DBMS',
         'How can I get a 9+ CGPA?',
+        'What is my current attendance?',
       ],
     };
   }
 
-  private static handleResourceSearch(
-    text: string,
-    lower: string,
-    user: AuthUser
-  ): CopilotResponse {
+  private static handleResourceSearch(text: string, lower: string, user: AuthUser): CopilotResponse {
+    let resources = VERIFIED_CAMPUS_RESOURCES;
+
     let subjectCode = 'CS204';
     let subjectName = 'Database Management Systems';
 
@@ -1870,33 +2890,40 @@ Feel free to ask follow-up questions, request step-by-step mathematical derivati
     } else if (lower.includes('digital') || lower.includes('electronics')) {
       subjectCode = 'EC201';
       subjectName = 'Digital Electronics';
-    } else if (lower.includes('dsa') || lower.includes('data structure')) {
+    } else if (lower.includes('dsa') || lower.includes('data structure') || lower.includes('algorithm')) {
       subjectCode = 'CS201';
       subjectName = 'Data Structures & Algorithms';
-    } else if (lower.includes('network')) {
+    } else if (lower.includes('network') || lower.includes('cn')) {
       subjectCode = 'CS301';
       subjectName = 'Computer Networks';
     }
 
-    const resources = VERIFIED_CAMPUS_RESOURCES.filter(
-      (r) => r.subjectCode === subjectCode
-    );
+    const filtered = resources.filter((r) => r.subjectCode === subjectCode);
 
     const card: CopilotCard = {
       cardType: 'RESOURCE_LIST',
-      title: `Verified University Materials — ${subjectName}`,
+      title: `Verified University Resources: ${subjectName} (${subjectCode})`,
       data: {
-        subject: subjectName,
         subjectCode,
-        resources: resources.length > 0 ? resources : VERIFIED_CAMPUS_RESOURCES.slice(0, 4),
+        subjectName,
+        resources: filtered,
       },
     };
+
+    const rows = filtered
+      .map(
+        (r) =>
+          `• **${r.title}** [${r.type}]\n  - Topics: ${r.keyTopics?.join(', ') || 'Core Syllabus'}\n  - Official Origin: *${r.semester}th Semester / ${r.year || 2024}*`
+      )
+      .join('\n');
+
+    const message = `I found **${filtered.length} verified university resources** for **${subjectName}** (${subjectCode}):\n\n${rows}\n\nYou can access or download these verified BPUT question papers and faculty lecture notes from the card below:`;
 
     return {
       intent: 'RESOURCE_SEARCH',
       category: 'Academic',
       confidence: 0.98,
-      message: `Here are the verified past-year university question papers (PYQs) and faculty lecture notes for **${subjectName} (${subjectCode})**:\n\nAll materials have been endorsed by the Department Academic Coordinator. You can download and save them directly.`,
+      message,
       cards: [card],
       quickReplies: [
         'Generate a 10-day DBMS study plan',
@@ -1918,19 +2945,53 @@ Feel free to ask follow-up questions, request step-by-step mathematical derivati
       intent: 'CAMPUS_STATUS',
       category: 'General',
       confidence: 0.9,
-      message: `Here is your current student status overview for **${user.fullName || user.username}** (Roll: ${user.rollNumber || '220101048'}):
-• **Hostel**: ${user.hostelBlock || 'Block B'} / Room ${user.roomNumber || '204'}
-• **Academic Cohort**: ${user.branch || 'CSE'} — Year ${user.year || 2}
-• **Submitted Requests**: ${recentRequestsCount} total campus requests on record.
-• **Operational Standing**: Active Semester — Good Standing.
-
-You can click any quick action below to check live records or plan your week.`,
+      message: `Here is your current student status overview for **${user.fullName || user.username}** (Roll: ${user.rollNumber || '220101048'}):\n• **Hostel**: ${user.hostelBlock || 'Block B'} / Room ${user.roomNumber || '204'}\n• **Academic Cohort**: ${user.branch || 'CSE'} — Year ${user.year || 2}\n• **Submitted Requests**: ${recentRequestsCount} total campus requests on record.\n• **Operational Standing**: Active Semester — Good Standing.\n\nYou can click any quick action below to check live records or plan your week.`,
       cards: [],
       quickReplies: [
         'What is my current attendance?',
         'What classes do I have today?',
         'What is the status of my bonafide application?',
         'How can I get a 9+ CGPA?',
+      ],
+    };
+  }
+
+  private static handleGeneralAi(text: string, lower: string, user: AuthUser): CopilotResponse {
+    let message = '';
+    if (lower.includes('deadlock')) {
+      message = `### 🖥️ How Operating Systems Handle Deadlocks
+
+A **deadlock** is a state where a set of processes are blocked because each process is holding a resource and waiting for another resource held by some other process in the set.
+
+#### The Four Necessary Coffman Conditions:
+1. **Mutual Exclusion**: Non-shareable resource.
+2. **Hold and Wait**: Process holding resources while requesting others.
+3. **No Preemption**: Resources cannot be forcibly revoked.
+4. **Circular Wait**: Closed chain of processes waiting on each other.
+
+#### Handling Strategies:
+1. **Deadlock Prevention**: Structurally eliminate at least one of the 4 Coffman conditions.
+2. **Deadlock Avoidance**: Dynamically inspect resource allocation state using algorithms like **Dijkstra's Banker's Algorithm**.
+3. **Detection and Recovery**: Periodic resource allocation graph cycle detection with process termination or resource preemption.
+4. **Ostrich Algorithm**: Ignore the issue (standard in general-purpose desktop OS like Unix/Windows where deadlocks are rare).`;
+    } else {
+      message = `### 💡 Academic & Conceptual Assistance
+
+I'm ready to assist you with conceptual explanations, academic writing, mathematical proofs, or engineering problem-solving.
+
+Please feel free to ask your specific question or provide the topic you would like me to unpack.`;
+    }
+
+    return {
+      intent: 'GENERAL_AI',
+      category: 'General',
+      confidence: 0.92,
+      message,
+      cards: [],
+      quickReplies: [
+        'How can I get a 9+ CGPA?',
+        'Explain recursion in C++',
+        'Generate a 10-day DBMS study plan',
       ],
     };
   }
@@ -1960,27 +3021,14 @@ If you have a general academic question, feel free to elaborate or rephrase it. 
   }
 
   // =========================================================================
-  // HELPER ALGORITHMS
+  // HELPER METHODS & STUDY PLAN GENERATOR
   // =========================================================================
 
-  private static findMatchingProcedure(lower: string): CampusProcedure | null {
-    let bestMatch: CampusProcedure | null = null;
-    let maxScore = 0;
-
-    for (const proc of VERIFIED_CAMPUS_PROCEDURES) {
-      let score = 0;
-      for (const kw of proc.keywords) {
-        if (lower.includes(kw)) {
-          score += kw.length;
-        }
-      }
-      if (score > maxScore) {
-        maxScore = score;
-        bestMatch = proc;
-      }
-    }
-
-    return maxScore >= 5 ? bestMatch : null;
+  private static findMatchingProcedure(lower: string): CampusProcedure | undefined {
+    return VERIFIED_CAMPUS_PROCEDURES.find((p) => {
+      if (lower.includes(p.title.toLowerCase())) return true;
+      return p.keywords.some((k) => lower.includes(k.toLowerCase()));
+    });
   }
 
   public static generateStructuredStudyPlan(
@@ -1988,99 +3036,87 @@ If you have a general academic question, feel free to elaborate or rephrase it. 
     subjectCode: string,
     days: number,
     hoursPerDay: number,
-    focusWeakness?: string
-  ): Array<{ dayNumber: number; focus: string; hours: number; topics: string[] }> {
-    const isDbms = subject.toLowerCase().includes('dbms') || subject.toLowerCase().includes('database') || subjectCode === 'CS204';
-    const isOs = subject.toLowerCase().includes('os') || subject.toLowerCase().includes('operating') || subjectCode === 'CS202';
+    weakness?: string
+  ): any[] {
+    const defaultTopics: Record<string, string[]> = {
+      CS204: [
+        'ER Modeling, Relational Algebra & Calculus',
+        'SQL Queries, Nested Queries, Joins, Triggers',
+        'Functional Dependencies & Normalization (1NF, 2NF, 3NF, BCNF)',
+        'Multi-valued Dependencies & 4NF/5NF',
+        'Transaction Processing, ACID Properties, Schedules',
+        'Concurrency Control Protocols (2PL, Timestamp Ordering)',
+        'Deadlock Prevention & Recovery in DBMS',
+        'Indexing: B-Trees and B+ Trees Architecture',
+        'Query Processing & Optimization Cost Metrics',
+        'Crash Recovery & Write-Ahead Logging (WAL)',
+      ],
+      CS202: [
+        'OS Architecture, System Calls & Dual Mode',
+        'Process State Diagram, PCB & Context Switching',
+        'CPU Scheduling: FCFS, SJF, Round Robin, Multilevel Queue',
+        'Process Synchronization, Race Conditions & Peterson Solution',
+        'Semaphores, Mutexes & Classic Synchronization Problems',
+        'Deadlock: 4 Conditions, Banker Algorithm, Prevention',
+        'Memory Management: Paging, Segmentation, TLB Misses',
+        'Virtual Memory: Page Replacement (FIFO, LRU, Optimal)',
+        'Disk Scheduling: FCFS, SCAN, C-SCAN, LOOK',
+        'File Systems, Inodes & Directory Allocation Methods',
+      ],
+    };
 
-    const plan: Array<{ dayNumber: number; focus: string; hours: number; topics: string[] }> = [];
+    const pool = defaultTopics[subjectCode] || [
+      'Fundamental Principles & Core Definitions',
+      'Mathematical Formulations & Architectural Models',
+      'Analytical Numerical Problems & Step-by-Step Derivations',
+      'Advanced Practical Applications & Case Studies',
+      'Frequently Repeated BPUT PYQ Long-Answer Questions',
+      'Module 1 & 2 Synthesis & Self-Assessment Test',
+      'Module 3 & 4 Analytical Problem Set',
+      'High-Yield Theory Modules & Flowchart Memorization',
+      'Previous Year BPUT Exam Timed Simulation',
+      'Final Formula Sheet & Rapid Definition Re-cap',
+    ];
 
-    for (let day = 1; day <= days; day++) {
-      let focus = `Module ${Math.min(5, Math.ceil((day / days) * 5))} Mastery`;
-      let topics: string[] = [];
+    const plan: any[] = [];
+    for (let i = 1; i <= days; i++) {
+      let phase = 'Core Foundation & Concepts';
+      let taskType = 'FOUNDATION';
+      if (i > days * 0.75) {
+        phase = 'Final Rapid Revision & Formula Sheets';
+        taskType = 'REVISION';
+      } else if (i > days * 0.5) {
+        phase = 'BPUT Previous Year Questions (PYQs)';
+        taskType = 'PYQ_PRACTICE';
+      } else if (i > days * 0.25) {
+        phase = 'High-Yield Deep Dive';
+        taskType = 'DEEP_DIVE';
+      }
 
-      if (isDbms) {
-        if (day <= Math.ceil(days * 0.25)) {
-          focus = focusWeakness ? `Foundations & ${focusWeakness}` : 'ER Modeling, Relational Algebra & SQL';
-          topics = [
-            'Entity-Relationship (ER) to Relational Mapping',
-            'Relational Algebra operators (Select, Project, Join, Division)',
-            'Complex SQL Queries: Nested Subqueries & Group By / Having',
-          ];
-          if (focusWeakness) {
-            topics.unshift(`Targeted Focus: ${focusWeakness} fundamentals`);
-          }
-        } else if (day <= Math.ceil(days * 0.5)) {
-          focus = 'Functional Dependencies & Normalization';
-          topics = [
-            'Closure of Attribute Sets & Minimal Cover algorithm',
-            '1NF, 2NF, 3NF and Boyce-Codd Normal Form (BCNF)',
-            'Lossless Join Decomposition & Dependency Preservation proofs',
-          ];
-          if (focusWeakness && focusWeakness.toLowerCase().includes('normal')) {
-            topics.unshift('⭐ In-depth Practice: 5 Past BPUT Normalization Problems');
-          }
-        } else if (day <= Math.ceil(days * 0.75)) {
-          focus = 'Transaction Processing & Concurrency Control';
-          topics = [
-            'ACID properties & Transaction State Diagram',
-            'Conflict vs View Serializability (Precedence Graph testing)',
-            'Two-Phase Locking (2PL) Protocol & Deadlock detection',
-          ];
-        } else {
-          focus = 'Indexing, Crash Recovery & BPUT PYQ Solvathon';
-          topics = [
-            'B-Tree vs B+ Tree Search, Insertion & Deletion mechanics',
-            'Log-based Crash Recovery (Deferred vs Immediate Update)',
-            'Solving 2023 & 2024 End-Semester University Question Papers',
-          ];
-        }
-      } else if (isOs) {
-        if (day <= Math.ceil(days * 0.33)) {
-          focus = 'Processes, Threads & CPU Scheduling';
-          topics = [
-            'Process Control Block (PCB) & Context Switching',
-            'Scheduling Algorithms: FCFS, SJF, Round Robin, Priority',
-            'Inter-Process Communication & Thread concurrency',
-          ];
-        } else if (day <= Math.ceil(days * 0.66)) {
-          focus = 'Synchronization & Deadlocks';
-          topics = [
-            'Critical Section Problem, Peterson Solution & Semaphores',
-            'Classical Problems: Dining Philosophers, Producer-Consumer',
-            "Banker's Algorithm for Deadlock Avoidance",
-          ];
-        } else {
-          focus = 'Memory Management & File Systems';
-          topics = [
-            'Paging, Segmentation & Inverted Page Tables',
-            'Page Replacement: FIFO, LRU, Optimal algorithms',
-            'Solving Past 5-Year BPUT Question Papers under timed exam conditions',
-          ];
-        }
-      } else {
-        topics = [
-          `Core syllabus derivations and theoretical fundamentals for Day ${day}`,
-          'Standard numerical problem-solving practice (last 5 years)',
-          'Formula sheet synthesis and answer presentation rehearsal',
-        ];
+      const topicIndex = (i - 1) % pool.length;
+      let topic = pool[topicIndex];
+      if (weakness && i === 2) {
+        topic = `Priority Focus: ${weakness} (Foundations and Mechanics)`;
+      } else if (weakness && i === Math.ceil(days / 2)) {
+        topic = `Advanced Practice: ${weakness} (Past Exam Numerical Problems)`;
       }
 
       plan.push({
-        dayNumber: day,
-        focus,
+        dayNumber: i,
+        day: i,
+        phase,
+        taskType,
         hours: hoursPerDay,
-        topics,
+        focus: topic,
+        topic,
+        tasks: `Devote ${hoursPerDay} hours to mastering ${topic}. Solve at least 3 numerical derivations and summarize bullet notes.`,
+        topics: [topic, 'BPUT PYQ Verification', 'Formula Cheat-Sheet Note'],
       });
     }
 
     return plan;
   }
 
-  /**
-   * Enriches and sanitizes the response object from Gemini before sending to client.
-   * Guarantees that all card types have non-null, validly typed arrays and fields.
-   */
   private static enrichGeminiResponse(
     geminiRes: CopilotResponse,
     rawText: string,
@@ -2123,7 +3159,9 @@ If you have a general academic question, feel free to elaborate or rephrase it. 
             dayNumber: p.dayNumber || idx + 1,
             focus: p.focus || `Day ${idx + 1} High-Yield Topic`,
             hours: p.hours || hoursPerDay,
-            topics: Array.isArray(p.topics) ? p.topics : ['Core Theoretical Concepts', 'PYQ Practice'],
+            topics: Array.isArray(p.topics)
+              ? p.topics
+              : ['Core Theoretical Concepts', 'PYQ Practice'],
           }));
         }
 
@@ -2159,54 +3197,38 @@ If you have a general academic question, feel free to elaborate or rephrase it. 
             resources = VERIFIED_CAMPUS_RESOURCES.filter((r) => r.subjectCode === 'CS202');
           } else if (lower.includes('dsa') || lower.includes('data structure')) {
             resources = VERIFIED_CAMPUS_RESOURCES.filter((r) => r.subjectCode === 'CS201');
-          } else if (lower.includes('network')) {
-            resources = VERIFIED_CAMPUS_RESOURCES.filter((r) => r.subjectCode === 'CS301');
           } else {
-            resources = VERIFIED_CAMPUS_RESOURCES.slice(0, 4);
+            resources = VERIFIED_CAMPUS_RESOURCES.slice(0, 3);
           }
-        } else {
-          resources = resources.map((r: any, idx: number) => ({
-            id: r.id || `res-ai-${idx + 1}`,
-            title: r.title || 'Verified University Academic Resource',
-            type: r.type || 'PYQ',
-            description: r.description || 'Official University Academic Material',
-            keyTopics: Array.isArray(r.keyTopics) ? r.keyTopics : [],
-            downloadUrl: r.downloadUrl || '/resources/academic',
-            ...r,
-          }));
         }
 
         return {
           ...card,
           data: {
-            subject: card.data?.subject,
-            subjectCode: card.data?.subjectCode,
             resources,
           },
         };
       }
 
       if (card.cardType === 'GUIDE_PROCEDURE') {
-        const matchedProc = this.findMatchingProcedure(lower);
-        const proc = card.data || {};
+        const d = card.data || {};
         return {
           ...card,
           data: {
-            id: proc.id || matchedProc?.id || 'proc-general',
-            category: proc.category || matchedProc?.category || 'General',
-            title: proc.title || matchedProc?.title || card.title || 'Verified Campus Operating Procedure',
-            department: proc.department || matchedProc?.department || 'Administrative Affairs',
-            location: proc.location || matchedProc?.location || 'Administrative Block, Ground Floor',
-            turnaroundTime: proc.turnaroundTime || matchedProc?.turnaroundTime || '24-48 Hours',
-            requiredDocuments: Array.isArray(proc.requiredDocuments)
-              ? proc.requiredDocuments
-              : matchedProc?.requiredDocuments || ['Student Identity Card (Roll Number)'],
-            steps:
-              Array.isArray(proc.steps) && proc.steps.length > 0
-                ? proc.steps
-                : matchedProc?.steps || ['Submit request through official desk or portal', 'Wait for departmental verification'],
-            notes: proc.notes || matchedProc?.notes,
-            directActionIntent: proc.directActionIntent || matchedProc?.directActionIntent,
+            id: d.id || 'proc-guideline',
+            title: d.title || card.title || 'Official Campus Procedure',
+            category: d.category || 'General',
+            department: d.department || 'Academic Affairs Cell',
+            location: d.location || 'Administrative Block',
+            turnaroundTime: d.turnaroundTime || '24 to 48 Hours',
+            requiredDocuments: Array.isArray(d.requiredDocuments)
+              ? d.requiredDocuments
+              : ['Student ID Card', 'Official Application Form'],
+            steps: Array.isArray(d.steps)
+              ? d.steps
+              : ['Submit digital application', 'Departmental verification', 'Receive official resolution'],
+            actionButtonLabel: d.actionButtonLabel,
+            notes: d.notes,
           },
         };
       }
@@ -2214,21 +3236,19 @@ If you have a general academic question, feel free to elaborate or rephrase it. 
       if (card.cardType === 'REQUEST_LIST') {
         const reqs = Array.isArray(card.data?.requests)
           ? card.data.requests
-          : Array.isArray(card.data?.items)
-          ? card.data.items
           : Array.isArray(card.data)
           ? card.data
           : [];
         return {
           ...card,
           data: {
-            title: card.data?.title || 'Campus Requests',
-            requests: reqs.map((r: any, idx: number) => ({
-              id: r.id || `req-${idx}`,
-              requestNumber: r.requestNumber || `NX-${10000 + idx}`,
+            title: card.title || 'Submitted Campus Requests',
+            requests: reqs.map((r: any) => ({
+              id: r.id || 'req-id',
+              requestNumber: r.requestNumber || 'NX-10001',
               title: r.title || 'Campus Request',
-              status: r.status || 'PENDING_APPROVAL',
-              type: r.type || 'GENERAL',
+              status: r.status || 'SUBMITTED',
+              type: r.type || 'REQUEST',
               createdAt: r.createdAt || new Date().toISOString(),
             })),
           },
@@ -2236,17 +3256,17 @@ If you have a general academic question, feel free to elaborate or rephrase it. 
       }
 
       if (card.cardType === 'DEADLINE_LIST') {
-        const deadlines = Array.isArray(card.data?.deadlines)
+        const dls = Array.isArray(card.data?.deadlines)
           ? card.data.deadlines
-          : Array.isArray(card.data?.items)
-          ? card.data.items
+          : Array.isArray(card.data)
+          ? card.data
           : [];
         return {
           ...card,
           data: {
-            title: card.data?.title || 'Academic Deadlines',
-            deadlines: deadlines.map((d: any, idx: number) => ({
-              id: d.id || `dl-${idx}`,
+            title: card.title || 'Upcoming Academic Deadlines',
+            deadlines: dls.map((d: any) => ({
+              id: d.id || 'dl-id',
               title: d.title || 'Academic Submission',
               description: d.description || 'Important institutional milestone',
               deadline: d.deadline || new Date().toISOString(),
@@ -2267,7 +3287,8 @@ If you have a general academic question, feel free to elaborate or rephrase it. 
             priority: d.priority || 'NORMAL',
             title: d.title || 'Maintenance Request',
             description: d.description || rawText,
-            location: d.location || `${user.hostelBlock || 'Hostel Block B'} - Room ${user.roomNumber || '204'}`,
+            location:
+              d.location || `${user.hostelBlock || 'Hostel Block B'} - Room ${user.roomNumber || '204'}`,
           },
         };
       }
@@ -2292,8 +3313,10 @@ If you have a general academic question, feel free to elaborate or rephrase it. 
         return {
           ...card,
           data: {
-            startDate: d.startDate || new Date(today.getTime() + 24 * 3600000).toISOString().split('T')[0],
-            endDate: d.endDate || new Date(today.getTime() + 4 * 24 * 3600000).toISOString().split('T')[0],
+            startDate:
+              d.startDate || new Date(today.getTime() + 24 * 3600000).toISOString().split('T')[0],
+            endDate:
+              d.endDate || new Date(today.getTime() + 4 * 24 * 3600000).toISOString().split('T')[0],
             reason: d.reason || rawText || 'Home Visit',
             emergencyContact: d.emergencyContact || 'Parent (+91 9876543210)',
             parentConsent: d.parentConsent ?? true,
@@ -2310,7 +3333,8 @@ If you have a general academic question, feel free to elaborate or rephrase it. 
             destination: d.destination || 'Local Market (Jayadev Vihar)',
             reason: d.reason || rawText || 'Personal Outing',
             departureTime: d.departureTime || new Date(now.getTime() + 30 * 60000).toISOString(),
-            expectedReturnTime: d.expectedReturnTime || new Date(now.getTime() + 4 * 3600000).toISOString(),
+            expectedReturnTime:
+              d.expectedReturnTime || new Date(now.getTime() + 4 * 3600000).toISOString(),
           },
         };
       }

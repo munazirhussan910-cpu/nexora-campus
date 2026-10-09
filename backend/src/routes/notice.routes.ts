@@ -6,6 +6,7 @@ import { requirePermission } from '../middleware/rbac.middleware';
 import { validateBody } from '../middleware/validate.middleware';
 import { AppError } from '../middleware/error.middleware';
 import { AuditService } from '../services/audit.service';
+import { NotificationService } from '../services/notification.service';
 import { AuthenticatedRequest } from '../types/auth';
 
 const router = Router();
@@ -179,6 +180,60 @@ router.post(
         entityId: notice.id,
         newValues: { title, priority, targets },
       });
+
+      // Dispatch in-app notifications to targeted users
+      try {
+        const isUrgent = priority === 'URGENT';
+        const hasAllTarget = targets.some((t: any) => t.targetType === 'ALL');
+
+        let recipientUsers: { id: string }[] = [];
+        if (hasAllTarget || isUrgent) {
+          recipientUsers = await prisma.user.findMany({
+            where: { isActive: true, id: { not: req.user!.id } },
+            select: { id: true },
+            take: 50,
+          });
+        } else {
+          const branchTargets = targets
+            .filter((t: any) => t.targetType === 'BRANCH')
+            .map((t: any) => t.targetValue);
+          const yearTargets = targets
+            .filter((t: any) => t.targetType === 'YEAR')
+            .map((t: any) => parseInt(t.targetValue, 10))
+            .filter((y: number) => !isNaN(y));
+          const hostelTargets = targets
+            .filter((t: any) => t.targetType === 'HOSTEL')
+            .map((t: any) => t.targetValue);
+
+          const studentConditions: any[] = [];
+          if (branchTargets.length > 0) studentConditions.push({ branch: { code: { in: branchTargets } } });
+          if (yearTargets.length > 0) studentConditions.push({ year: { in: yearTargets } });
+          if (hostelTargets.length > 0)
+            studentConditions.push({ hostelRoom: { hostelBlock: { name: { in: hostelTargets } } } });
+
+          if (studentConditions.length > 0) {
+            const targetedStudents = await prisma.student.findMany({
+              where: { OR: studentConditions },
+              select: { userId: true },
+              take: 50,
+            });
+            recipientUsers = targetedStudents.map((s) => ({ id: s.userId }));
+          }
+        }
+
+        for (const recipient of recipientUsers) {
+          await NotificationService.send({
+            userId: recipient.id,
+            title: isUrgent ? `🚨 URGENT Notice: ${title}` : `Campus Notice: ${title}`,
+            message: content.length > 120 ? `${content.slice(0, 117)}...` : content,
+            type: isUrgent ? 'ALERT' : 'INFO',
+            referenceType: 'NOTICE',
+            referenceId: notice.id,
+          });
+        }
+      } catch (notifErr) {
+        console.warn('Failed to dispatch notice notifications:', notifErr);
+      }
 
       res.status(201).json({
         success: true,

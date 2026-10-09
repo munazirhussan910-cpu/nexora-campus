@@ -11,7 +11,8 @@ router.get(
   authenticate,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const notifications = await NotificationService.getUserNotifications(req.user!.id);
+      const limit = req.query.limit ? Math.min(Math.max(parseInt(String(req.query.limit), 10) || 20, 1), 50) : 20;
+      const notifications = await NotificationService.getUserNotifications(req.user!.id, limit);
       const unreadCount = await NotificationService.getUnreadCount(req.user!.id);
 
       res.json({
@@ -54,6 +55,23 @@ router.post(
       res.json({
         success: true,
         message: 'All notifications marked as read',
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// DELETE /api/notifications/:id - Delete a specific notification owned by user
+router.delete(
+  '/:id',
+  authenticate,
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      await NotificationService.deleteNotification(String(req.params.id), req.user!.id);
+      res.json({
+        success: true,
+        message: 'Notification removed',
       });
     } catch (err) {
       next(err);

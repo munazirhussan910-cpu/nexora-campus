@@ -382,6 +382,17 @@ router.post(
         'Student confirmed resolution of issue'
       );
 
+      if (request.assignedTo) {
+        await NotificationService.send({
+          userId: request.assignedTo,
+          title: 'Work Order Confirmed',
+          message: `Student confirmed resolution for ticket ${request.requestNumber}.`,
+          type: 'SUCCESS',
+          referenceType: 'COMPLAINT',
+          referenceId: request.id,
+        });
+      }
+
       res.json({
         success: true,
         message: 'Complaint resolution confirmed',
@@ -431,6 +442,17 @@ router.post(
           req.user!.id,
           `Student rated ${rating}/5 stars: "${feedback || 'No feedback'}"`
         );
+      }
+
+      if (request.assignedTo) {
+        await NotificationService.send({
+          userId: request.assignedTo,
+          title: 'Service Rating Received',
+          message: `Student rated your service ${rating}/5 stars on ticket ${request.requestNumber}.`,
+          type: 'INFO',
+          referenceType: 'COMPLAINT',
+          referenceId: request.id,
+        });
       }
 
       res.json({

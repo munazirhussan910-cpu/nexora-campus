@@ -1,17 +1,32 @@
 /**
  * Verified Campus Knowledge Base & Policies
  * Biju Patnaik University of Technology (BPUT) / Nexora Campus
- * Ground-truth repository for academic regulations, grading rules, hostel policies, and career guidelines.
+ * Ground-truth repository for academic regulations, grading rules, hostel policies, and campus operations.
  */
 
 export interface CampusKnowledgeItem {
   id: string;
-  category: 'Academic' | 'Hostel' | 'Exam' | 'Grading' | 'Placement' | 'Library' | 'Maintenance' | 'Documents' | 'Scholarship' | 'General';
+  category:
+    | 'Academic'
+    | 'Hostel'
+    | 'Exam'
+    | 'Grading'
+    | 'Placement'
+    | 'Library'
+    | 'Maintenance'
+    | 'Documents'
+    | 'Scholarship'
+    | 'Security'
+    | 'General';
   title: string;
   summary: string;
   content: string;
   keywords: string[];
   source: string;
+  lastUpdated: string;
+  verificationStatus: 'OFFICIAL' | 'VERIFIED' | 'PROVISIONAL';
+  audience: Array<'STUDENT' | 'FACULTY' | 'WARDEN' | 'SECURITY' | 'STAFF' | 'ACADEMIC_OFFICER' | 'ADMIN' | 'ALL'>;
+  suitableForStudents: boolean;
 }
 
 export const VERIFIED_CAMPUS_KNOWLEDGE: CampusKnowledgeItem[] = [
@@ -50,6 +65,10 @@ $$\\text{Percentage (\\%)} = (\\text{CGPA} - 0.5) \\times 10$$
       'marks to grade',
     ],
     source: 'BPUT Academic Regulations (Clause 6.2)',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'FACULTY', 'ACADEMIC_OFFICER', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'strategy-9-cgpa',
@@ -98,6 +117,10 @@ $$\\text{Percentage (\\%)} = (\\text{CGPA} - 0.5) \\times 10$$
       'study tips',
     ],
     source: 'Nexora Academic Guidance & Topper Mentorship Framework',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'VERIFIED',
+    audience: ['STUDENT', 'FACULTY', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'bput-attendance-regulation',
@@ -123,6 +146,10 @@ $$\\text{Percentage (\\%)} = (\\text{CGPA} - 0.5) \\times 10$$
       'admit card eligibility',
     ],
     source: 'BPUT Academic Regulations Section 7.1',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'FACULTY', 'ACADEMIC_OFFICER', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'hostel-mess-curfew-rules',
@@ -153,6 +180,10 @@ $$\\text{Percentage (\\%)} = (\\text{CGPA} - 0.5) \\times 10$$
       'night out',
     ],
     source: 'Nexora Student Hostel Handbook (2025–26)',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'WARDEN', 'SECURITY', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'placement-preparation-roadmap',
@@ -185,6 +216,10 @@ $$\\text{Percentage (\\%)} = (\\text{CGPA} - 0.5) \\times 10$$
       'software engineer placement',
     ],
     source: 'Nexora Training & Placement (T&P) Cell',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'VERIFIED',
+    audience: ['STUDENT', 'FACULTY', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'programming-dsa-guidance',
@@ -218,6 +253,10 @@ $$\\text{Percentage (\\%)} = (\\text{CGPA} - 0.5) \\times 10$$
       'coding advice',
     ],
     source: 'Nexora Tech & Coding Club Curriculum',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'VERIFIED',
+    audience: ['STUDENT', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'bput-backlog-rules',
@@ -240,6 +279,10 @@ $$\\text{Percentage (\\%)} = (\\text{CGPA} - 0.5) \\times 10$$
       'bput backlog rule',
     ],
     source: 'BPUT Examination Regulations Section 8',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'FACULTY', 'ACADEMIC_OFFICER', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'bonafide-certificate-regulations',
@@ -263,6 +306,10 @@ $$\\text{Percentage (\\%)} = (\\text{CGPA} - 0.5) \\times 10$$
       'certificate status',
     ],
     source: 'Nexora Academic Affairs Cell Guidelines (Section 3)',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'ACADEMIC_OFFICER', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'campus-maintenance-sla',
@@ -288,6 +335,10 @@ $$\\text{Percentage (\\%)} = (\\text{CGPA} - 0.5) \\times 10$$
       'how long repair takes',
     ],
     source: 'Nexora Estate Management & Maintenance SLA Charter',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'STAFF', 'WARDEN', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'hostel-leave-gatepass-policy',
@@ -315,6 +366,10 @@ $$\\text{Percentage (\\%)} = (\\text{CGPA} - 0.5) \\times 10$$
       'leave procedure',
     ],
     source: 'Nexora Student Security & Hostel Warden Protocol',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'WARDEN', 'SECURITY', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'scholarship-schemes-overview',
@@ -341,6 +396,10 @@ $$\\text{Percentage (\\%)} = (\\text{CGPA} - 0.5) \\times 10$$
       'scholarship verification',
     ],
     source: 'Nexora Student Welfare & Nodal Scholarship Office',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'VERIFIED',
+    audience: ['STUDENT', 'ACADEMIC_OFFICER', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
   {
     id: 'academic-calendar-exam-cycle',
@@ -367,18 +426,145 @@ $$\\text{Percentage (\\%)} = (\\text{CGPA} - 0.5) \\times 10$$
       'semester schedule',
     ],
     source: 'BPUT University Academic Calendar 2025–26',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'FACULTY', 'ACADEMIC_OFFICER', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
+  },
+  {
+    id: 'campus-notices-timetable-policy',
+    category: 'Academic',
+    title: 'Official Campus Notices & Timetable Scheduling Regulations',
+    summary: 'Digital publishing rules for branch and semester targeted circulars, urgent class updates, and daily routine revisions.',
+    content: `Campus Communication & Routine Regulation:
+• **Digital Notice Publication**: Official notices are published via Nexora with granular audience targeting (Target: ALL, BRANCH, YEAR, SEMESTER, or SECTION).
+• **Class Rescheduling & Adjustments**: Faculty class adjustment notices or room reassignments must be published by **8:00 AM** on the date of instruction.
+• **Official Hierarchy**: University circulars signed by the Dean or Registrar take precedence over departmental reminders.
+• **Notice Priority Levels**:
+  - **URGENT**: Exam schedule updates, campus closures, severe weather alerts.
+  - **NORMAL**: Regular academic announcements, guest lectures, club events.
+  - **LOW**: General informational items and club notifications.`,
+    keywords: [
+      'notices',
+      'notice board',
+      'circular',
+      'timetable update',
+      'class schedule',
+      'reschedule',
+      'routine rules',
+      'announcements',
+    ],
+    source: 'Nexora Academic Operations Charter (Section 4.1)',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['STUDENT', 'FACULTY', 'ACADEMIC_OFFICER', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
+  },
+  {
+    id: 'gate-security-turnstile-policy',
+    category: 'Security',
+    title: 'Main Gate Security, Pass Verification & Visitor Regulations',
+    summary: 'Turnstile access protocols at Gate 1 and Gate 2: QR token scanning, 4-digit offline PIN fallback, and emergency response priorities.',
+    content: `Main Gate Turnstile Security Protocols:
+• **Entry/Exit Verification**: All student egress and ingress is authenticated at Gate 1 (Main Gate) or Gate 2 (Hostel Quad Gate) using dynamic HMAC QR tokens or emergency 4-digit PINs.
+• **Security Guard Turnstile Interface**: Security officers scan student passes via the Nexora Security Scanner (\`/security/scan\`), recording precise timestamps.
+• **Late Entry Logging**: Students arriving after curfew (7:30 PM for 1st Year, 8:30 PM for seniors) are logged into the Late Registry and intimations are routed to the Hostel Warden.
+• **Emergency Protocols**: In the event of a campus SOS trigger, security units immediately receive location, distress type, and contact telemetry to dispatch first responders.`,
+    keywords: [
+      'security gate',
+      'turnstile',
+      'gate 1',
+      'gate 2',
+      'security rules',
+      'visitor policy',
+      'late entry',
+      'gate verification',
+      'qr scanner',
+    ],
+    source: 'Nexora Campus Security & Gate Operations Protocol',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['SECURITY', 'WARDEN', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
+  },
+  {
+    id: 'warden-hostel-operations-policy',
+    category: 'Hostel',
+    title: 'Hostel Warden Operational Guidelines & Leave Review Protocols',
+    summary: 'Warden authority guidelines: 12h SLA on overnight leaves, parental consent verification, and hostel facility oversight.',
+    content: `Hostel Warden Operational Regulations:
+• **Jurisdiction**: Wardens exercise administrative and disciplinary authority over their designated residential hostel blocks (e.g. Block A, Block B, Block C).
+• **Leave Application Adjudication**:
+  - Standard overnight leaves: Reviewed and approved within **12 hours**.
+  - Emergency/Medical leave: Adjudicated within **2 hours**.
+  - Parental consent telephone verification is mandatory for all leaves exceeding 3 nights.
+• **Nightly Roll-Call Verification**: Nightly biometric or physical register verification is conducted by block caretakers between 9:00 PM and 9:30 PM.
+• **Room Maintenance Oversight**: Urgent room repair alerts (sparking electricity, water flooding) trigger immediate warden escalation to the central estate office.`,
+    keywords: [
+      'warden policy',
+      'warden rules',
+      'hostel block',
+      'leave approval',
+      'roll call',
+      'hostel administration',
+      'warden duties',
+    ],
+    source: 'Nexora Hostel Administration & Warden Operational Manual',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['WARDEN', 'ADMIN'],
+    suitableForStudents: false,
+  },
+  {
+    id: 'academic-officer-bonafide-policy',
+    category: 'Documents',
+    title: 'Academic Cell Bonafide Certification & Verification Protocol',
+    summary: 'Procedural verification for issuing official digitally signed bonafide certificates and maintaining tamper-evident audit trails.',
+    content: `Academic Cell Certification Directives:
+• **Prerequisite Verification**: Before approving a Bonafide Certificate request, the Academic Officer validates:
+  1. Active semester student enrollment status without disciplinary suspension.
+  2. Verified academic branch, year, and roll number match.
+  3. Valid stated purpose (Scholarship, Bank Loan, Passport, Internship NOC).
+• **Turnaround Commitment**: All digital requests processed within **24 to 48 working hours**.
+• **Verification Architecture**: Each certificate is stamped with a unique document number, HMAC token, and public QR code resolvable at \`/verify/:certificateId\`.
+• **Physical Stamping**: If bank or consular authorities require hard-copy embossment, students may bring the printed PDF to Window 3, Academic Cell, Ground Floor Admin Block.`,
+    keywords: [
+      'academic officer',
+      'bonafide approval',
+      'certification protocol',
+      'academic cell',
+      'window 3',
+      'document verification',
+    ],
+    source: 'Nexora Academic Registrar Policy Guideline 2025',
+    lastUpdated: '2025-2026 Academic Year',
+    verificationStatus: 'OFFICIAL',
+    audience: ['ACADEMIC_OFFICER', 'ADMIN', 'ALL'],
+    suitableForStudents: true,
   },
 ];
 
 /**
  * Lightweight tokenized knowledge search across verified campus records.
  * Returns relevant grounded items sorted by keyword overlap relevance score.
+ * Supports optional audience role filtering.
  */
-export function searchCampusKnowledge(query: string, maxResults = 3): CampusKnowledgeItem[] {
+export function searchCampusKnowledge(
+  query: string,
+  maxResults = 3,
+  userRole?: string,
+  minScore = 1
+): CampusKnowledgeItem[] {
   const cleanQuery = query.toLowerCase().trim();
   const queryTokens = cleanQuery.split(/[\s,?.!-]+/).filter((t) => t.length > 2);
 
-  const scored = VERIFIED_CAMPUS_KNOWLEDGE.map((item) => {
+  const filteredKnowledge = userRole
+    ? VERIFIED_CAMPUS_KNOWLEDGE.filter(
+        (item) => item.audience.includes('ALL') || item.audience.includes(userRole as any)
+      )
+    : VERIFIED_CAMPUS_KNOWLEDGE;
+
+  const scored = filteredKnowledge.map((item) => {
     let score = 0;
 
     // Check exact keyword matches
@@ -400,8 +586,44 @@ export function searchCampusKnowledge(query: string, maxResults = 3): CampusKnow
   });
 
   return scored
-    .filter((s) => s.score > 0)
+    .filter((s) => s.score >= minScore)
     .sort((a, b) => b.score - a.score)
     .slice(0, maxResults)
     .map((s) => s.item);
+}
+
+/**
+ * Retrieves a single verified knowledge item by its unique ID.
+ */
+export function getKnowledgeItemById(id: string): CampusKnowledgeItem | undefined {
+  return VERIFIED_CAMPUS_KNOWLEDGE.find((item) => item.id === id);
+}
+
+/**
+ * Lists verified campus knowledge items with optional category and audience filtering.
+ */
+export function listVerifiedKnowledge(filters?: {
+  category?: string;
+  audience?: string;
+  suitableForStudents?: boolean;
+}): CampusKnowledgeItem[] {
+  return VERIFIED_CAMPUS_KNOWLEDGE.filter((item) => {
+    if (filters?.category && item.category.toLowerCase() !== filters.category.toLowerCase()) {
+      return false;
+    }
+    if (
+      filters?.audience &&
+      !item.audience.includes('ALL') &&
+      !item.audience.includes(filters.audience as any)
+    ) {
+      return false;
+    }
+    if (
+      typeof filters?.suitableForStudents === 'boolean' &&
+      item.suitableForStudents !== filters.suitableForStudents
+    ) {
+      return false;
+    }
+    return true;
+  });
 }

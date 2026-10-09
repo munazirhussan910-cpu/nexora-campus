@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 import { apiRequest } from '@/lib/api';
 import {
   Compass,
@@ -23,6 +24,13 @@ import {
   DollarSign,
   Briefcase,
   FlaskConical,
+  Wrench,
+  Key,
+  Search,
+  AlertCircle,
+  ExternalLink,
+  GraduationCap,
+  Sparkles,
 } from 'lucide-react';
 
 interface Step1Option {
@@ -36,76 +44,76 @@ interface Step1Option {
 
 const STEP_1_OPTIONS: Step1Option[] = [
   {
-    id: 'CERTIFICATE',
-    category: 'CERTIFICATE',
-    label: 'Certificate',
-    desc: 'Bonafide, enrollment proof, bank verification, passport documentation',
+    id: 'HOSTEL_LEAVE',
+    category: 'HOSTEL_LEAVE',
+    label: 'Hostel Leave',
+    desc: 'Multi-day outstation leave with parental consent and warden approval',
+    icon: Calendar,
+    color: 'border-purple-500/30 text-purple-600 dark:text-purple-400 bg-purple-500/5',
+  },
+  {
+    id: 'BONAFIDE',
+    category: 'BONAFIDE',
+    label: 'Bonafide Certificate',
+    desc: 'Official certified document for scholarship, education loan, or passport',
     icon: FileCheck,
     color: 'border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5',
   },
   {
-    id: 'ACADEMIC_REQUEST',
-    category: 'ACADEMIC_REQUEST',
-    label: 'Academic Request',
-    desc: 'Timetable discrepancy, attendance condonation, subject corrections',
-    icon: BookOpen,
+    id: 'COMPLAINT',
+    category: 'COMPLAINT',
+    label: 'Maintenance Complaint',
+    desc: 'Report room electrical, plumbing, carpentry, or Wi-Fi breakdown',
+    icon: Wrench,
+    color: 'border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/5',
+  },
+  {
+    id: 'GATE_PASS',
+    category: 'GATE_PASS',
+    label: 'Gate Pass',
+    desc: 'Campus day outpass for market, coaching, or medical visits (QR & PIN)',
+    icon: Key,
+    color: 'border-cyan-500/30 text-cyan-600 dark:text-cyan-400 bg-cyan-500/5',
+  },
+  {
+    id: 'TRACK_REQUEST',
+    category: 'TRACK_REQUEST',
+    label: 'Check Existing Request',
+    desc: 'Inspect live status and timeline of your submitted tickets and leaves',
+    icon: Search,
     color: 'border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/5',
-  },
-  {
-    id: 'INTERNSHIP',
-    category: 'INTERNSHIP',
-    label: 'Internship',
-    desc: 'Summer training NOC, company offer letters, absence permission',
-    icon: Briefcase,
-    color: 'border-purple-500/30 text-purple-600 dark:text-purple-300 bg-purple-500/5',
-  },
-  {
-    id: 'SCHOLARSHIP',
-    category: 'SCHOLARSHIP',
-    label: 'Scholarship',
-    desc: 'NSP verification, state portal certification, fee structure proof',
-    icon: DollarSign,
-    color: 'border-green-500/30 text-green-600 dark:text-green-400 bg-green-500/5',
-  },
-  {
-    id: 'EXAMINATION',
-    category: 'EXAMINATION',
-    label: 'Examination',
-    desc: 'Exam form registration, admit card guidelines, schedule & backlogs',
-    icon: FlaskConical,
-    color: 'border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/5',
-  },
-  {
-    id: 'HOSTEL',
-    category: 'HOSTEL',
-    label: 'Hostel',
-    desc: 'Outstation leave, exit gate pass, room plumbing & electrical repair',
-    icon: Building,
-    color: 'border-pink-500/30 text-pink-600 dark:text-pink-400 bg-pink-500/5',
   },
   {
     id: 'ROUTINE',
     category: 'ROUTINE',
-    label: 'Academic Routine',
-    desc: 'Daily lecture schedule, room allocations, faculty timetable',
-    icon: Calendar,
-    color: 'border-cyan-500/30 text-cyan-600 dark:text-cyan-400 bg-cyan-500/5',
+    label: 'Timetable & Routine',
+    desc: 'Today’s schedule, period timings, room allocations, and faculty',
+    icon: Clock,
+    color: 'border-indigo-500/30 text-indigo-600 dark:text-indigo-400 bg-indigo-500/5',
   },
   {
     id: 'NOTICE',
     category: 'NOTICE',
-    label: 'Academic Notice',
-    desc: 'Official university circulars, mid-semester guidelines, holidays',
+    label: 'Campus Notices',
+    desc: 'Official university circulars, exam notifications, and schedules',
     icon: Bell,
-    color: 'border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/5',
+    color: 'border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/5',
+  },
+  {
+    id: 'ATTENDANCE',
+    category: 'ATTENDANCE',
+    label: 'Attendance Standing',
+    desc: 'Check subject percentages, 75% exam cutoff, and safe bunk calculations',
+    icon: GraduationCap,
+    color: 'border-teal-500/30 text-teal-600 dark:text-teal-400 bg-teal-500/5',
   },
   {
     id: 'CONFUSED',
     category: 'CONFUSED',
-    label: "I'm not sure",
-    desc: 'Tell us what you want to achieve and we will route you to the right desk',
+    label: "I'm Not Sure",
+    desc: 'Explain what you want to achieve and Nexora will route you to the right desk',
     icon: HelpCircle,
-    color: 'border-rose-500/30 text-rose-600 dark:text-rose-400 bg-rose-500/5',
+    color: 'border-slate-500/30 text-slate-600 dark:text-slate-400 bg-slate-500/5',
   },
 ];
 
@@ -117,226 +125,406 @@ interface Step2Option {
   targetSubcategory?: string;
   actionUrlOverride?: string;
   actionLabelOverride?: string;
+  requirements?: string[];
+  processSteps?: string[];
+  whatHappensNext?: string[];
+  responsibleRole?: string;
+  sla?: string;
 }
 
 const STEP_2_QUESTIONS: Record<string, { question: string; options: Step2Option[] }> = {
-  CERTIFICATE: {
-    question: 'What type of certificate or verification do you need?',
+  HOSTEL_LEAVE: {
+    question: 'What type of hostel absence do you require?',
     options: [
       {
-        id: 'cert_bonafide',
-        label: 'Bonafide Certificate',
-        desc: 'For scholarship, bank account opening, hackathon participation, or passport',
-        targetCategory: 'CERTIFICATE',
-        targetSubcategory: 'BONAFIDE',
-        actionUrlOverride: '/student/documents?purpose=Scholarship',
-        actionLabelOverride: 'Start Bonafide Application',
-      },
-      {
-        id: 'cert_other',
-        label: 'Other Academic Certificate / Clearance',
-        desc: 'Custom verification or institutional character certification',
-        targetCategory: 'GENERAL',
-        actionUrlOverride: '/student/documents?purpose=Other',
-        actionLabelOverride: 'Request Academic Clearance',
-      },
-      {
-        id: 'cert_unsure',
-        label: "I'm not sure",
-        desc: 'I need to check requirements for my application',
-        targetCategory: 'CERTIFICATE',
-        targetSubcategory: 'BONAFIDE',
-      },
-    ],
-  },
-  ACADEMIC_REQUEST: {
-    question: 'What kind of academic issue or request do you have?',
-    options: [
-      {
-        id: 'acad_attendance',
-        label: 'Attendance Discrepancy / Condonation',
-        desc: 'Check missed lectures, medical exemption, or percentage review',
-        targetCategory: 'ACADEMIC_REQUEST',
-        targetSubcategory: 'ATTENDANCE',
-        actionUrlOverride: '/student/attendance',
-        actionLabelOverride: 'Review Attendance Ledger',
-      },
-      {
-        id: 'acad_routine',
-        label: 'Routine or Classroom Clarification',
-        desc: 'Look up classroom halls, lab timings, or teacher allocations',
-        targetCategory: 'ROUTINE',
-        targetSubcategory: 'ROUTINE',
-        actionUrlOverride: '/student/academics',
-        actionLabelOverride: 'View Class Routine',
-      },
-      {
-        id: 'acad_office',
-        label: 'Contact Academic Office',
-        desc: 'Consult Academic Officer Prof. Sanjeev Mohanty in Administrative Block',
-        targetCategory: 'GENERAL',
-        actionUrlOverride: '/student/dashboard',
-        actionLabelOverride: 'Open Student Desk',
-      },
-    ],
-  },
-  INTERNSHIP: {
-    question: 'What documentation is required for your internship?',
-    options: [
-      {
-        id: 'intern_noc',
-        label: 'Internship NOC & Recommendation',
-        desc: 'Formal institutional clearance letter verifying dates and absence clearance',
-        targetCategory: 'INTERNSHIP',
-        targetSubcategory: 'NOC',
-        actionUrlOverride: '/student/documents?purpose=Internship',
-        actionLabelOverride: 'Apply for Internship NOC',
-      },
-      {
-        id: 'intern_routine',
-        label: 'Class Routine & Exam Date Verification',
-        desc: 'Verify that your internship period does not overlap with semester exams',
-        targetCategory: 'ROUTINE',
-        actionUrlOverride: '/student/academics',
-        actionLabelOverride: 'Check Exam & Class Schedule',
-      },
-      {
-        id: 'intern_unsure',
-        label: "I'm not sure",
-        desc: 'Guide me through the standard internship approval process',
-        targetCategory: 'INTERNSHIP',
-        targetSubcategory: 'NOC',
-      },
-    ],
-  },
-  SCHOLARSHIP: {
-    question: 'What scholarship documentation is requested by the portal?',
-    options: [
-      {
-        id: 'sch_bonafide',
-        label: 'Bonafide Certificate for Scholarship',
-        desc: 'Required by National Scholarship Portal (NSP) and State Post-Matric portals',
-        targetCategory: 'SCHOLARSHIP',
-        targetSubcategory: 'SCHOLARSHIP',
-        actionUrlOverride: '/student/documents?purpose=Scholarship',
-        actionLabelOverride: 'Apply for Scholarship Bonafide',
-      },
-      {
-        id: 'sch_fee',
-        label: 'Fee Structure & Enrolment Certificate',
-        desc: 'Official fee breakdown slip and term admission receipt',
-        targetCategory: 'CERTIFICATE',
-        targetSubcategory: 'BONAFIDE',
-        actionUrlOverride: '/student/documents?purpose=Scholarship',
-        actionLabelOverride: 'Start Certificate Request',
-      },
-      {
-        id: 'sch_deadline',
-        label: 'Check Scholarship Verification Deadline',
-        desc: 'Confirm the university last date for online portal verification',
-        targetCategory: 'NOTICE',
-        actionUrlOverride: '/student/dashboard',
-        actionLabelOverride: 'View Upcoming Deadlines',
-      },
-    ],
-  },
-  EXAMINATION: {
-    question: 'What examination support are you looking for?',
-    options: [
-      {
-        id: 'exam_form',
-        label: 'Mid-Semester Exam Registration & Form',
-        desc: 'Registration rules, subject code verification, and backlog paper details',
-        targetCategory: 'EXAMINATION',
-        targetSubcategory: 'EXAM_FORM',
-        actionUrlOverride: '/student/academics',
-        actionLabelOverride: 'Open Academic Hub',
-      },
-      {
-        id: 'exam_routine',
-        label: 'Exam Schedule & Hall Allocation',
-        desc: 'Check subject test dates, timings, and examination room assignments',
-        targetCategory: 'ROUTINE',
-        actionUrlOverride: '/student/academics',
-        actionLabelOverride: 'View Academic Timetable',
-      },
-      {
-        id: 'exam_attendance',
-        label: '75% Attendance Eligibility Check',
-        desc: 'Verify if your current subject percentages clear the university exam cutoff',
-        targetCategory: 'ACADEMIC_REQUEST',
-        targetSubcategory: 'ATTENDANCE',
-        actionUrlOverride: '/student/attendance',
-        actionLabelOverride: 'Check Attendance Status',
-      },
-    ],
-  },
-  HOSTEL: {
-    question: 'Which hostel workflow do you need to initiate?',
-    options: [
-      {
-        id: 'hostel_leave',
-        label: 'Hostel Leave Application',
-        desc: 'Multi-day outstation leave with parental consent and warden approval',
+        id: 'leave_home',
+        label: 'Home Vacation / Family Travel',
+        desc: 'Overnight journey home or vacation leave exceeding 24 hours',
         targetCategory: 'HOSTEL',
         targetSubcategory: 'LEAVE',
         actionUrlOverride: '/student/leave',
         actionLabelOverride: 'Apply for Hostel Leave',
+        requirements: [
+          'Confirmed travel start and return dates',
+          'Parent / Guardian phone number reachable for verification',
+          'Explicit parental consent confirmation',
+          'Hostel room and block registration',
+        ],
+        processSteps: [
+          'Submit digital Leave Application on Nexora at least 24 hours prior to travel',
+          'Hostel Warden receives instant dispatch and inspects room clearance',
+          'Parent consent phone verification conducted for leaves over 3 days',
+          'Warden grants digital endorsement with cryptographic authorization',
+          'Present approved leave at Main Gate security scanner upon departure',
+        ],
+        whatHappensNext: [
+          'Warden receives immediate notification with 12-hour SLA response clock',
+          'Upon warden approval, departure turnstile clearance is enabled at Gate 1 & 2',
+          'When returning, security scans your ID to record return timestamp automatically',
+        ],
+        responsibleRole: 'Hostel Block Warden',
+        sla: 'Within 12 Hours (Emergency: 2h)',
       },
       {
-        id: 'hostel_gatepass',
-        label: 'Campus Exit Gate Pass',
-        desc: 'Day pass for market visits, coaching, library, or short errands (QR & PIN)',
+        id: 'leave_emergency',
+        label: 'Emergency / Medical Leave',
+        desc: 'Urgent medical absence or family emergency requiring immediate exit',
+        targetCategory: 'HOSTEL',
+        targetSubcategory: 'LEAVE',
+        actionUrlOverride: '/student/leave',
+        actionLabelOverride: 'Apply for Urgent Leave',
+        requirements: [
+          'Medical prescription or reason for urgent departure',
+          'Reachable parent contact number',
+          'Room caretaker intimation',
+        ],
+        processSteps: [
+          'Select "Emergency / Medical" as reason in leave form',
+          'Hostel warden alerted via priority notification',
+          'Fast-track verification processed within 2 hours',
+          'Exit enabled at turnstile immediately upon approval',
+        ],
+        whatHappensNext: [
+          'Priority notification dispatched to Block Caretaker and Warden',
+          'Medical condonation ledger updated if absence exceeds 3 days',
+        ],
+        responsibleRole: 'Hostel Block Warden & Campus Health Officer',
+        sla: '2 Hours (Emergency SLA)',
+      },
+    ],
+  },
+  BONAFIDE: {
+    question: 'What is the purpose of your Bonafide Certificate?',
+    options: [
+      {
+        id: 'bonafide_scholarship',
+        label: 'Scholarship Application (State / NSP)',
+        desc: 'Official proof of enrollment for PRERANA, Medhabruti, or Central Sector Portal',
+        targetCategory: 'CERTIFICATE',
+        targetSubcategory: 'BONAFIDE',
+        actionUrlOverride: '/student/documents?purpose=Scholarship',
+        actionLabelOverride: 'Start Scholarship Bonafide',
+        requirements: [
+          'Active student registration number (Roll Number)',
+          'Current academic branch and semester details',
+          'Fee dues clearance in accounts ledger',
+        ],
+        processSteps: [
+          'Submit digital Bonafide request selecting "Scholarship"',
+          'Academic Affairs Cell validates enrollment standing and attendance rate',
+          'Digital certificate generated with HMAC QR verification code',
+          'Download signed PDF from Documents & Bonafide tab',
+          'Submit to Nodal Scholarship Officer for biometric endorsement',
+        ],
+        whatHappensNext: [
+          'Academic Cell processes digital signature within 24 to 48 hours',
+          'Unique verification link generated for government portal scrutiny',
+        ],
+        responsibleRole: 'Academic Affairs Officer (Window 3, Admin Block)',
+        sla: '24 to 48 Working Hours',
+      },
+      {
+        id: 'bonafide_bank',
+        label: 'Bank Education Loan / Account Opening',
+        desc: 'Mandatory verification document for nationalized and private bank loans',
+        targetCategory: 'CERTIFICATE',
+        targetSubcategory: 'BONAFIDE',
+        actionUrlOverride: '/student/documents?purpose=Bank',
+        actionLabelOverride: 'Apply for Bank Bonafide',
+        requirements: [
+          'Student identity card and roll number',
+          'Bank name and loan branch details',
+        ],
+        processSteps: [
+          'Submit Bonafide request with purpose "Bank"',
+          'Academic Officer verifies active standing',
+          'Download certified PDF with digital stamp and QR verification',
+          'Physical embossed seal can be stamped at Window 3 if mandated by bank',
+        ],
+        whatHappensNext: [
+          'Issued PDF stored securely in your permanent student vault',
+          'Public URL resolves live validity status when scanned by bank managers',
+        ],
+        responsibleRole: 'Academic Operations Officer',
+        sla: '24 to 48 Hours',
+      },
+      {
+        id: 'bonafide_internship',
+        label: 'Summer Internship NOC / Recommendation',
+        desc: 'Institutional No-Objection Certificate verifying student absence permission',
+        targetCategory: 'INTERNSHIP',
+        targetSubcategory: 'NOC',
+        actionUrlOverride: '/student/documents?purpose=Internship',
+        actionLabelOverride: 'Apply for Internship NOC',
+        requirements: [
+          'Company offer letter or official selection email',
+          'Internship start and end dates',
+          'Attendance standing >= 75%',
+        ],
+        processSteps: [
+          'Apply for Bonafide selecting purpose "Internship"',
+          'Academic Officer verifies absence does not clash with semester exams',
+          'Digital NOC issued with departmental clearance endorsement',
+        ],
+        whatHappensNext: [
+          'PDF generated and copied to Training & Placement Cell records',
+        ],
+        responsibleRole: 'Academic Affairs & T&P Cell',
+        sla: '48 Hours',
+      },
+    ],
+  },
+  COMPLAINT: {
+    question: 'What kind of facility or room issue are you experiencing?',
+    options: [
+      {
+        id: 'comp_electrical',
+        label: 'Electrical Breakdown (Fan, Light, Switch, Geyser)',
+        desc: 'Sparking switch, broken fan capacitor, non-functional light, or power outage',
+        targetCategory: 'HOSTEL',
+        targetSubcategory: 'COMPLAINT',
+        actionUrlOverride: '/student/requests/new',
+        actionLabelOverride: 'Log Electrical Complaint',
+        requirements: [
+          'Hostel block and exact room/floor number',
+          'Description of breakdown (e.g. fan sparking, fuse blown)',
+        ],
+        processSteps: [
+          'Describe issue under New Complaint on Nexora',
+          'Automatic keyword router dispatches ticket to Senior Electrician (Ramesh Kumar)',
+          'Technician visits room during operating hours (9 AM – 6 PM)',
+          'Upon repair, technician logs resolution notes',
+          'Student confirms work completion and submits 1–5 star rating',
+        ],
+        whatHappensNext: [
+          'Electrician receives mobile dispatch notification with room location',
+          'SLA timer starts immediately: Urgent repairs within 4h, Normal within 24h',
+        ],
+        responsibleRole: 'Estate Maintenance Wing (Electrical Section)',
+        sla: 'Urgent: 4 Hours | Normal: 24 Hours',
+      },
+      {
+        id: 'comp_plumbing',
+        label: 'Plumbing Issue (Tap Leak, Pipe Burst, Choked Drain)',
+        desc: 'Leaking faucet, washroom drainage overflow, or no water supply',
+        targetCategory: 'HOSTEL',
+        targetSubcategory: 'COMPLAINT',
+        actionUrlOverride: '/student/requests/new',
+        actionLabelOverride: 'Log Plumbing Complaint',
+        requirements: [
+          'Hostel room and floor area',
+          'Specific description of leak or blockage',
+        ],
+        processSteps: [
+          'Log complaint with priority (Urgent for pipe burst, Normal for minor tap leak)',
+          'Routed automatically to Estate Plumber (Suresh Pradhan)',
+          'Technician attends to repair and records parts replaced',
+          'Student verifies resolution in room',
+        ],
+        whatHappensNext: [
+          'Automatic assignment to dedicated plumbing personnel with real-time tracking',
+        ],
+        responsibleRole: 'Estate Maintenance Wing (Plumbing Section)',
+        sla: 'Urgent: 4 Hours | Normal: 24 Hours',
+      },
+      {
+        id: 'comp_network',
+        label: 'Wi-Fi 6 & IT Connectivity Problem',
+        desc: 'SSID disconnection, captive portal redirect failure, or MAC address registration',
+        targetCategory: 'HOSTEL',
+        targetSubcategory: 'COMPLAINT',
+        actionUrlOverride: '/student/requests/new',
+        actionLabelOverride: 'Log Wi-Fi Issue',
+        requirements: [
+          'Device physical MAC address',
+          'Hostel wing and room location',
+        ],
+        processSteps: [
+          'Submit IT support ticket with device MAC address',
+          'Computer Center network engineer inspects access point connectivity',
+          'Captive portal authorization reset performed remotely',
+        ],
+        whatHappensNext: [
+          'Network operations desk verifies signal strength and updates ticket status',
+        ],
+        responsibleRole: 'Computer Center & IT Wing (Room 004, CSE Block)',
+        sla: 'Same Day (9 AM – 5 PM)',
+      },
+    ],
+  },
+  GATE_PASS: {
+    question: 'What type of gate pass do you need to generate?',
+    options: [
+      {
+        id: 'pass_market',
+        label: 'Market Visit / Short City Errands',
+        desc: 'Daytime campus exit for study materials, medical pharmacy, or groceries',
         targetCategory: 'HOSTEL',
         targetSubcategory: 'GATE_PASS',
         actionUrlOverride: '/student/gate-pass',
         actionLabelOverride: 'Apply for Gate Pass',
+        requirements: [
+          'Stated destination and purpose',
+          'Departure and return time within curfew (Return by 8:30 PM for seniors, 7:30 PM for freshers)',
+        ],
+        processSteps: [
+          'Fill Gate Pass destination and return window',
+          'Hostel Warden receives instant digital dispatch',
+          'Upon review, dynamic HMAC QR code and 4-digit PIN are generated',
+          'Present QR code or PIN at Gate 1 or Gate 2 scanner',
+          'Security verifies and logs outbound and inbound timestamps',
+        ],
+        whatHappensNext: [
+          'Warden receives approval prompt with 2–4 hour SLA',
+          'Once approved, active pass appears on your dashboard ready for scanning',
+        ],
+        responsibleRole: 'Hostel Warden & Main Gate Security',
+        sla: '2 to 4 Hours',
       },
+    ],
+  },
+  TRACK_REQUEST: {
+    question: 'Which submitted records do you wish to inspect?',
+    options: [
       {
-        id: 'hostel_complaint',
-        label: 'Room Repair & Maintenance',
-        desc: 'Plumbing leak, broken fan/switch, furniture carpentry, WiFi issue',
-        targetCategory: 'HOSTEL',
-        targetSubcategory: 'COMPLAINT',
-        actionUrlOverride: '/student/requests/new',
-        actionLabelOverride: 'Log Maintenance Complaint',
+        id: 'track_all',
+        label: 'View All Active & Historical Requests',
+        desc: 'Check live status of complaints, leaves, bonafide requests, and passes',
+        targetCategory: 'GENERAL',
+        actionUrlOverride: '/student/requests',
+        actionLabelOverride: 'Open Requests Ledger',
+        requirements: [
+          'Authenticated student login session',
+          'Request ticket number (e.g. NX-10291) if querying a specific ticket',
+        ],
+        processSteps: [
+          'Navigate to My Requests to inspect live progress cards',
+          'Review status badges: SUBMITTED, ASSIGNED, IN_PROGRESS, APPROVED, RESOLVED',
+          'Click on any request to view timeline and assigned officer details',
+        ],
+        whatHappensNext: [
+          'Live database synchronization displays current status verified by backend',
+        ],
+        responsibleRole: 'Central Operations Command Center',
+        sla: 'Real-Time Telemetry',
       },
     ],
   },
   ROUTINE: {
-    question: 'What routine details do you need to look up?',
+    question: 'What timetable information are you looking for?',
     options: [
       {
         id: 'rout_today',
-        label: "Today's Class Schedule & Room Details",
-        desc: 'See which lectures are active today, classroom numbers, and faculty',
+        label: "Today's Schedule & Room Numbers",
+        desc: 'Inspect period hours, lecture halls, and assigned faculty for today',
         targetCategory: 'ROUTINE',
         targetSubcategory: 'ROUTINE',
         actionUrlOverride: '/student/academics',
         actionLabelOverride: "View Today's Routine",
+        requirements: ['Active student cohort (Branch & Year)'],
+        processSteps: [
+          'Open Academic Hub or ask Copilot "What classes do I have today?"',
+          'Review period timings, room allocations (e.g. LH-101), and faculty',
+          'Report 5 minutes prior to period commencement',
+        ],
+        whatHappensNext: [
+          'Attendance recorded digitally by subject faculty at start of lecture',
+        ],
+        responsibleRole: 'Academic Department Faculty & Timetable Coordinator',
+        sla: 'Instant View',
       },
       {
         id: 'rout_weekly',
-        label: 'Complete Weekly Branch Timetable',
-        desc: 'Full Mon-Fri schedule covering core lectures, labs, and tutorials',
+        label: 'Full Weekly Branch Timetable Grid',
+        desc: 'Comprehensive Monday-to-Friday schedule including labs and tutorials',
         targetCategory: 'ROUTINE',
         targetSubcategory: 'ROUTINE',
         actionUrlOverride: '/student/academics',
-        actionLabelOverride: 'View Weekly Schedule',
+        actionLabelOverride: 'Open Weekly Timetable',
+        requirements: ['Student semester registration'],
+        processSteps: [
+          'Access complete weekly grid under Academic Hub',
+          'Check lab session timings and elective subject batches',
+        ],
+        whatHappensNext: ['Synchronized weekly from central academic database'],
+        responsibleRole: 'Academic Dean Office',
+        sla: 'Instant View',
       },
     ],
   },
   NOTICE: {
-    question: 'What notice or circular are you seeking?',
+    question: 'What announcements do you need to view?',
     options: [
       {
-        id: 'not_circular',
-        label: 'Official Campus Circulars & Exam Dates',
-        desc: 'Academic guidelines, registration schedules, and holiday announcements',
+        id: 'not_circulars',
+        label: 'Official Circulars & Exam Notifications',
+        desc: 'BPUT university guidelines, semester registration cutoffs, and holiday notices',
         targetCategory: 'NOTICE',
         targetSubcategory: 'NOTICE',
         actionUrlOverride: '/student/notices',
-        actionLabelOverride: 'View Campus Notices',
+        actionLabelOverride: 'Browse Campus Notices',
+        requirements: ['Enrolled student account'],
+        processSteps: [
+          'Browse targeted notice board filtered by branch, year, and urgency',
+          'Inspect high-priority circulars signed by Dean / Registrar',
+        ],
+        whatHappensNext: [
+          'Urgent notices push broadcast alerts to student dashboards and mobile views',
+        ],
+        responsibleRole: 'Academic Registrar & Notice Cell',
+        sla: 'Live Notice Stream',
+      },
+    ],
+  },
+  ATTENDANCE: {
+    question: 'What attendance assistance do you require?',
+    options: [
+      {
+        id: 'att_standing',
+        label: 'Check 75% Cutoff & Mathematical Margin',
+        desc: 'Inspect overall percentage, subject-wise ledger, and safe class bunk calculation',
+        targetCategory: 'ACADEMIC_REQUEST',
+        targetSubcategory: 'ATTENDANCE',
+        actionUrlOverride: '/student/attendance',
+        actionLabelOverride: 'Open Attendance Ledger',
+        requirements: [
+          'Student roll number linked to active semester enrollment',
+          'Official attendance records updated by course instructors',
+        ],
+        processSteps: [
+          'Open Attendance Ledger to view subject-by-subject attendance',
+          'Inspect mathematical margin: safe upcoming misses (if >= 75%) or required consecutive classes (if < 75%)',
+          'Consult faculty coordinator if discrepancy exists',
+        ],
+        whatHappensNext: [
+          'Official admit card generation requires minimum 75% attendance in each registered subject',
+        ],
+        responsibleRole: 'Department Academic Coordinator & Course Faculty',
+        sla: 'Updated Weekly Post-Lecture',
+      },
+      {
+        id: 'att_condonation',
+        label: 'Medical Condonation Guidelines (65%–74.9%)',
+        desc: 'Procedures for formal attendance relaxation on certified hospitalization grounds',
+        targetCategory: 'ACADEMIC_REQUEST',
+        targetSubcategory: 'ATTENDANCE',
+        actionUrlOverride: '/student/attendance',
+        actionLabelOverride: 'Review Condonation Policy',
+        requirements: [
+          'Registered medical fitness certificate and hospital discharge slip',
+          'Submission within 7 calendar days of returning to campus',
+          'Minimum 65% attendance before condonation review',
+        ],
+        processSteps: [
+          'Submit medical certificates to Academic Affairs Cell (Window 3)',
+          'Academic Committee scrutinizes hospital documentation',
+          'Up to 10% condonation recorded in university ERP',
+        ],
+        whatHappensNext: [
+          'Condoned classes marked EXCUSED in attendance ledger, restoring exam eligibility',
+        ],
+        responsibleRole: 'Academic Cell Committee',
+        sla: '5 Working Days Post-Submission',
       },
     ],
   },
@@ -344,83 +532,56 @@ const STEP_2_QUESTIONS: Record<string, { question: string; options: Step2Option[
     question: 'What are you trying to accomplish?',
     options: [
       {
-        id: 'conf_intern',
-        label: 'I need something for an internship',
-        desc: 'Apply for official No-Objection Certificate (NOC) and absence clearance',
-        targetCategory: 'INTERNSHIP',
-        targetSubcategory: 'NOC',
-        actionUrlOverride: '/student/documents?purpose=Internship',
-        actionLabelOverride: 'Apply for Internship NOC',
-      },
-      {
-        id: 'conf_scholar',
-        label: 'I need something for a scholarship',
-        desc: 'State or National scholarship verification document with digital seal',
-        targetCategory: 'SCHOLARSHIP',
-        targetSubcategory: 'SCHOLARSHIP',
-        actionUrlOverride: '/student/documents?purpose=Scholarship',
-        actionLabelOverride: 'Apply for Scholarship Bonafide',
-      },
-      {
-        id: 'conf_exam',
-        label: 'I need something for an exam',
-        desc: 'Exam form submission, subject registration check, or attendance eligibility',
-        targetCategory: 'EXAMINATION',
-        targetSubcategory: 'EXAM_FORM',
-        actionUrlOverride: '/student/academics',
-        actionLabelOverride: 'Check Exam Details',
-      },
-      {
-        id: 'conf_cert',
-        label: 'I need a certificate',
-        desc: 'Official institutional Bonafide certificate for banking or identification',
-        targetCategory: 'CERTIFICATE',
-        targetSubcategory: 'BONAFIDE',
-        actionUrlOverride: '/student/documents?purpose=Scholarship',
-        actionLabelOverride: 'Start Bonafide Application',
-      },
-      {
-        id: 'conf_routine',
-        label: 'I need academic information',
-        desc: 'Lecture schedules, classroom hall numbers, attendance rates, or circulars',
-        targetCategory: 'ROUTINE',
-        targetSubcategory: 'ROUTINE',
-        actionUrlOverride: '/student/academics',
-        actionLabelOverride: 'Open Academic Hub',
-      },
-      {
-        id: 'conf_repair',
-        label: 'I need to repair something in my hostel room',
-        desc: 'Tap leak, broken switch, door hinge, fan repair, or washroom cleaning',
-        targetCategory: 'HOSTEL',
-        targetSubcategory: 'COMPLAINT',
-        actionUrlOverride: '/student/requests/new',
-        actionLabelOverride: 'Log Room Complaint',
-      },
-      {
         id: 'conf_leave',
-        label: 'I need to leave campus for a trip or market',
-        desc: 'Day exit gate pass (QR/PIN) or multi-day outstation hostel leave',
+        label: 'I need to travel home or out of campus',
+        desc: 'Apply for multi-day hostel leave or same-day exit gate pass',
         targetCategory: 'HOSTEL',
         targetSubcategory: 'LEAVE',
         actionUrlOverride: '/student/leave',
-        actionLabelOverride: 'Apply for Leave / Pass',
+        actionLabelOverride: 'Go to Hostel Leave',
+        requirements: ['Travel dates', 'Parent contact number'],
+        processSteps: ['Submit digital leave request', 'Warden review', 'Gate turnstile exit'],
+        responsibleRole: 'Hostel Block Warden',
+        sla: '12 Hours',
       },
       {
-        id: 'conf_office',
-        label: 'I need to contact the academic office',
-        desc: 'Direct consultation with Academic Officer Prof. Sanjeev Mohanty',
-        targetCategory: 'GENERAL',
-        actionUrlOverride: '/student/dashboard',
-        actionLabelOverride: 'Go to Student Dashboard',
+        id: 'conf_cert',
+        label: 'I need an official certificate or proof of study',
+        desc: 'Bonafide certificate for scholarship, bank loan, passport, or internship',
+        targetCategory: 'CERTIFICATE',
+        targetSubcategory: 'BONAFIDE',
+        actionUrlOverride: '/student/documents?purpose=Scholarship',
+        actionLabelOverride: 'Apply for Bonafide',
+        requirements: ['Student roll number', 'Stated purpose'],
+        processSteps: ['Submit request', 'Academic officer certification', 'Download verified PDF'],
+        responsibleRole: 'Academic Affairs Cell',
+        sla: '24–48 Hours',
       },
       {
-        id: 'conf_other',
-        label: 'Something else',
-        desc: 'General inquiry or campus support ticket',
-        targetCategory: 'GENERAL',
+        id: 'conf_repair',
+        label: 'Something is broken in my hostel room',
+        desc: 'Fan, light, tap, plumbing, door lock, or Wi-Fi problem',
+        targetCategory: 'HOSTEL',
+        targetSubcategory: 'COMPLAINT',
         actionUrlOverride: '/student/requests/new',
-        actionLabelOverride: 'Create Campus Request',
+        actionLabelOverride: 'Log Room Repair',
+        requirements: ['Room number', 'Breakdown description'],
+        processSteps: ['Log ticket', 'Automatic dispatch to technician', 'Repair and verification'],
+        responsibleRole: 'Estate Maintenance Wing',
+        sla: '4h Urgent / 24h Normal',
+      },
+      {
+        id: 'conf_attendance',
+        label: 'I need to check if I can sit for examinations',
+        desc: 'Verify if your current attendance clears the mandatory 75% cutoff',
+        targetCategory: 'ACADEMIC_REQUEST',
+        targetSubcategory: 'ATTENDANCE',
+        actionUrlOverride: '/student/attendance',
+        actionLabelOverride: 'Check Attendance Status',
+        requirements: ['Roll number'],
+        processSteps: ['Open attendance ledger', 'Review safe misses or needed classes'],
+        responsibleRole: 'Academic Coordinator',
+        sla: 'Instant View',
       },
     ],
   },
@@ -429,6 +590,7 @@ const STEP_2_QUESTIONS: Record<string, { question: string; options: Step2Option[
 export default function StudentGuidancePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -437,6 +599,13 @@ export default function StudentGuidancePage() {
   const [guidanceItems, setGuidanceItems] = useState<any[]>([]);
   const [resolvedItem, setResolvedItem] = useState<any | null>(null);
   const [loadingGuidance, setLoadingGuidance] = useState(true);
+
+  // Live verified backend telemetry state
+  const [liveRequests, setLiveRequests] = useState<any[]>([]);
+  const [liveGatePasses, setLiveGatePasses] = useState<any[]>([]);
+  const [liveAttendance, setLiveAttendance] = useState<any | null>(null);
+  const [liveRoutine, setLiveRoutine] = useState<any | null>(null);
+  const [loadingTelemetry, setLoadingTelemetry] = useState(false);
 
   useEffect(() => {
     const fetchGuidanceDb = async () => {
@@ -449,6 +618,32 @@ export default function StudentGuidancePage() {
     };
     fetchGuidanceDb();
   }, []);
+
+  // Fetch live verified records when user reaches Step 3
+  useEffect(() => {
+    if (currentStep === 3) {
+      const fetchVerifiedTelemetry = async () => {
+        setLoadingTelemetry(true);
+        try {
+          const [reqRes, gpRes, attRes, routRes] = await Promise.all([
+            apiRequest('/requests/my'),
+            apiRequest('/gate-passes/my'),
+            apiRequest('/student/attendance'),
+            apiRequest('/student/routine'),
+          ]);
+          if (reqRes.success && reqRes.data) setLiveRequests(reqRes.data);
+          if (gpRes.success && gpRes.data) setLiveGatePasses(gpRes.data);
+          if (attRes.success && attRes.data) setLiveAttendance(attRes.data);
+          if (routRes.success && routRes.data) setLiveRoutine(routRes.data);
+        } catch (err) {
+          console.warn('[Process Navigator] Could not fetch live telemetry:', err);
+        } finally {
+          setLoadingTelemetry(false);
+        }
+      };
+      fetchVerifiedTelemetry();
+    }
+  }, [currentStep]);
 
   useEffect(() => {
     const queryCat = searchParams.get('category');
@@ -478,37 +673,31 @@ export default function StudentGuidancePage() {
       return false;
     });
 
-    if (match) {
-      setResolvedItem({
-        ...match,
-        actionUrl: option.actionUrlOverride || match.actionUrl,
-        actionLabel: option.actionLabelOverride || match.actionLabel,
-      });
-    } else {
-      setResolvedItem({
-        title: option.label,
-        category: option.targetCategory,
-        description: option.desc,
-        requiredDocs: [
-          'Student Roll Number & ID Card',
-          'Current Semester and Branch details',
-          'Application Purpose and Supporting proof (if applicable)',
-        ],
-        processSteps: [
-          'Access the relevant Nexora campus service module',
-          'Fill in required operational and student information',
-          'Submit the ticket to the responsible department',
-          'Track live request progress on your dashboard',
-          'Receive official status update upon review',
-        ],
-        responsibleRole:
-          option.targetCategory === 'HOSTEL'
-            ? 'Hostel Warden / Staff'
-            : 'Academic Operations Officer',
-        actionUrl: option.actionUrlOverride || '/student/dashboard',
-        actionLabel: option.actionLabelOverride || 'Proceed to Process',
-      });
-    }
+    setResolvedItem({
+      title: option.label,
+      category: option.targetCategory,
+      subcategory: option.targetSubcategory,
+      description: option.desc,
+      requiredDocs: option.requirements || match?.requiredDocs || [
+        'Student Roll Number & ID Card',
+        'Academic Year and Branch Registration',
+        'Stated Purpose & Supporting Details',
+      ],
+      processSteps: option.processSteps || match?.processSteps || [
+        'Access the official Nexora campus service module',
+        'Fill in verified student information',
+        'Submit request for departmental review',
+        'Track live progress on your dashboard',
+      ],
+      whatHappensNext: option.whatHappensNext || [
+        'Ticket dispatched to responsible office with SLA timer activated',
+        'Real-time status updates broadcast to your student portal',
+      ],
+      responsibleRole: option.responsibleRole || match?.responsibleRole || 'Academic Operations Officer',
+      turnaroundSla: option.sla || '24 to 48 Hours',
+      actionUrl: option.actionUrlOverride || match?.actionUrl || '/student/dashboard',
+      actionLabel: option.actionLabelOverride || match?.actionLabel || 'Proceed to Form',
+    });
 
     setCurrentStep(3);
   };
@@ -534,10 +723,10 @@ export default function StudentGuidancePage() {
             </div>
 
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-foreground tracking-tight">
-              Student Guidance Mode
+              Campus Process Navigator
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-2xl leading-relaxed">
-              Tell us what you are trying to do, and Nexora will guide you to the correct verified campus workflow.
+              Find verified requirements, official department workflows, and live request status for every campus procedure.
             </p>
           </div>
 
@@ -574,7 +763,7 @@ export default function StudentGuidancePage() {
               1
             </span>
             <span className={`text-xs font-semibold ${currentStep === 1 ? 'text-foreground' : 'text-muted-foreground'}`}>
-              Select Need
+              Select Task
             </span>
           </div>
 
@@ -608,25 +797,25 @@ export default function StudentGuidancePage() {
               3
             </span>
             <span className={`text-xs font-semibold ${currentStep === 3 ? 'text-foreground' : 'text-muted-foreground'}`}>
-              Resolution &amp; Form
+              Verified Workflow &amp; Form
             </span>
           </div>
         </div>
       </div>
 
-      {/* STEP 1: What do you need help with? */}
+      {/* STEP 1: What campus procedure do you want to navigate? */}
       {currentStep === 1 && (
         <div className="space-y-4 animate-tab-fade">
           <div className="bg-surface border border-border rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xs space-y-4">
             <div>
               <div className="text-[11px] uppercase font-mono font-bold text-primary tracking-wider mb-1">
-                STEP 1 OF 3
+                STEP 1 OF 3 • SELECT CAMPUS PROCEDURE
               </div>
               <h2 className="text-base sm:text-xl font-bold text-foreground tracking-tight">
-                What do you need help with?
+                What campus task do you want to complete?
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Select the campus area or topic you want to proceed with. If you are uncertain, pick &ldquo;I&apos;m not sure&rdquo;.
+                Choose an official procedure below to inspect verified prerequisites, turnaround times, and direct form links.
               </p>
             </div>
 
@@ -645,7 +834,10 @@ export default function StudentGuidancePage() {
                       <div className="w-10 h-10 rounded-xl bg-surface-secondary border border-border flex items-center justify-center group-hover:scale-110 transition-transform">
                         <Icon size={20} />
                       </div>
-                      <ChevronRight size={16} className="text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all" />
+                      <ChevronRight
+                        size={16}
+                        className="text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all"
+                      />
                     </div>
 
                     <div>
@@ -671,7 +863,7 @@ export default function StudentGuidancePage() {
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div>
                 <div className="text-[11px] uppercase font-mono font-bold text-primary tracking-wider mb-1">
-                  STEP 2 OF 3 • CLARIFICATION
+                  STEP 2 OF 3 • CLARIFICATION &amp; PURPOSE
                 </div>
                 <h2 className="text-base sm:text-xl font-bold text-foreground tracking-tight">
                   {step2Config.question}
@@ -715,7 +907,7 @@ export default function StudentGuidancePage() {
         </div>
       )}
 
-      {/* STEP 3: Result & Direct Campus Form Connection */}
+      {/* STEP 3: Result, Verified Workflow & Live Telemetry Verification */}
       {currentStep === 3 && resolvedItem && (
         <div className="space-y-6 animate-tab-fade">
           <div className="bg-surface border border-border rounded-2xl sm:rounded-3xl p-5 sm:p-8 shadow-xs space-y-6">
@@ -723,15 +915,126 @@ export default function StudentGuidancePage() {
             <div className="border-b border-border pb-5">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-xs font-mono font-bold mb-3 shadow-xs">
                 <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" />
-                <span>IDENTIFIED WORKFLOW &amp; REQUIREMENTS</span>
+                <span>VERIFIED CAMPUS WORKFLOW &amp; PREREQUISITES</span>
               </div>
 
               <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-foreground tracking-tight">
-                You need: {resolvedItem.title}
+                {resolvedItem.title}
               </h2>
               <p className="text-xs sm:text-sm text-muted-foreground mt-2 leading-relaxed max-w-3xl">
                 {resolvedItem.description}
               </p>
+            </div>
+
+            {/* LIVE VERIFIED BACKEND TELEMETRY PANEL (Requirement #6: Display actual status verified by backend) */}
+            <div className="rounded-2xl border border-primary/30 bg-primary/5 dark:bg-[#141b2c] p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-mono font-bold text-primary dark:text-[#18C5D8] uppercase tracking-wider">
+                  <Sparkles size={14} />
+                  <span>Verified Live Records (Current Session)</span>
+                </div>
+                <span className="text-[10px] font-mono text-muted-foreground">
+                  Synchronized from Central Database
+                </span>
+              </div>
+
+              {loadingTelemetry ? (
+                <div className="text-xs text-muted-foreground animate-pulse py-2">
+                  Checking verified records...
+                </div>
+              ) : selectedCategory === 'GATE_PASS' ? (
+                <div>
+                  {liveGatePasses.length > 0 ? (
+                    <div className="space-y-2">
+                      <div className="text-xs text-foreground">
+                        You have <strong>{liveGatePasses.length} gate pass(es)</strong> on record.
+                      </div>
+                      <div className="p-3 rounded-xl bg-surface border border-border flex items-center justify-between text-xs">
+                        <div>
+                          <div className="font-bold">
+                            Destination: {liveGatePasses[0].destination}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground">
+                            Status: <span className="font-mono font-bold text-primary">{liveGatePasses[0].gateStatus}</span> • PIN: <code className="font-mono font-bold text-foreground">{liveGatePasses[0].passPin}</code>
+                          </div>
+                        </div>
+                        <Link
+                          href="/student/gate-pass"
+                          className="px-2.5 py-1 rounded-lg bg-surface-secondary border border-border text-xs font-bold text-primary hover:underline"
+                        >
+                          View Pass &rarr;
+                        </Link>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground">
+                      No active gate passes on record. You can apply for a day outpass using the button below.
+                    </div>
+                  )}
+                </div>
+              ) : selectedCategory === 'ATTENDANCE' ? (
+                <div>
+                  {liveAttendance ? (
+                    <div className="space-y-2">
+                      <div className="flex items-baseline justify-between">
+                        <div className="text-xs text-foreground">
+                          Current Overall Attendance:{' '}
+                          <strong className="text-sm font-mono text-primary">
+                            {liveAttendance.overall?.percentage}%
+                          </strong>{' '}
+                          ({liveAttendance.overall?.present} / {liveAttendance.overall?.total} classes)
+                        </div>
+                        <span
+                          className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                            liveAttendance.overall?.isAboveThreshold
+                              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                              : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/30'
+                          }`}
+                        >
+                          {liveAttendance.overall?.isAboveThreshold ? 'Eligible (>=75%)' : 'Shortage (<75%)'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {liveAttendance.overall?.insight || 'Attendance is updated weekly following completed lectures.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground">Attendance records synchronizing...</div>
+                  )}
+                </div>
+              ) : selectedCategory === 'ROUTINE' ? (
+                <div>
+                  {liveRoutine ? (
+                    <div className="text-xs text-foreground">
+                      Scheduled for <strong>{liveRoutine.today}</strong>: <strong>{liveRoutine.todayClasses?.length || 0} classes</strong>.
+                      {liveRoutine.todayClasses?.length > 0 && (
+                        <span className="text-muted-foreground ml-2">
+                          Next: {liveRoutine.todayClasses[0].subjectName} ({liveRoutine.todayClasses[0].startTime}) in Room {liveRoutine.todayClasses[0].room}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground">Class routine verified against academic timetable.</div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  {liveRequests.length > 0 ? (
+                    <div className="space-y-1.5">
+                      <div className="text-xs text-foreground">
+                        You have <strong>{liveRequests.length} active/recent request(s)</strong> in the system:
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Latest: <strong>[{liveRequests[0].requestNumber}]</strong> {liveRequests[0].title} — <span className="font-mono text-primary">{liveRequests[0].status}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground">
+                      No active requests currently pending. Proceed below to submit a new verified application.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Structured Breakdown: Required Info & Process */}
@@ -740,7 +1043,7 @@ export default function StudentGuidancePage() {
               <div className="bg-surface-secondary border border-border rounded-2xl p-4 sm:p-5 space-y-3">
                 <div className="flex items-center gap-2 text-xs font-bold text-primary uppercase font-mono tracking-wider">
                   <FileText size={15} />
-                  <span>Required Information &amp; Documents</span>
+                  <span>Mandatory Prerequisites &amp; Documents</span>
                 </div>
 
                 <div className="space-y-2">
@@ -761,7 +1064,7 @@ export default function StudentGuidancePage() {
               <div className="bg-surface-secondary border border-border rounded-2xl p-4 sm:p-5 space-y-3">
                 <div className="flex items-center gap-2 text-xs font-bold text-cyan-600 dark:text-cyan-400 uppercase font-mono tracking-wider">
                   <Clock size={15} />
-                  <span>End-to-End Process Workflow</span>
+                  <span>Step-by-Step Procedure</span>
                 </div>
 
                 <div className="space-y-2 text-xs">
@@ -781,26 +1084,43 @@ export default function StudentGuidancePage() {
               </div>
             </div>
 
+            {/* WHAT HAPPENS NEXT SECTION (Requirement #5) */}
+            <div className="bg-surface-secondary border border-border rounded-2xl p-4 sm:p-5 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-400 uppercase font-mono tracking-wider">
+                <ArrowRight size={15} />
+                <span>What Happens Next (Post-Submission Lifecycle)</span>
+              </div>
+              <div className="space-y-2 text-xs text-foreground">
+                {Array.isArray(resolvedItem.whatHappensNext) && resolvedItem.whatHappensNext.length > 0 ? (
+                  resolvedItem.whatHappensNext.map((nextItem: string, idx: number) => (
+                    <div key={idx} className="flex items-start gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1.5" />
+                      <span className="leading-snug">{nextItem}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div>
+                    Your application is reviewed by the responsible department, and you will receive digital notification upon decision.
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Department Ownership & Verification SLA */}
             <div className="p-4 rounded-xl bg-surface-secondary border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono">
               <div className="flex items-center gap-2 text-foreground">
                 <Shield size={16} className="text-primary shrink-0" />
                 <span>
-                  Responsible Office:{' '}
-                  <strong className="text-foreground">
-                    {resolvedItem.responsibleRole === 'ACADEMIC_OFFICER'
-                      ? 'Academic Operations Officer (Prof. Sanjeev Mohanty)'
-                      : resolvedItem.responsibleRole === 'WARDEN'
-                      ? 'Hostel Warden'
-                      : resolvedItem.responsibleRole === 'SECURITY'
-                      ? 'Campus Gate Security'
-                      : 'Campus Operations Staff'}
-                  </strong>
+                  Responsible Authority:{' '}
+                  <strong className="text-foreground">{resolvedItem.responsibleRole}</strong>
                 </span>
               </div>
 
               <div className="text-muted-foreground text-[11px]">
-                Standard Turnaround SLA: <strong className="text-emerald-600 dark:text-emerald-400 font-bold">24 – 48 Hours</strong>
+                Standard Turnaround SLA:{' '}
+                <strong className="text-emerald-600 dark:text-emerald-400 font-bold">
+                  {resolvedItem.turnaroundSla}
+                </strong>
               </div>
             </div>
 

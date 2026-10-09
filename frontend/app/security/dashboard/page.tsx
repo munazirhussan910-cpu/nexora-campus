@@ -93,8 +93,8 @@ export default function SecurityDashboardPage() {
           />
           <StatCard
             title="Current Curfew"
-            value="10:00 PM"
-            subtitle="Hostel standard curfew"
+            value="8:30 PM"
+            subtitle="Seniors 8:30 PM / Freshers 7:30 PM"
             icon={Clock}
             color="purple"
           />
