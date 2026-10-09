@@ -3,6 +3,9 @@ import { GeminiService } from '../services/gemini.service';
 import { AuthUser } from '../types/auth';
 
 describe('Nexora Copilot Service & Card Generation Suite', () => {
+  beforeAll(() => {
+    jest.spyOn(GeminiService, 'generateResponse').mockResolvedValue(null);
+  });
   const mockStudentUser: AuthUser = {
     id: 'c0eeeaf2-d46c-41f2-940b-6fae1eaab22f',
     username: 'aryan',

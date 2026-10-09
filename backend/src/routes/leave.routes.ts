@@ -8,6 +8,7 @@ import { AppError } from '../middleware/error.middleware';
 import { RequestService } from '../services/request.service';
 import { NotificationService } from '../services/notification.service';
 import { AuditService } from '../services/audit.service';
+import { getWardenHostelBlock } from '../services/warden.service';
 import { AuthenticatedRequest } from '../types/auth';
 
 const router = Router();
@@ -100,8 +101,62 @@ router.get(
   requirePermission('leave.approve'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const whereClause: any = { status: 'PENDING_APPROVAL' };
+
+      if (req.user!.role === 'WARDEN') {
+        const wardenBlock = await getWardenHostelBlock(req.user!);
+        if (!wardenBlock) {
+          res.json({
+            success: true,
+            data: [],
+          });
+          return;
+        }
+
+        whereClause.AND = [
+          {
+            OR: [
+              {
+                request: {
+                  requester: {
+                    student: {
+                      hostelRoom: {
+                        hostelBlockId: wardenBlock.id,
+                      },
+                    },
+                  },
+                },
+              },
+              {
+                AND: [
+                  {
+                    request: {
+                      requester: {
+                        student: {
+                          OR: [
+                            { hostelRoomId: null },
+                            { hostelRoom: null },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                  {
+                    request: {
+                      location: {
+                        contains: wardenBlock.name,
+                      },
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ];
+      }
+
       const pending = await prisma.leaveRequest.findMany({
-        where: { status: 'PENDING_APPROVAL' },
+        where: whereClause,
         include: {
           request: {
             include: {
@@ -170,8 +225,43 @@ router.post(
       const id = String(req.params.id);
       const leave = await prisma.leaveRequest.findUnique({
         where: { id },
-        include: { request: true },
+        include: {
+          request: {
+            include: {
+              requester: {
+                include: {
+                  student: {
+                    include: { hostelRoom: true },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
+
+      if (!leave) {
+        throw new AppError('Leave application not found', 404);
+      }
+
+      if (req.user!.role === 'WARDEN') {
+        const wardenBlock = await getWardenHostelBlock(req.user!);
+        if (wardenBlock) {
+          const studentBlockId = leave.request.requester.student?.hostelRoom?.hostelBlockId;
+          const location = leave.request.location || '';
+          const isUnderWarden =
+            (studentBlockId && studentBlockId === wardenBlock.id) ||
+            location.includes(wardenBlock.name);
+
+          if (!isUnderWarden) {
+            throw new AppError(
+              'You are only authorized to decide leaves for students residing in your assigned hostel block',
+              403,
+              'FORBIDDEN'
+            );
+          }
+        }
+      }
 
       if (!leave) {
         throw new AppError('Leave application not found', 404);
@@ -235,8 +325,43 @@ router.post(
       const { reason } = req.body;
       const leave = await prisma.leaveRequest.findUnique({
         where: { id },
-        include: { request: true },
+        include: {
+          request: {
+            include: {
+              requester: {
+                include: {
+                  student: {
+                    include: { hostelRoom: true },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
+
+      if (!leave) {
+        throw new AppError('Leave application not found', 404);
+      }
+
+      if (req.user!.role === 'WARDEN') {
+        const wardenBlock = await getWardenHostelBlock(req.user!);
+        if (wardenBlock) {
+          const studentBlockId = leave.request.requester.student?.hostelRoom?.hostelBlockId;
+          const location = leave.request.location || '';
+          const isUnderWarden =
+            (studentBlockId && studentBlockId === wardenBlock.id) ||
+            location.includes(wardenBlock.name);
+
+          if (!isUnderWarden) {
+            throw new AppError(
+              'You are only authorized to decide leaves for students residing in your assigned hostel block',
+              403,
+              'FORBIDDEN'
+            );
+          }
+        }
+      }
 
       if (!leave) {
         throw new AppError('Leave application not found', 404);

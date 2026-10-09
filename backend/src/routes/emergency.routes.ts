@@ -2,12 +2,22 @@ import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import prisma from '../config/prisma';
 import { authenticate } from '../middleware/auth.middleware';
+import { requireRole } from '../middleware/rbac.middleware';
+import { createRateLimiter } from '../middleware/rateLimit.middleware';
 import { validateBody } from '../middleware/validate.middleware';
 import { AppError } from '../middleware/error.middleware';
 import { EmergencyService } from '../services/emergency.service';
 import { AuthenticatedRequest } from '../types/auth';
 
 const router = Router();
+
+const sosRateLimiter = createRateLimiter({
+  windowMs: 5 * 60 * 1000,
+  max: 5,
+  message: 'Emergency SOS rate limit reached. If this is a life-threatening emergency, call campus security desk immediately.',
+  code: 'SOS_RATE_LIMITED',
+});
+
 
 const triggerSosSchema = z.object({
   distressType: z.enum(['MEDICAL', 'SECURITY', 'FIRE', 'HARASSMENT', 'GENERAL']).default('GENERAL'),
@@ -28,6 +38,7 @@ const resolveSosSchema = z.object({
 router.post(
   '/trigger',
   authenticate,
+  sosRateLimiter,
   validateBody(triggerSosSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -70,13 +81,16 @@ router.post(
   }
 );
 
-// GET /api/emergency/active - Security / Warden gets active alerts
+// GET /api/emergency/active - Security / Warden / Admin get active alerts; Students see only their own
 router.get(
   '/active',
   authenticate,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const active = EmergencyService.getActive();
+      const isResponder = ['SECURITY', 'WARDEN', 'ADMIN'].includes(req.user!.role);
+      const active = EmergencyService.getActive().filter(
+        (a) => isResponder || a.studentId === req.user!.id
+      );
       res.json({
         success: true,
         data: active,
@@ -87,13 +101,16 @@ router.get(
   }
 );
 
-// GET /api/emergency/all - Full incident history
+// GET /api/emergency/all - Full incident history (Security/Warden/Admin, or own for student)
 router.get(
   '/all',
   authenticate,
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const all = EmergencyService.getAll();
+      const isResponder = ['SECURITY', 'WARDEN', 'ADMIN'].includes(req.user!.role);
+      const all = EmergencyService.getAll().filter(
+        (a) => isResponder || a.studentId === req.user!.id
+      );
       res.json({
         success: true,
         data: all,

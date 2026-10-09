@@ -433,7 +433,19 @@ router.get(
         throw new AppError('Certificate document not available for download', 404);
       }
 
-      const filePath = path.join(config.storageDir, path.basename(bonafide.documentUrl));
+      // Check authorization: Owner, Academic Officer, or Admin
+      const isOwner = bonafide.request?.requesterId === req.user!.id;
+      const isAuthorizedStaff = ['ADMIN', 'ACADEMIC_OFFICER'].includes(req.user!.role);
+      if (!isOwner && !isAuthorizedStaff) {
+        throw new AppError('Unauthorized to download this certificate', 403, 'FORBIDDEN');
+      }
+
+      const safeFilename = path.basename(bonafide.documentUrl);
+      const filePath = path.resolve(config.storageDir, safeFilename);
+
+      if (!filePath.startsWith(path.resolve(config.storageDir))) {
+        throw new AppError('Invalid document path', 400, 'INVALID_PATH');
+      }
 
       if (!fs.existsSync(filePath)) {
         throw new AppError('File not found on storage server', 404);

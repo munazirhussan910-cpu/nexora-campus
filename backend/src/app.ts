@@ -28,6 +28,7 @@ import copilotRoutes from './routes/copilot.routes';
 import mentorRoutes from './routes/mentor.routes';
 import liteRoutes from './routes/lite.routes';
 import messRoutes from './routes/mess.routes';
+import emergencyRoutes from './routes/emergency.routes';
 
 const app: Express = express();
 
@@ -87,6 +88,7 @@ app.use('/api/copilot', copilotRoutes);
 app.use('/api/mentors', mentorRoutes);
 app.use('/api/lite', liteRoutes);
 app.use('/api/mess-menu', messRoutes);
+app.use('/api/emergency', emergencyRoutes);
 
 // Centralized Error Handling
 app.use(errorHandler);

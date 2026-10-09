@@ -330,11 +330,29 @@ router.patch(
   validateBody(updateStatusSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const requestId = String(req.params.id);
       const { status, comment } = req.body;
+      const user = req.user!;
+
+      // 1. Fetch Request to evaluate ownership and role authorization
+      const request = await prisma.request.findUnique({
+        where: { id: requestId },
+        include: { requestType: true },
+      });
+
+      if (!request) {
+        res.status(404).json({
+          success: false,
+          error: { code: 'NOT_FOUND', message: 'Request not found' },
+        });
+        return;
+      }
+
+      // 2. Cancellation
       if (status === 'CANCELLED') {
         const updated = await RequestService.cancelRequest(
-          String(req.params.id),
-          req.user!.id,
+          requestId,
+          user.id,
           comment
         );
         res.json({
@@ -345,10 +363,56 @@ router.patch(
         return;
       }
 
+      // 3. Strict Authorization by Request Type and Status Target
+      const typeCode = request.requestType.code;
+      const isAdmin = user.role === 'ADMIN';
+
+      let isAuthorized = isAdmin;
+
+      if (!isAuthorized) {
+        if (typeCode === 'COMPLAINT') {
+          if (['ACCEPTED', 'IN_PROGRESS', 'RESOLVED'].includes(status)) {
+            isAuthorized =
+              request.assignedTo === user.id ||
+              user.permissions.includes('complaints.manage') ||
+              user.permissions.includes('requests.reassign');
+          } else if (['CONFIRMED', 'CLOSED'].includes(status)) {
+            isAuthorized =
+              request.requesterId === user.id ||
+              user.permissions.includes('complaints.manage');
+          }
+        } else if (typeCode === 'GATE_PASS') {
+          if (['APPROVED', 'REJECTED'].includes(status)) {
+            isAuthorized = user.role === 'WARDEN' || user.permissions.includes('gatepass.approve');
+          } else if (['DEPARTED', 'RETURNED'].includes(status)) {
+            isAuthorized = user.role === 'SECURITY' || user.permissions.includes('gatepass.verify');
+          }
+        } else if (typeCode === 'LEAVE') {
+          if (['APPROVED', 'REJECTED'].includes(status)) {
+            isAuthorized = user.role === 'WARDEN' || user.permissions.includes('leave.approve');
+          }
+        } else if (typeCode === 'BONAFIDE') {
+          if (['APPROVED', 'REJECTED'].includes(status)) {
+            isAuthorized = user.role === 'ACADEMIC_OFFICER' || user.permissions.includes('bonafide.approve');
+          }
+        }
+      }
+
+      if (!isAuthorized) {
+        res.status(403).json({
+          success: false,
+          error: {
+            code: 'FORBIDDEN',
+            message: `You are not authorized to transition request #${request.requestNumber} to status '${status}'.`,
+          },
+        });
+        return;
+      }
+
       const updated = await RequestService.transitionStatus(
-        String(req.params.id),
+        requestId,
         status,
-        req.user!.id,
+        user.id,
         comment
       );
 
