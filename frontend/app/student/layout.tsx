@@ -15,19 +15,36 @@ import {
   Bell,
   User,
   CheckCircle2,
+  Sparkles,
+  Users,
+  HeartHandshake,
+  Compass,
 } from 'lucide-react';
 
 const studentNavItems: NavItem[] = [
-  { label: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard },
-  { label: 'Academic Hub', href: '/student/academics', icon: GraduationCap },
-  { label: 'My Attendance', href: '/student/attendance', icon: CheckCircle2 },
-  { label: 'My Requests', href: '/student/requests', icon: Inbox },
-  { label: '+ New Complaint', href: '/student/requests/new', icon: PlusCircle },
-  { label: 'Gate Pass (QR & PIN)', href: '/student/gate-pass', icon: Key },
-  { label: 'Documents & Bonafide', href: '/student/documents', icon: FileCheck },
-  { label: 'Hostel Leave', href: '/student/leave', icon: Calendar },
-  { label: 'Campus Notices', href: '/student/notices', icon: Bell },
-  { label: 'Student Profile', href: '/student/profile', icon: User },
+  // 1. Overview
+  { label: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard, group: 'Overview' },
+
+  // 2. Campus Requests
+  { label: 'My Requests', href: '/student/requests', icon: Inbox, group: 'Campus Requests' },
+  { label: '+ New Complaint', href: '/student/requests/new', icon: PlusCircle, group: 'Campus Requests' },
+  { label: 'Gate Pass (QR & PIN)', href: '/student/gate-pass', icon: Key, group: 'Campus Requests' },
+  { label: 'Documents & Bonafide', href: '/student/documents', icon: FileCheck, group: 'Campus Requests' },
+  { label: 'Hostel Leave', href: '/student/leave', icon: Calendar, group: 'Campus Requests' },
+
+  // 3. Academics & Guidance
+  { label: 'Guidance Mode', href: '/student/guidance', icon: Compass, badge: 'GUIDE', group: 'Academics & Guidance' },
+  { label: 'Nexora Copilot', href: '/student/copilot', icon: Sparkles, badge: 'AI', group: 'Academics & Guidance' },
+  { label: 'Academic Hub', href: '/student/academics', icon: GraduationCap, group: 'Academics & Guidance' },
+  { label: 'My Attendance', href: '/student/attendance', icon: CheckCircle2, group: 'Academics & Guidance' },
+
+  // 4. Community & Mentorship
+  { label: 'Senior Guides', href: '/student/mentors', icon: Users, badge: 'PEER', group: 'Community & Mentors' },
+  { label: 'My Mentor Profile', href: '/student/mentor-profile', icon: HeartHandshake, group: 'Community & Mentors' },
+  { label: 'Campus Notices', href: '/student/notices', icon: Bell, group: 'Community & Mentors' },
+
+  // 5. Account
+  { label: 'Student Profile', href: '/student/profile', icon: User, group: 'Account' },
 ];
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {

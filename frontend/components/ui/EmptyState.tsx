@@ -9,6 +9,8 @@ interface EmptyStateProps {
   actionText?: string;
   actionHref?: string;
   onAction?: () => void;
+  secondaryActionText?: string;
+  secondaryActionHref?: string;
 }
 
 export function EmptyState({
@@ -18,35 +20,48 @@ export function EmptyState({
   actionText,
   actionHref,
   onAction,
+  secondaryActionText,
+  secondaryActionHref,
 }: EmptyStateProps) {
   return (
-    <div className="py-12 sm:py-16 text-center text-xs text-gray-400 flex flex-col items-center justify-center gap-3 p-6 bg-[#101420]/50 border border-dashed border-[#232a3d] rounded-2xl">
-      <div className="w-12 h-12 rounded-2xl bg-[#141824] border border-[#262e42] flex items-center justify-center text-gray-500 shadow-sm">
-        <Icon size={22} className="text-[#d4af37]" />
+    <div className="py-12 sm:py-16 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-3.5 p-6 bg-[#121624]/60 border border-dashed border-[#232b3f] rounded-2xl transition-all">
+      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#181e30] border border-[#2d3852] flex items-center justify-center text-slate-300 shadow-md shadow-black/20">
+        <Icon size={24} className="text-[#18C5D8]" />
       </div>
-      <div className="max-w-sm">
-        <h3 className="font-bold text-sm text-gray-200">{title}</h3>
-        {description && <p className="text-gray-400 mt-1 text-xs leading-relaxed">{description}</p>}
+      <div className="max-w-md space-y-1">
+        <h3 className="font-bold text-sm sm:text-base text-white tracking-tight">{title}</h3>
+        {description && <p className="text-slate-400 text-xs leading-relaxed">{description}</p>}
       </div>
 
-      {(actionText && actionHref) && (
-        <Link
-          href={actionHref}
-          className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#d4af37] hover:bg-[#e4c257] text-black font-bold text-xs shadow transition active:scale-95"
-        >
-          {actionText}
-        </Link>
-      )}
+      <div className="flex items-center gap-3 mt-2 flex-wrap justify-center">
+        {actionText && actionHref && (
+          <Link
+            href={actionHref}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#5B20A0] hover:bg-[#6c28be] text-white font-bold text-xs shadow-md shadow-[#5B20A0]/25 transition-all duration-150 active:scale-95"
+          >
+            {actionText}
+          </Link>
+        )}
 
-      {(actionText && onAction && !actionHref) && (
-        <button
-          type="button"
-          onClick={onAction}
-          className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#d4af37] hover:bg-[#e4c257] text-black font-bold text-xs shadow transition active:scale-95"
-        >
-          {actionText}
-        </button>
-      )}
+        {actionText && onAction && !actionHref && (
+          <button
+            type="button"
+            onClick={onAction}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#5B20A0] hover:bg-[#6c28be] text-white font-bold text-xs shadow-md shadow-[#5B20A0]/25 transition-all duration-150 active:scale-95"
+          >
+            {actionText}
+          </button>
+        )}
+
+        {secondaryActionText && secondaryActionHref && (
+          <Link
+            href={secondaryActionHref}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#171d2b] hover:bg-[#202738] border border-[#2b364d] text-slate-300 hover:text-white font-semibold text-xs transition-all duration-150 active:scale-95"
+          >
+            {secondaryActionText}
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar, NavItem } from '@/components/layout/Sidebar';
 import { PortalGuard } from '@/components/layout/PortalGuard';
-import { LayoutDashboard, CheckSquare, History, BarChart3, Calendar } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, History, BarChart3, Calendar, User } from 'lucide-react';
 
 const facultyNavItems: NavItem[] = [
   { label: 'Teacher Dashboard', href: '/faculty/dashboard', icon: LayoutDashboard },
@@ -12,6 +12,7 @@ const facultyNavItems: NavItem[] = [
   { label: 'Attendance History', href: '/faculty/attendance/history', icon: History },
   { label: 'Subject Attendance', href: '/faculty/attendance/subjects', icon: BarChart3 },
   { label: 'Day-wise Attendance', href: '/faculty/attendance/day-wise', icon: Calendar },
+  { label: 'Faculty Profile', href: '/faculty/profile', icon: User },
 ];
 
 export default function FacultyLayout({ children }: { children: React.ReactNode }) {

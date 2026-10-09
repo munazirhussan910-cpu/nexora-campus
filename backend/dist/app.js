@@ -27,6 +27,9 @@ const student_routes_1 = __importDefault(require("./routes/student.routes"));
 const kiosk_routes_1 = __importDefault(require("./routes/kiosk.routes"));
 const integration_routes_1 = __importDefault(require("./routes/integration.routes"));
 const faculty_routes_1 = __importDefault(require("./routes/faculty.routes"));
+const copilot_routes_1 = __importDefault(require("./routes/copilot.routes"));
+const mentor_routes_1 = __importDefault(require("./routes/mentor.routes"));
+const lite_routes_1 = __importDefault(require("./routes/lite.routes"));
 const app = (0, express_1.default)();
 // Security & Parsing Middlewares
 app.use((0, helmet_1.default)({
@@ -37,8 +40,8 @@ app.use((0, cors_1.default)({
     origin: [env_1.config.frontendUrl, 'http://localhost:3000', 'http://127.0.0.1:3000'],
     credentials: true,
 }));
-app.use(express_1.default.json());
-app.use(express_1.default.urlencoded({ extended: true }));
+app.use(express_1.default.json({ limit: '10mb' }));
+app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
 app.use((0, cookie_parser_1.default)());
 // Static storage folder for generated PDFs and uploaded files
 if (!fs_1.default.existsSync(env_1.config.storageDir)) {
@@ -55,6 +58,7 @@ app.get('/api/health', (req, res) => {
 });
 // API Routes
 app.use('/api/auth', auth_routes_1.default);
+app.use('/api/profile', auth_routes_1.default);
 app.use('/api/requests', request_routes_1.default);
 app.use('/api/complaints', complaint_routes_1.default);
 app.use('/api/gate-passes', gatepass_routes_1.default);
@@ -69,6 +73,9 @@ app.use('/api/student', student_routes_1.default);
 app.use('/api/faculty', faculty_routes_1.default);
 app.use('/api/kiosk', kiosk_routes_1.default);
 app.use('/api/integrations', integration_routes_1.default);
+app.use('/api/copilot', copilot_routes_1.default);
+app.use('/api/mentors', mentor_routes_1.default);
+app.use('/api/lite', lite_routes_1.default);
 // Centralized Error Handling
 app.use(error_middleware_1.errorHandler);
 exports.default = app;

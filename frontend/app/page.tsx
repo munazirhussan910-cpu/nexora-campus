@@ -794,7 +794,7 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
               </div>
               <div className="p-3 rounded-xl bg-[#141722]/80 border border-[#232838] hover:border-[#3d4661] hover:-translate-y-1 transition-all duration-200">
                 <div className="text-[11px] text-gray-400 font-medium">Bandwidth Profile</div>
-                <div className="text-sm sm:text-base font-bold font-mono text-[#d4af37] mt-0.5">&lt; 25 KB</div>
+                <div className="text-sm sm:text-base font-bold font-mono text-[#d4af37] mt-0.5">  Low Internt </div>
                 <div className="text-[10px] text-gray-500 font-mono">Lite & Kiosk Interfaces</div>
               </div>
             </div>
@@ -1670,7 +1670,27 @@ Handle complaints, maintenance, gate passes, hostel leaves, certificates, and op
         </div>
       </section>
 
-      {/* 9. CORE ARCHITECTURAL CAPABILITIES */}
+      {/* 9. STUDENT GUIDANCE */}
+      <section className="py-14 sm:py-20 bg-[#101522] border-t border-[#232838]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-2 gap-5">
+          <div className="rounded-3xl border border-violet-500/30 bg-gradient-to-br from-violet-950/40 to-[#141722] p-6 sm:p-8">
+            <div className="w-11 h-11 rounded-xl bg-violet-500/15 text-violet-300 flex items-center justify-center"><Sparkles size={22} /></div>
+            <p className="mt-5 text-[10px] font-mono uppercase tracking-widest text-violet-300">AI-guided next steps</p>
+            <h2 className="mt-2 text-2xl font-extrabold text-white">Ask what to do next.</h2>
+            <p className="mt-3 text-sm leading-relaxed text-gray-400">Nexora Copilot helps students turn everyday campus questions into clear, verified next steps—from a maintenance issue or document request to study planning and finding academic resources.</p>
+            <Link href="/student/copilot" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-violet-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-violet-400"><Sparkles size={16} /> Open Nexora Copilot <ArrowRight size={15} /></Link>
+          </div>
+          <div className="rounded-3xl border border-cyan-500/25 bg-gradient-to-br from-cyan-950/30 to-[#141722] p-6 sm:p-8">
+            <div className="w-11 h-11 rounded-xl bg-cyan-500/15 text-cyan-300 flex items-center justify-center"><Users size={22} /></div>
+            <p className="mt-5 text-[10px] font-mono uppercase tracking-widest text-cyan-300">Peer mentorship</p>
+            <h2 className="mt-2 text-2xl font-extrabold text-white">Learn from the students ahead of you.</h2>
+            <p className="mt-3 text-sm leading-relaxed text-gray-400">Browse available senior guides by year and branch, review the topics they support, and send a thoughtful mentorship request. Seniors control their public profile, availability, LinkedIn link, and CGPA disclosure.</p>
+            <Link href="/student/mentors" className="mt-6 inline-flex items-center gap-2 rounded-xl border border-cyan-400/50 px-4 py-2.5 text-sm font-bold text-cyan-200 hover:bg-cyan-500/10"><Users size={16} /> Find a senior guide <ArrowRight size={15} /></Link>
+          </div>
+        </div>
+      </section>
+
+      {/* 10. CORE ARCHITECTURAL CAPABILITIES */}
       <section id="features" className="scroll-mt-20 py-14 sm:py-20 bg-[#0f1118] border-t border-[#232838]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-14">

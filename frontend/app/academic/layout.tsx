@@ -4,10 +4,22 @@ import React, { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar, NavItem } from '@/components/layout/Sidebar';
 import { PortalGuard } from '@/components/layout/PortalGuard';
-import { LayoutDashboard, FileCheck, User } from 'lucide-react';
+import {
+  LayoutDashboard,
+  Calendar,
+  Bell,
+  Clock,
+  Compass,
+  FileCheck,
+  User,
+} from 'lucide-react';
 
 const academicNavItems: NavItem[] = [
   { label: 'Academic Dashboard', href: '/academic/dashboard', icon: LayoutDashboard },
+  { label: 'Daily Routine', href: '/academic/routine', icon: Calendar },
+  { label: 'Academic Notices', href: '/academic/notices', icon: Bell },
+  { label: 'Academic Deadlines', href: '/academic/deadlines', icon: Clock },
+  { label: 'Guidance Content', href: '/academic/guidance', icon: Compass, badge: 'NEW' },
   { label: 'Certificate Approvals', href: '/academic/approvals', icon: FileCheck },
   { label: 'Officer Profile', href: '/academic/profile', icon: User },
 ];
@@ -16,10 +28,10 @@ export default function AcademicLayout({ children }: { children: React.ReactNode
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <PortalGuard allowedRoles={['ACADEMIC_OFFICER', 'ADMIN']} portalTitle="Academic Cell">
+    <PortalGuard allowedRoles={['ACADEMIC_OFFICER', 'ADMIN']} portalTitle="Academic Operations Desk">
       <div className="min-h-screen bg-[#0a0d14] flex flex-col overflow-x-hidden text-[#edeef2]">
         <Navbar
-          portalName="ACADEMIC CELL"
+          portalName="ACADEMIC OPERATIONS"
           onMenuClick={() => setIsMobileMenuOpen((prev) => !prev)}
           isMobileMenuOpen={isMobileMenuOpen}
         />

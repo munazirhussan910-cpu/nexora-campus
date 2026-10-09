@@ -40,7 +40,7 @@ export default function StudentNoticesPage() {
     <div className="space-y-6 sm:space-y-8 max-w-4xl mx-auto">
       {/* Page Header */}
       <div>
-        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#1b2234] border border-[#d4af37]/35 text-[#d4af37] text-[10px] font-mono font-bold uppercase tracking-wider mb-2 shadow-xs">
+        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#5B20A0]/20 border border-[#7A3DB8]/40 text-[#18C5D8] text-[10px] font-mono font-bold uppercase tracking-wider mb-2 shadow-xs">
           <Radio size={12} className="animate-pulse" />
           <span>Institutional Broadcast Network</span>
         </div>
@@ -145,9 +145,9 @@ export default function StudentNoticesPage() {
                     <button
                       type="button"
                       onClick={() => handleMarkRead(n.id)}
-                      className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#d4af37] hover:bg-[#e4c257] text-black font-bold text-xs shadow-xs active:scale-95 transition-all"
+                      className="inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#5B20A0] hover:bg-[#6c28be] text-white font-bold text-xs shadow-xs active:scale-95 transition-all"
                     >
-                      <Check size={14} />
+                      <Check size={14} className="text-[#18C5D8]" />
                       <span>Acknowledge / Mark Read</span>
                     </button>
                   )}

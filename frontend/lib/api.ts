@@ -80,7 +80,7 @@ export async function apiRequest<T = any>(
   }
 
   // 2. In-flight request deduplication for concurrent identical GET calls
-  if (method === 'GET' && !options.skipDedupe && inFlightRequests.has(cacheKey)) {
+  if (method === 'GET' && !options.skipDedupe && options.useCache !== false && inFlightRequests.has(cacheKey)) {
     return inFlightRequests.get(cacheKey)!;
   }
 
@@ -104,6 +104,11 @@ export async function apiRequest<T = any>(
           data,
           expiresAt: Date.now() + ttl,
         });
+      }
+
+      // Invalidate cached GET responses upon any successful mutation
+      if (method !== 'GET' && data.success) {
+        clearApiCache();
       }
 
       return data;
@@ -130,7 +135,7 @@ export async function apiRequest<T = any>(
     }
   };
 
-  if (method === 'GET' && !options.skipDedupe) {
+  if (method === 'GET' && !options.skipDedupe && options.useCache !== false) {
     const promise = executeFetch();
     inFlightRequests.set(cacheKey, promise);
     return promise;

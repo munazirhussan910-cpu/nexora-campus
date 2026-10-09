@@ -61,29 +61,37 @@ export const authenticate = async (
         username: string;
         email: string;
         isActive: boolean | number;
+        bio: string | null;
+        profilePhotoUrl: string | null;
         roleId: string;
         roleName: string;
         studentId: string | null;
         rollNumber: string | null;
         studentName: string | null;
         year: number | null;
+        studentPhone: string | null;
+        studentParentPhone: string | null;
         branchCode: string | null;
         roomNumber: string | null;
         hostelBlockName: string | null;
         staffId: string | null;
+        staffEmployeeId: string | null;
         staffName: string | null;
         staffDept: string | null;
+        staffDesignation: string | null;
+        staffSpecialization: string | null;
+        staffPhone: string | null;
         permissionsCsv: string | null;
       }>
     >`
       SELECT 
-        u.id, u.username, u.email, u.isActive,
+        u.id, u.username, u.email, u.isActive, u.bio, u.profilePhotoUrl,
         r.id as roleId, r.name as roleName,
-        st.id as studentId, st.rollNumber, st.fullName as studentName, st.year,
+        st.id as studentId, st.rollNumber, st.fullName as studentName, st.year, st.phone as studentPhone, st.parentPhone as studentParentPhone,
         b.code as branchCode,
         rm.roomNumber,
         hb.name as hostelBlockName,
-        sf.id as staffId, sf.fullName as staffName, sf.department as staffDept,
+        sf.id as staffId, sf.employeeId as staffEmployeeId, sf.fullName as staffName, sf.department as staffDept, sf.designation as staffDesignation, sf.specialization as staffSpecialization, sf.phone as staffPhone,
         (
           SELECT GROUP_CONCAT(p.code, ',')
           FROM RolePermission rp
@@ -129,12 +137,19 @@ export const authenticate = async (
       studentId: user.studentId || undefined,
       staffId: user.staffId || undefined,
       rollNumber: user.rollNumber || undefined,
+      employeeId: user.staffEmployeeId || undefined,
       fullName: user.studentName || user.staffName || undefined,
-      department: user.staffDept || undefined,
+      department: user.staffDept || (user.branchCode ? `Department of ${user.branchCode}` : undefined),
+      designation: user.staffDesignation || (user.studentId ? 'Student' : undefined),
+      specialization: user.staffSpecialization || undefined,
       branch: user.branchCode || undefined,
       year: user.year || undefined,
       hostelBlock: user.hostelBlockName || undefined,
       roomNumber: user.roomNumber || undefined,
+      phone: user.studentPhone || user.staffPhone || undefined,
+      parentPhone: user.studentParentPhone || undefined,
+      bio: user.bio || undefined,
+      profilePhotoUrl: user.profilePhotoUrl || undefined,
     };
 
     // Store in short-lived session cache

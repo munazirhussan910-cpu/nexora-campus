@@ -11,6 +11,10 @@ const prisma_1 = __importDefault(require("../config/prisma"));
 const env_1 = require("../config/env");
 const auth_middleware_1 = require("../middleware/auth.middleware");
 const validate_middleware_1 = require("../middleware/validate.middleware");
+const mentor_routes_1 = require("./mentor.routes");
+const audit_service_1 = require("../services/audit.service");
+const error_middleware_1 = require("../middleware/error.middleware");
+const storage_service_1 = require("../services/storage.service");
 const router = (0, express_1.Router)();
 const loginSchema = zod_1.z.object({
     usernameOrEmail: zod_1.z.string().trim().min(1, 'Username or email is required'),
@@ -41,16 +45,10 @@ const registerStudentSchema = zod_1.z
     year: zod_1.z
         .union([zod_1.z.number().int(), zod_1.z.string().trim()])
         .refine((val) => {
-        const num = typeof val === 'number' ? val : parseInt(val.replace(/\D/g, ''), 10);
-        return !isNaN(num) && num >= 1 && num <= 8;
+        const y = (0, mentor_routes_1.resolveStudentYear)({ year: val });
+        return y >= 1 && y <= 4;
     }, { message: 'Please provide a valid semester (1-8) or academic year (1-4)' })
-        .transform((val) => {
-        const num = typeof val === 'number' ? val : parseInt(val.replace(/\D/g, ''), 10);
-        if (num > 4 && num <= 8) {
-            return Math.ceil(num / 2); // Map semester 1-8 to year 1-4
-        }
-        return num;
-    }),
+        .transform((val) => (0, mentor_routes_1.resolveStudentYear)({ year: val })),
     hostel: zod_1.z.string().trim().optional(),
     roomNumber: zod_1.z.string().trim().optional(),
     phone: zod_1.z.string().trim().optional(),
@@ -297,6 +295,7 @@ router.post('/register', (0, validate_middleware_1.validateBody)(registerStudent
                     year: createdStudent.year,
                     hostelBlock: createdStudent.hostelRoom?.hostelBlock.name,
                     roomNumber: createdStudent.hostelRoom?.roomNumber,
+                    profilePhotoUrl: null,
                 },
             },
         });
@@ -394,6 +393,7 @@ router.post('/login', (0, validate_middleware_1.validateBody)(loginSchema), asyn
                     year: user.student?.year,
                     hostelBlock: user.student?.hostelRoom?.hostelBlock.name,
                     roomNumber: user.student?.hostelRoom?.roomNumber,
+                    profilePhotoUrl: user.profilePhotoUrl || null,
                 },
             },
         });
@@ -410,6 +410,275 @@ router.get('/me', auth_middleware_1.authenticate, async (req, res) => {
             user: req.user,
         },
     });
+});
+const updateProfileSchema = zod_1.z.object({
+    fullName: zod_1.z.string().trim().min(2, 'Full Name must be at least 2 characters').max(100).optional(),
+    phone: zod_1.z.string().trim().max(20, 'Phone number cannot exceed 20 characters').optional().nullable(),
+    parentPhone: zod_1.z.string().trim().max(20).optional().nullable(),
+    department: zod_1.z.string().trim().min(1).max(100).optional().nullable(),
+    designation: zod_1.z.string().trim().min(1).max(100).optional().nullable(),
+    specialization: zod_1.z.string().trim().max(100).optional().nullable(),
+    bio: zod_1.z.string().trim().max(1000, 'Bio cannot exceed 1000 characters').optional().nullable(),
+    profilePhotoUrl: zod_1.z.string().trim().max(10 * 1024 * 1024, 'Profile photo data too large').optional().nullable(),
+});
+/**
+ * PUT /api/auth/profile
+ * Allows any authenticated user (Student, Staff, Faculty, Warden, Security, Academic Officer, Admin)
+ * to update their own profile information.
+ * Role escalation, email modification, and user ID tampering are strictly prohibited.
+ */
+router.put(['/profile', '/me'], auth_middleware_1.authenticate, (0, validate_middleware_1.validateBody)(updateProfileSchema), async (req, res, next) => {
+    try {
+        const userId = req.user.id;
+        const { fullName, phone, parentPhone, department, designation, specialization, bio, profilePhotoUrl } = req.body;
+        const user = await prisma_1.default.user.findUnique({
+            where: { id: userId },
+            include: { student: true, staff: true },
+        });
+        if (!user) {
+            throw new error_middleware_1.AppError('User not found', 404);
+        }
+        // Handle profile photo processing if provided in the update
+        let resolvedPhotoUrl = undefined;
+        if (profilePhotoUrl !== undefined) {
+            if (!profilePhotoUrl || profilePhotoUrl.trim() === '') {
+                storage_service_1.StorageService.safeDeleteDiskFile(user.profilePhotoUrl || '');
+                resolvedPhotoUrl = null;
+            }
+            else {
+                const processed = await storage_service_1.StorageService.processAndSaveAvatar(userId, profilePhotoUrl, user.profilePhotoUrl);
+                resolvedPhotoUrl = processed.profilePhotoUrl;
+            }
+        }
+        const updated = await prisma_1.default.$transaction(async (tx) => {
+            // 1. Update User level fields (bio, profilePhotoUrl)
+            const userUpdateData = {};
+            if (bio !== undefined) {
+                userUpdateData.bio = bio ? String(bio).trim() : null;
+            }
+            if (resolvedPhotoUrl !== undefined) {
+                userUpdateData.profilePhotoUrl = resolvedPhotoUrl;
+            }
+            if (Object.keys(userUpdateData).length > 0) {
+                await tx.user.update({
+                    where: { id: userId },
+                    data: userUpdateData,
+                });
+            }
+            // 2. If user is Student, update Student record
+            if (user.student) {
+                let branchId = user.student.branchId;
+                if (department) {
+                    const trimmedDept = String(department).trim();
+                    const branch = await tx.branch.findFirst({
+                        where: {
+                            OR: [
+                                { code: trimmedDept.toUpperCase() },
+                                { name: { contains: trimmedDept } },
+                            ],
+                        },
+                    });
+                    if (branch)
+                        branchId = branch.id;
+                }
+                await tx.student.update({
+                    where: { id: user.student.id },
+                    data: {
+                        ...(fullName ? { fullName: String(fullName).trim() } : {}),
+                        ...(phone !== undefined ? { phone: phone ? String(phone).trim() : null } : {}),
+                        ...(parentPhone !== undefined ? { parentPhone: parentPhone ? String(parentPhone).trim() : null } : {}),
+                        branchId,
+                    },
+                });
+            }
+            // 3. If user is Staff (STAFF, FACULTY, WARDEN, SECURITY, ACADEMIC_OFFICER, ADMIN), update Staff record
+            if (user.staff) {
+                await tx.staff.update({
+                    where: { id: user.staff.id },
+                    data: {
+                        ...(fullName ? { fullName: String(fullName).trim() } : {}),
+                        ...(phone !== undefined ? { phone: phone ? String(phone).trim() : null } : {}),
+                        ...(department ? { department: String(department).trim() } : {}),
+                        ...(designation ? { designation: String(designation).trim() } : {}),
+                        ...(specialization !== undefined ? { specialization: specialization ? String(specialization).trim() : null } : {}),
+                    },
+                });
+            }
+            return tx.user.findUnique({
+                where: { id: userId },
+                include: {
+                    role: true,
+                    student: { include: { branch: true } },
+                    staff: true,
+                },
+            });
+        });
+        // Invalidate the session cache so subsequent queries immediately return updated data
+        (0, auth_middleware_1.clearAuthSessionCache)(userId);
+        await audit_service_1.AuditService.log({
+            actorId: userId,
+            action: 'PROFILE_UPDATED',
+            entityType: 'USER',
+            entityId: userId,
+            newValues: { fullName, phone, department, designation, bio, profilePhotoUpdated: resolvedPhotoUrl !== undefined },
+        });
+        res.json({
+            success: true,
+            message: 'Profile updated successfully.',
+            data: {
+                user: {
+                    id: updated.id,
+                    username: updated.username,
+                    email: updated.email,
+                    role: updated.role.name,
+                    fullName: updated.student?.fullName || updated.staff?.fullName || updated.username,
+                    phone: updated.student?.phone || updated.staff?.phone || null,
+                    parentPhone: updated.student?.parentPhone || null,
+                    department: updated.staff?.department || (updated.student?.branch ? updated.student.branch.name : null),
+                    branch: updated.student?.branch?.code || null,
+                    designation: updated.staff?.designation || (updated.student ? 'Student' : null),
+                    specialization: updated.staff?.specialization || null,
+                    rollNumber: updated.student?.rollNumber || null,
+                    employeeId: updated.staff?.employeeId || null,
+                    year: updated.student?.year || null,
+                    bio: updated.bio || null,
+                    profilePhotoUrl: updated.profilePhotoUrl || null,
+                },
+            },
+        });
+    }
+    catch (err) {
+        next(err);
+    }
+});
+/**
+ * POST /api/auth/profile/photo
+ * Direct upload/update endpoint for user's profile photo
+ */
+router.post(['/profile/photo', '/photo'], auth_middleware_1.authenticate, async (req, res, next) => {
+    try {
+        const userId = req.user.id;
+        const photoPayload = req.body?.photo || req.body?.photoData || req.body?.profilePhotoUrl;
+        if (!photoPayload || typeof photoPayload !== 'string') {
+            res.status(400).json({
+                success: false,
+                error: {
+                    code: 'INVALID_PHOTO_PAYLOAD',
+                    message: 'A valid image file or data payload is required.',
+                },
+            });
+            return;
+        }
+        const currentUser = await prisma_1.default.user.findUnique({ where: { id: userId } });
+        if (!currentUser) {
+            throw new error_middleware_1.AppError('User not found', 404);
+        }
+        const processed = await storage_service_1.StorageService.processAndSaveAvatar(userId, photoPayload, currentUser.profilePhotoUrl);
+        const updated = await prisma_1.default.user.update({
+            where: { id: userId },
+            data: { profilePhotoUrl: processed.profilePhotoUrl },
+            include: {
+                role: true,
+                student: { include: { branch: true } },
+                staff: true,
+            },
+        });
+        (0, auth_middleware_1.clearAuthSessionCache)(userId);
+        await audit_service_1.AuditService.log({
+            actorId: userId,
+            action: 'PROFILE_PHOTO_UPDATED',
+            entityType: 'USER',
+            entityId: userId,
+        });
+        res.json({
+            success: true,
+            message: 'Profile photo updated successfully.',
+            data: {
+                profilePhotoUrl: updated.profilePhotoUrl,
+                user: {
+                    id: updated.id,
+                    username: updated.username,
+                    email: updated.email,
+                    role: updated.role.name,
+                    fullName: updated.student?.fullName || updated.staff?.fullName || updated.username,
+                    phone: updated.student?.phone || updated.staff?.phone || null,
+                    parentPhone: updated.student?.parentPhone || null,
+                    department: updated.staff?.department || (updated.student?.branch ? updated.student.branch.name : null),
+                    branch: updated.student?.branch?.code || null,
+                    designation: updated.staff?.designation || (updated.student ? 'Student' : null),
+                    specialization: updated.staff?.specialization || null,
+                    rollNumber: updated.student?.rollNumber || null,
+                    employeeId: updated.staff?.employeeId || null,
+                    year: updated.student?.year || null,
+                    bio: updated.bio || null,
+                    profilePhotoUrl: updated.profilePhotoUrl || null,
+                },
+            },
+        });
+    }
+    catch (err) {
+        next(err);
+    }
+});
+/**
+ * DELETE /api/auth/profile/photo
+ * Direct endpoint to remove user profile photo
+ */
+router.delete(['/profile/photo', '/photo'], auth_middleware_1.authenticate, async (req, res, next) => {
+    try {
+        const userId = req.user.id;
+        const currentUser = await prisma_1.default.user.findUnique({ where: { id: userId } });
+        if (!currentUser) {
+            throw new error_middleware_1.AppError('User not found', 404);
+        }
+        if (currentUser.profilePhotoUrl) {
+            storage_service_1.StorageService.safeDeleteDiskFile(currentUser.profilePhotoUrl);
+        }
+        const updated = await prisma_1.default.user.update({
+            where: { id: userId },
+            data: { profilePhotoUrl: null },
+            include: {
+                role: true,
+                student: { include: { branch: true } },
+                staff: true,
+            },
+        });
+        (0, auth_middleware_1.clearAuthSessionCache)(userId);
+        await audit_service_1.AuditService.log({
+            actorId: userId,
+            action: 'PROFILE_PHOTO_REMOVED',
+            entityType: 'USER',
+            entityId: userId,
+        });
+        res.json({
+            success: true,
+            message: 'Profile photo removed successfully.',
+            data: {
+                profilePhotoUrl: null,
+                user: {
+                    id: updated.id,
+                    username: updated.username,
+                    email: updated.email,
+                    role: updated.role.name,
+                    fullName: updated.student?.fullName || updated.staff?.fullName || updated.username,
+                    phone: updated.student?.phone || updated.staff?.phone || null,
+                    parentPhone: updated.student?.parentPhone || null,
+                    department: updated.staff?.department || (updated.student?.branch ? updated.student.branch.name : null),
+                    branch: updated.student?.branch?.code || null,
+                    designation: updated.staff?.designation || (updated.student ? 'Student' : null),
+                    specialization: updated.staff?.specialization || null,
+                    rollNumber: updated.student?.rollNumber || null,
+                    employeeId: updated.staff?.employeeId || null,
+                    year: updated.student?.year || null,
+                    bio: updated.bio || null,
+                    profilePhotoUrl: null,
+                },
+            },
+        });
+    }
+    catch (err) {
+        next(err);
+    }
 });
 // POST /api/auth/logout
 router.post('/logout', (req, res) => {
@@ -554,6 +823,7 @@ router.post('/switch-persona', (0, validate_middleware_1.validateBody)(switchPer
                     year: user.student?.year,
                     hostelBlock: user.student?.hostelRoom?.hostelBlock.name,
                     roomNumber: user.student?.hostelRoom?.roomNumber,
+                    profilePhotoUrl: user.profilePhotoUrl || null,
                 },
             },
         });

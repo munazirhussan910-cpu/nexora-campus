@@ -9,6 +9,7 @@ import { RequestService } from '../services/request.service';
 import { QrService } from '../services/qr.service';
 import { NotificationService } from '../services/notification.service';
 import { AuditService } from '../services/audit.service';
+import { getWardenHostelBlock } from '../services/warden.service';
 import { AuthenticatedRequest } from '../types/auth';
 
 const router = Router();
@@ -117,8 +118,62 @@ router.get(
   requirePermission('gatepass.approve'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const whereClause: any = { gateStatus: 'PENDING_APPROVAL' };
+
+      if (req.user!.role === 'WARDEN') {
+        const wardenBlock = await getWardenHostelBlock(req.user!);
+        if (!wardenBlock) {
+          res.json({
+            success: true,
+            data: [],
+          });
+          return;
+        }
+
+        whereClause.AND = [
+          {
+            OR: [
+              {
+                request: {
+                  requester: {
+                    student: {
+                      hostelRoom: {
+                        hostelBlockId: wardenBlock.id,
+                      },
+                    },
+                  },
+                },
+              },
+              {
+                AND: [
+                  {
+                    request: {
+                      requester: {
+                        student: {
+                          OR: [
+                            { hostelRoomId: null },
+                            { hostelRoom: null },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                  {
+                    request: {
+                      location: {
+                        contains: wardenBlock.name,
+                      },
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ];
+      }
+
       const pendingPasses = await prisma.gatePass.findMany({
-        where: { gateStatus: 'PENDING_APPROVAL' },
+        where: whereClause,
         include: {
           request: {
             include: {

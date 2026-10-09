@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { apiRequest } from '@/lib/api';
+import { apiRequest, clearApiCache } from '@/lib/api';
 import { StatusBadge } from '@/components/status/StatusBadge';
 import { PriorityBadge } from '@/components/status/PriorityBadge';
 import { SLAIndicator } from '@/components/status/SLAIndicator';
@@ -20,6 +20,7 @@ import {
   User,
   Phone,
   MessageSquare,
+  Loader2,
 } from 'lucide-react';
 
 export default function StaffTaskDetailPage() {
@@ -27,79 +28,200 @@ export default function StaffTaskDetailPage() {
   const taskId = params.id as string;
 
   const [task, setTask] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
 
   // Resolution Notes Modal / Form
   const [resolutionNotes, setResolutionNotes] = useState('');
-  const [submittingAction, setSubmittingAction] = useState(false);
+  const [submittingAction, setSubmittingAction] = useState<'accept' | 'start' | 'resolve' | null>(null);
 
-  const fetchTask = async () => {
-    setLoading(true);
-    const res = await apiRequest(`/requests/${taskId}`);
-    if (res.success && res.data) {
-      setTask(res.data);
-      if (res.data.complaint?.resolutionNotes) {
-        setResolutionNotes(res.data.complaint.resolutionNotes);
-      }
-    } else {
-      setError(res.error?.message || 'Failed to load task details');
+  // Synchronous submission lock to prevent duplicate clicks and race conditions
+  const isSubmittingRef = useRef(false);
+  // Request sequence ID to discard outdated responses from in-flight GET requests
+  const latestRequestIdRef = useRef(0);
+  const taskRef = useRef<any>(null);
+  taskRef.current = task;
+
+  const fetchTask = useCallback(async (options?: { silent?: boolean; useCache?: boolean }) => {
+    const isInitial = !taskRef.current;
+    if (!options?.silent && isInitial) {
+      setInitialLoading(true);
     }
-    setLoading(false);
-  };
+    const currentRequestId = ++latestRequestIdRef.current;
 
-  useEffect(() => {
-    if (taskId) fetchTask();
+    try {
+      const res = await apiRequest(`/requests/${taskId}`, {
+        useCache: options?.useCache ?? false,
+        skipDedupe: true,
+      });
+
+      // Discard if a newer request was issued while this one was in flight
+      if (currentRequestId !== latestRequestIdRef.current) {
+        return;
+      }
+
+      if (res.success && res.data) {
+        setTask(res.data);
+        if (res.data.complaint?.resolutionNotes) {
+          setResolutionNotes(res.data.complaint.resolutionNotes);
+        }
+      } else if (isInitial) {
+        setError(res.error?.message || 'Failed to load task details');
+      }
+    } catch (err: any) {
+      if (isInitial) {
+        setError(err?.message || 'Failed to load task details');
+      }
+    } finally {
+      if (currentRequestId === latestRequestIdRef.current) {
+        setInitialLoading(false);
+      }
+    }
   }, [taskId]);
 
-  const handleAccept = async () => {
-    setSubmittingAction(true);
-    setActionSuccess('');
-    const res = await apiRequest(`/complaints/${taskId}/accept`, { method: 'POST' });
-    if (res.success) {
-      setActionSuccess('Task accepted successfully! Student has been notified.');
-      fetchTask();
-    } else {
-      setError(res.error?.message || 'Failed to accept task');
+  useEffect(() => {
+    if (taskId) {
+      fetchTask({ useCache: false });
     }
-    setSubmittingAction(false);
+  }, [taskId, fetchTask]);
+
+  const handleAccept = async () => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    setSubmittingAction('accept');
+    setError('');
+    setActionSuccess('');
+
+    try {
+      const res = await apiRequest(`/complaints/${taskId}/accept`, { method: 'POST' });
+      if (res.success) {
+        // Discard any older in-flight GET requests
+        latestRequestIdRef.current++;
+        if (res.data) {
+          setTask((prev: any) => ({
+            ...prev,
+            ...res.data,
+            status: 'ACCEPTED',
+            complaint: res.data.complaint || prev?.complaint,
+            timeline: res.data.timeline || prev?.timeline,
+            sla: res.data.sla || prev?.sla,
+          }));
+        } else {
+          setTask((prev: any) => ({ ...prev, status: 'ACCEPTED' }));
+        }
+        setActionSuccess('Task accepted successfully! Available next action: Start On-Site Work.');
+        clearApiCache();
+      } else {
+        setError(res.error?.message || 'Failed to accept task');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to accept task');
+    } finally {
+      isSubmittingRef.current = false;
+      setSubmittingAction(null);
+    }
   };
 
   const handleStart = async () => {
-    setSubmittingAction(true);
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    setSubmittingAction('start');
+    setError('');
     setActionSuccess('');
-    const res = await apiRequest(`/complaints/${taskId}/start`, { method: 'POST' });
-    if (res.success) {
-      setActionSuccess('Work marked as IN PROGRESS. Student notified.');
-      fetchTask();
-    } else {
-      setError(res.error?.message || 'Failed to start work');
+
+    try {
+      const res = await apiRequest(`/complaints/${taskId}/start`, { method: 'POST' });
+      if (res.success) {
+        latestRequestIdRef.current++;
+        if (res.data) {
+          setTask((prev: any) => ({
+            ...prev,
+            ...res.data,
+            status: 'IN_PROGRESS',
+            complaint: res.data.complaint || prev?.complaint,
+            timeline: res.data.timeline || prev?.timeline,
+            sla: res.data.sla || prev?.sla,
+          }));
+        } else {
+          setTask((prev: any) => ({ ...prev, status: 'IN_PROGRESS' }));
+        }
+        setActionSuccess('Work marked as IN PROGRESS. Student notified.');
+        clearApiCache();
+      } else {
+        setError(res.error?.message || 'Failed to start work');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to start work');
+    } finally {
+      isSubmittingRef.current = false;
+      setSubmittingAction(null);
     }
-    setSubmittingAction(false);
   };
 
   const handleResolve = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!resolutionNotes.trim()) return;
+    if (isSubmittingRef.current) return;
 
-    setSubmittingAction(true);
-    setActionSuccess('');
-    const res = await apiRequest(`/complaints/${taskId}/resolve`, {
-      method: 'POST',
-      body: JSON.stringify({ resolutionNotes }),
-    });
-
-    if (res.success) {
-      setActionSuccess('Complaint marked as RESOLVED! Notification dispatched to student for confirmation.');
-      fetchTask();
-    } else {
-      setError(res.error?.message || 'Failed to resolve task');
+    const trimmedNotes = resolutionNotes.trim();
+    if (!trimmedNotes) {
+      setError('Please provide detailed technician resolution notes before resolving.');
+      return;
     }
-    setSubmittingAction(false);
+
+    isSubmittingRef.current = true;
+    setSubmittingAction('resolve');
+    setError('');
+    setActionSuccess('');
+
+    try {
+      const res = await apiRequest(`/complaints/${taskId}/resolve`, {
+        method: 'POST',
+        body: JSON.stringify({ resolutionNotes: trimmedNotes }),
+      });
+
+      if (res.success) {
+        latestRequestIdRef.current++;
+        if (res.data) {
+          setTask((prev: any) => ({
+            ...prev,
+            ...res.data,
+            status: 'RESOLVED',
+            complaint: {
+              ...(prev?.complaint || {}),
+              ...(res.data.complaint || {}),
+              resolutionNotes: res.data.complaint?.resolutionNotes || trimmedNotes,
+            },
+            timeline: res.data.timeline || prev?.timeline,
+            sla: res.data.sla || prev?.sla,
+          }));
+          if (res.data.complaint?.resolutionNotes) {
+            setResolutionNotes(res.data.complaint.resolutionNotes);
+          }
+        } else {
+          setTask((prev: any) => ({
+            ...prev,
+            status: 'RESOLVED',
+            complaint: {
+              ...(prev?.complaint || {}),
+              resolutionNotes: trimmedNotes,
+            },
+          }));
+        }
+        setActionSuccess('Complaint marked as RESOLVED! Notification dispatched to student for confirmation.');
+        clearApiCache();
+      } else {
+        setError(res.error?.message || 'Failed to resolve task');
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to resolve task');
+    } finally {
+      isSubmittingRef.current = false;
+      setSubmittingAction(null);
+    }
   };
 
-  if (loading) {
+  if (initialLoading && !task) {
     return <div className="py-20 text-center text-xs text-gray-500">Loading work order details...</div>;
   }
 
@@ -115,6 +237,8 @@ export default function StaffTaskDetailPage() {
       </div>
     );
   }
+
+  if (!task) return null;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -147,28 +271,50 @@ export default function StaffTaskDetailPage() {
             {task.status === 'ASSIGNED' && (
               <button
                 onClick={handleAccept}
-                disabled={submittingAction}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs shadow transition"
+                disabled={Boolean(submittingAction)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Check size={15} /> Accept Task
+                {submittingAction === 'accept' ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" /> Accepting...
+                  </>
+                ) : (
+                  <>
+                    <Check size={15} /> Accept &amp; Manage
+                  </>
+                )}
               </button>
             )}
 
             {task.status === 'ACCEPTED' && (
               <button
                 onClick={handleStart}
-                disabled={submittingAction}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow transition"
+                disabled={Boolean(submittingAction)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Play size={14} /> Start On-Site Work
+                {submittingAction === 'start' ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" /> Starting...
+                  </>
+                ) : (
+                  <>
+                    <Play size={14} /> Start On-Site Work
+                  </>
+                )}
               </button>
             )}
           </div>
         </div>
 
+        {error && (
+          <div className="p-3 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
+            <AlertCircle size={16} className="shrink-0" /> <span>{error}</span>
+          </div>
+        )}
+
         {actionSuccess && (
           <div className="p-3 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-300 text-xs flex items-center gap-2">
-            <CheckCircle2 size={16} /> <span>{actionSuccess}</span>
+            <CheckCircle2 size={16} className="shrink-0" /> <span>{actionSuccess}</span>
           </div>
         )}
 
@@ -226,19 +372,26 @@ export default function StaffTaskDetailPage() {
             <form onSubmit={handleResolve} className="space-y-3">
               <textarea
                 required
+                disabled={Boolean(submittingAction)}
                 value={resolutionNotes}
                 onChange={(e) => setResolutionNotes(e.target.value)}
                 placeholder="e.g. Replaced leaking valve gasket with brand new brass spindle. Checked water flow under high pressure."
-                className="w-full bg-[#12151f] border border-[#2e3447] rounded-lg p-3 text-xs text-white placeholder-gray-500 h-24 focus:outline-none focus:border-amber-400"
+                className="w-full bg-[#12151f] border border-[#2e3447] rounded-lg p-3 text-xs text-white placeholder-gray-500 h-24 focus:outline-none focus:border-amber-400 disabled:opacity-60"
               />
 
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  disabled={submittingAction || !resolutionNotes.trim()}
-                  className="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs shadow transition disabled:opacity-50"
+                  disabled={Boolean(submittingAction) || !resolutionNotes.trim()}
+                  className="px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs shadow transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  {submittingAction ? 'Recording...' : 'Mark Resolved & Notify Student'}
+                  {submittingAction === 'resolve' ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" /> Resolving...
+                    </>
+                  ) : (
+                    'Mark Resolved & Notify Student'
+                  )}
                 </button>
               </div>
             </form>

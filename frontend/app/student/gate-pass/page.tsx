@@ -226,8 +226,8 @@ export default function StudentGatePassPage() {
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-gray-300 font-semibold mb-1.5 text-xs">
-                Destination <span className="text-[#d4af37]">*</span>
+              <label className="block text-slate-300 font-semibold mb-1.5 text-xs">
+                Destination <span className="text-[#18C5D8]">*</span>
               </label>
               <input
                 type="text"
@@ -235,13 +235,13 @@ export default function StudentGatePassPage() {
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
                 placeholder="e.g. Bhubaneswar City Center / Market"
-                className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
+                className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] transition"
               />
             </div>
 
             <div>
-              <label className="block text-gray-300 font-semibold mb-1.5 text-xs">
-                Reason for Exit <span className="text-[#d4af37]">*</span>
+              <label className="block text-slate-300 font-semibold mb-1.5 text-xs">
+                Reason for Exit <span className="text-[#18C5D8]">*</span>
               </label>
               <input
                 type="text"
@@ -249,33 +249,33 @@ export default function StudentGatePassPage() {
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="e.g. Purchasing academic project hardware"
-                className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
+                className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] transition"
               />
             </div>
 
             <div>
-              <label className="block text-gray-300 font-semibold mb-1.5 text-xs">
-                Expected Departure Time <span className="text-[#d4af37]">*</span>
+              <label className="block text-slate-300 font-semibold mb-1.5 text-xs">
+                Expected Departure Time <span className="text-[#18C5D8]">*</span>
               </label>
               <input
                 type="datetime-local"
                 required
                 value={departureTime}
                 onChange={(e) => setDepartureTime(e.target.value)}
-                className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
+                className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] transition"
               />
             </div>
 
             <div>
-              <label className="block text-gray-300 font-semibold mb-1.5 text-xs">
-                Expected Return Time <span className="text-[#d4af37]">*</span>
+              <label className="block text-slate-300 font-semibold mb-1.5 text-xs">
+                Expected Return Time <span className="text-[#18C5D8]">*</span>
               </label>
               <input
                 type="datetime-local"
                 required
                 value={expectedReturnTime}
                 onChange={(e) => setExpectedReturnTime(e.target.value)}
-                className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition"
+                className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] transition"
               />
             </div>
           </div>
@@ -284,7 +284,7 @@ export default function StudentGatePassPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs shadow-md shadow-cyan-950/30 transition-all active:scale-95 disabled:opacity-50"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#5B20A0] hover:bg-[#6c28be] text-white font-bold text-xs shadow-md shadow-[#5B20A0]/25 transition-all active:scale-95 disabled:opacity-50"
             >
               {submitting ? 'Submitting to Warden...' : 'Submit Gate Pass Request'}
             </button>

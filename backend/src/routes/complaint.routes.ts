@@ -161,6 +161,46 @@ router.get(
   }
 );
 
+async function getFullComplaintTask(requestId: string) {
+  const fullRequest = await prisma.request.findUnique({
+    where: { id: requestId },
+    include: {
+      requestType: true,
+      requester: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          student: {
+            include: {
+              branch: true,
+              hostelRoom: { include: { hostelBlock: true } },
+            },
+          },
+        },
+      },
+      assignedStaff: {
+        select: {
+          id: true,
+          staff: { select: { fullName: true, designation: true, phone: true } },
+        },
+      },
+      complaint: true,
+    },
+  });
+
+  if (!fullRequest) return null;
+
+  const timeline = await RequestService.getRequestTimeline(requestId);
+  const sla = SlaService.computeSla(fullRequest);
+
+  return {
+    ...fullRequest,
+    timeline,
+    sla,
+  };
+}
+
 // POST /api/complaints/:id/accept - Staff accepts complaint
 router.post(
   '/:id/accept',
@@ -198,10 +238,12 @@ router.post(
         data: { acceptedAt: new Date() },
       });
 
+      const fullTask = await getFullComplaintTask(requestId);
+
       res.json({
         success: true,
         message: 'Complaint accepted successfully',
-        data: updated,
+        data: fullTask || updated,
       });
     } catch (err) {
       next(err);
@@ -239,10 +281,12 @@ router.post(
         'Staff has started on-site maintenance work'
       );
 
+      const fullTask = await getFullComplaintTask(requestId);
+
       res.json({
         success: true,
         message: 'Work status marked as in progress',
-        data: updated,
+        data: fullTask || updated,
       });
     } catch (err) {
       next(err);
@@ -299,10 +343,12 @@ router.post(
         `Resolved with notes: ${resolutionNotes}`
       );
 
+      const fullTask = await getFullComplaintTask(requestId);
+
       res.json({
         success: true,
         message: 'Complaint marked as resolved',
-        data: updated,
+        data: fullTask || updated,
       });
     } catch (err) {
       next(err);

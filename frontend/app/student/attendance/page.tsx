@@ -158,15 +158,15 @@ export default function StudentAttendancePage() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[11px] font-mono uppercase tracking-widest text-[#d4af37] font-semibold">
+            <span className="text-[11px] font-mono uppercase tracking-widest text-[#18C5D8] font-semibold">
               Student Attendance Portal
             </span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
             My Attendance Record
           </h1>
-          <p className="text-xs text-gray-400 mt-0.5">
-            {data?.student.fullName} • Roll: <span className="font-mono text-gray-200">{data?.student.rollNumber}</span> • B.Tech {data?.student.branch} (Year {data?.student.year})
+          <p className="text-xs text-slate-400 mt-0.5">
+            {data?.student.fullName} • Roll: <span className="font-mono text-slate-200">{data?.student.rollNumber}</span> • B.Tech {data?.student.branch} (Year {data?.student.year})
           </p>
         </div>
 
@@ -175,9 +175,9 @@ export default function StudentAttendancePage() {
             type="button"
             onClick={handleRefresh}
             disabled={refreshing}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#141824] border border-[#273043] hover:border-[#d4af37]/60 text-xs font-semibold text-gray-300 hover:text-white transition shadow-xs active:scale-95 disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#141824] border border-[#273043] hover:border-[#18C5D8]/60 text-xs font-semibold text-slate-300 hover:text-white transition shadow-xs active:scale-95 disabled:opacity-50"
           >
-            <RefreshCw size={13} className={refreshing ? 'animate-spin text-[#d4af37]' : ''} />
+            <RefreshCw size={13} className={refreshing ? 'animate-spin text-[#18C5D8]' : ''} />
             <span>{refreshing ? 'Syncing...' : 'Refresh Records'}</span>
           </button>
         </div>
@@ -192,7 +192,7 @@ export default function StudentAttendancePage() {
 
       {/* 1. Overall Attendance Hero Card */}
       <div className="bg-[#141824] border border-[#232a3d] rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-[#d4af37]/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-80 h-80 bg-[#5B20A0]/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
           {/* Main Percentage Display */}
@@ -267,9 +267,9 @@ export default function StudentAttendancePage() {
                   style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }}
                 />
               </div>
-              <div className="flex justify-between text-[10px] font-mono text-gray-500 mt-1">
+              <div className="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
                 <span>0%</span>
-                <span className="text-[#d4af37]">▲ 75% Minimum Target</span>
+                <span className="text-[#18C5D8]">▲ 75% Minimum Target</span>
                 <span>100%</span>
               </div>
             </div>
@@ -296,7 +296,7 @@ export default function StudentAttendancePage() {
       <div className="bg-[#141824] border border-[#232a3d] rounded-2xl overflow-hidden shadow-xl">
         <div className="p-4 sm:p-5 border-b border-[#21273a] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#1a2133] border border-[#2b354d] flex items-center justify-center text-[#d4af37]">
+            <div className="w-8 h-8 rounded-lg bg-[#1a2133] border border-[#2b354d] flex items-center justify-center text-[#18C5D8]">
               <BookOpen size={16} />
             </div>
             <div>
@@ -330,7 +330,7 @@ export default function StudentAttendancePage() {
                 data.records.map((sub) => (
                   <tr key={sub.id} className="hover:bg-[#181e2e] transition group">
                     <td className="py-3 px-4">
-                      <div className="font-semibold text-white group-hover:text-[#d4af37] transition">
+                      <div className="font-semibold text-white group-hover:text-[#18C5D8] transition">
                         {sub.subjectName}
                       </div>
                       <div className="text-[11px] font-mono text-gray-400">{sub.subjectCode}</div>
@@ -454,7 +454,7 @@ export default function StudentAttendancePage() {
 
       {/* Security & Authenticity Policy Note */}
       <div className="p-4 rounded-xl bg-[#101420] border border-[#21283a] text-gray-400 text-xs flex items-center gap-3">
-        <ShieldCheck size={20} className="text-[#d4af37] shrink-0" />
+        <ShieldCheck size={20} className="text-[#18C5D8] shrink-0" />
         <div className="leading-relaxed">
           <strong className="text-gray-200">Institutional Attendance Verification:</strong> Attendance
           is authoritatively recorded by assigned faculty members in accordance with university academic regulations.

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 import {
   FileCheck,
@@ -19,8 +20,9 @@ import {
 import { CancelRequestModal } from '@/components/modals/CancelRequestModal';
 
 export default function StudentDocumentsPage() {
+  const searchParams = useSearchParams();
   const [bonafideRequests, setBonafideRequests] = useState<any[]>([]);
-  const [purpose, setPurpose] = useState('Scholarship');
+  const [purpose, setPurpose] = useState(searchParams.get('purpose') || 'Scholarship');
   const [loading, setLoading] = useState(true);
   const [cancellingBonafide, setCancellingBonafide] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -107,13 +109,13 @@ export default function StudentDocumentsPage() {
 
         <form onSubmit={handleRequestBonafide} className="space-y-4 text-xs">
           <div>
-            <label className="block text-gray-300 font-semibold mb-1.5 text-xs">
-              Purpose of Certificate <span className="text-[#d4af37]">*</span>
+            <label className="block text-slate-300 font-semibold mb-1.5 text-xs">
+              Purpose of Certificate <span className="text-[#18C5D8]">*</span>
             </label>
             <select
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
-              className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37] transition"
+              className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] transition"
             >
               <option value="Scholarship">State / National Scholarship Verification</option>
               <option value="Bank">Bank Account Opening / Education Loan</option>
@@ -122,7 +124,7 @@ export default function StudentDocumentsPage() {
               <option value="Passport">Passport / Visa Application</option>
               <option value="Other">Other Official Requirement</option>
             </select>
-            <p className="text-[11px] text-gray-500 mt-1.5 font-mono">
+            <p className="text-[11px] text-slate-500 mt-1.5 font-mono">
               The purpose will be stated verbatim on your official certified PDF.
             </p>
           </div>
@@ -131,7 +133,7 @@ export default function StudentDocumentsPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs shadow-md shadow-emerald-950/30 transition-all active:scale-95 disabled:opacity-50"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#5B20A0] hover:bg-[#6c28be] text-white font-bold text-xs shadow-md shadow-[#5B20A0]/25 transition-all active:scale-95 disabled:opacity-50"
             >
               {submitting ? 'Submitting Application...' : 'Request Certificate'}
             </button>
@@ -224,7 +226,7 @@ export default function StudentDocumentsPage() {
                       <a
                         href={`/api/bonafide/${b.id}/download`}
                         download
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#171d2b] hover:bg-[#20283b] text-[#d4af37] border border-[#d4af37]/30 transition-all font-semibold active:scale-95 shadow-xs"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#162030] hover:bg-[#1c283d] text-[#18C5D8] border border-[#18C5D8]/40 transition-all font-semibold active:scale-95 shadow-xs"
                       >
                         <Download size={14} />
                         <span>Download PDF</span>

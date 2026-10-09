@@ -64,12 +64,35 @@ router.get(
         },
       });
 
+      // Fetch session records for this student to account for any EXCUSED sessions
+      const studentSessionRecords = await prisma.attendanceRecord.findMany({
+        where: { studentId: student.id },
+        include: { session: { select: { subjectId: true } } },
+      });
+
+      const recordsBySubject = new Map<string, typeof studentSessionRecords>();
+      for (const r of studentSessionRecords) {
+        const subId = r.session.subjectId;
+        if (!recordsBySubject.has(subId)) {
+          recordsBySubject.set(subId, []);
+        }
+        recordsBySubject.get(subId)!.push(r);
+      }
+
       let totalPresent = 0;
       let totalClasses = 0;
 
       const records = attendances.map((item) => {
-        const present = item.present;
-        const total = item.total;
+        const sRecords = recordsBySubject.get(item.subjectId);
+        let present = item.present;
+        let total = item.total;
+
+        if (sRecords && sRecords.length > 0) {
+          const excused = sRecords.filter((r) => r.status === 'EXCUSED').length;
+          total = Math.max(0, sRecords.length - excused);
+          present = sRecords.filter((r) => ['PRESENT', 'LATE'].includes(r.status)).length;
+        }
+
         const absent = Math.max(0, total - present);
         totalPresent += present;
         totalClasses += total;
@@ -411,14 +434,37 @@ router.get(
       // 1. Attendance aggregation
       const attendances = await prisma.attendance.findMany({
         where: { studentId: student.id },
-        select: { present: true, total: true },
+        select: { subjectId: true, present: true, total: true },
       });
+
+      const studentSessionRecords = await prisma.attendanceRecord.findMany({
+        where: { studentId: student.id },
+        include: { session: { select: { subjectId: true } } },
+      });
+
+      const recordsBySubject = new Map<string, typeof studentSessionRecords>();
+      for (const r of studentSessionRecords) {
+        const subId = r.session.subjectId;
+        if (!recordsBySubject.has(subId)) {
+          recordsBySubject.set(subId, []);
+        }
+        recordsBySubject.get(subId)!.push(r);
+      }
 
       let totalPresent = 0;
       let totalClasses = 0;
       for (const a of attendances) {
-        totalPresent += a.present;
-        totalClasses += a.total;
+        const sRecords = recordsBySubject.get(a.subjectId);
+        if (sRecords && sRecords.length > 0) {
+          const excused = sRecords.filter((r) => r.status === 'EXCUSED').length;
+          const effTotal = Math.max(0, sRecords.length - excused);
+          const pres = sRecords.filter((r) => ['PRESENT', 'LATE'].includes(r.status)).length;
+          totalPresent += pres;
+          totalClasses += effTotal;
+        } else {
+          totalPresent += a.present;
+          totalClasses += a.total;
+        }
       }
 
       const overallPercentage =
@@ -479,6 +525,24 @@ router.get(
         },
       });
 
+      const upcomingDeadlinesCount = await prisma.academicDeadline.count({
+        where: {
+          isActive: true,
+          OR: [
+            { targetYear: null },
+            { targetYear: student.year },
+          ],
+          AND: [
+            {
+              OR: [
+                { targetBranchId: null },
+                { targetBranchId: student.branchId },
+              ],
+            },
+          ],
+        },
+      });
+
       res.json({
         success: true,
         data: {
@@ -489,6 +553,16 @@ router.get(
             isAboveThreshold: overallPercentage >= 75.0,
           },
           todayClassesCount: todayClasses.length,
+          todayClasses: todayClasses.map((c) => ({
+            id: c.id,
+            subject: c.subject.name,
+            code: c.subject.code,
+            time: c.startTime,
+            endTime: c.endTime,
+            room: c.room,
+            faculty: c.faculty,
+            type: c.type || 'LECTURE',
+          })),
           nextClass: nextClass
             ? {
                 subject: nextClass.subject.name,
@@ -496,9 +570,253 @@ router.get(
                 time: nextClass.startTime,
                 room: nextClass.room,
                 faculty: nextClass.faculty,
+                type: nextClass.type || 'LECTURE',
               }
             : null,
           recentUpdatesCount: updatesCount,
+          upcomingDeadlinesCount,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * GET /api/student/guidance
+ * Structured decision-tree guidance items for student
+ */
+router.get(
+  '/guidance',
+  authenticate,
+  requireRole('STUDENT', 'ADMIN'),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const student = await getStudentForUser(req.user!);
+      const { category, subcategory } = req.query;
+
+      const where: any = { isActive: true };
+      if (category) where.category = String(category).toUpperCase();
+      if (subcategory) where.subcategory = String(subcategory).toUpperCase();
+
+      if (student) {
+        where.OR = [
+          { targetYear: null },
+          { targetYear: student.year },
+        ];
+        if (student.branchId) {
+          where.AND = [
+            {
+              OR: [
+                { targetBranchId: null },
+                { targetBranchId: student.branchId },
+              ],
+            },
+          ];
+        }
+      }
+
+      const items = await prisma.guidanceItem.findMany({
+        where,
+        include: { branch: { select: { code: true, name: true } } },
+        orderBy: [{ category: 'asc' }, { updatedAt: 'desc' }],
+      });
+
+      const formatted = items.map((item) => {
+        let docs: string[] = [];
+        let steps: string[] = [];
+
+        try {
+          docs = typeof item.requiredDocs === 'string' && item.requiredDocs.startsWith('[')
+            ? JSON.parse(item.requiredDocs)
+            : item.requiredDocs.split('\n').filter(Boolean);
+        } catch {
+          docs = [item.requiredDocs];
+        }
+
+        try {
+          steps = typeof item.processSteps === 'string' && item.processSteps.startsWith('[')
+            ? JSON.parse(item.processSteps)
+            : item.processSteps.split('\n').filter(Boolean);
+        } catch {
+          steps = [item.processSteps];
+        }
+
+        return {
+          id: item.id,
+          title: item.title,
+          category: item.category,
+          subcategory: item.subcategory,
+          description: item.description,
+          targetYear: item.targetYear,
+          branch: item.branch?.code || null,
+          requiredDocs: docs,
+          processSteps: steps,
+          responsibleRole: item.responsibleRole,
+          relatedForm: item.relatedForm,
+          actionUrl: item.actionUrl,
+          actionLabel: item.actionLabel,
+        };
+      });
+
+      res.json({
+        success: true,
+        data: formatted,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * GET /api/student/deadlines
+ * Upcoming academic deadlines personalized for student's cohort
+ */
+router.get(
+  '/deadlines',
+  authenticate,
+  requireRole('STUDENT', 'ADMIN'),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const student = await getStudentForUser(req.user!);
+
+      const where: any = { isActive: true };
+      if (student) {
+        where.AND = [
+          {
+            OR: [
+              { targetYear: null },
+              { targetYear: student.year },
+            ],
+          },
+          {
+            OR: [
+              { targetBranchId: null },
+              { targetBranchId: student.branchId },
+            ],
+          },
+        ];
+      }
+
+      const deadlines = await prisma.academicDeadline.findMany({
+        where,
+        include: { branch: { select: { code: true, name: true } } },
+        orderBy: { deadline: 'asc' },
+      });
+
+      const now = new Date();
+      const formatted = deadlines.map((d) => {
+        const dueDate = new Date(d.deadline);
+        const diffMs = dueDate.getTime() - now.getTime();
+        const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        const isPast = daysLeft < 0;
+
+        return {
+          id: d.id,
+          title: d.title,
+          description: d.description,
+          deadline: d.deadline,
+          targetYear: d.targetYear,
+          branch: d.branch?.code || 'ALL',
+          relatedForm: d.relatedForm,
+          actionUrl: d.actionUrl,
+          daysLeft,
+          isPast,
+          isUrgent: daysLeft >= 0 && daysLeft <= 3,
+        };
+      });
+
+      res.json({
+        success: true,
+        data: formatted,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * GET /api/student/routine
+ * Personalized today's routine & weekly timetable
+ */
+router.get(
+  '/routine',
+  authenticate,
+  requireRole('STUDENT', 'ADMIN'),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const student = await getStudentForUser(req.user!);
+
+      if (!student) {
+        res.status(404).json({
+          success: false,
+          error: { code: 'STUDENT_NOT_FOUND', message: 'No student profile linked' },
+        });
+        return;
+      }
+
+      const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+      const todayDay = dayNames[new Date().getDay()];
+      const queryDay = todayDay === 'SUNDAY' ? 'MONDAY' : todayDay;
+
+      const [allEntries, specificDateEntries] = await Promise.all([
+        prisma.timetableEntry.findMany({
+          where: {
+            branchId: student.branchId,
+            year: student.year,
+            date: null,
+          },
+          include: {
+            subject: { select: { code: true, name: true, faculty: true } },
+          },
+          orderBy: [{ startTime: 'asc' }],
+        }),
+        prisma.timetableEntry.findMany({
+          where: {
+            branchId: student.branchId,
+            year: student.year,
+            date: { not: null },
+          },
+          include: {
+            subject: { select: { code: true, name: true, faculty: true } },
+          },
+          orderBy: [{ startTime: 'asc' }],
+        }),
+      ]);
+
+      const formatEntry = (e: any) => ({
+        id: e.id,
+        day: e.day,
+        date: e.date,
+        startTime: e.startTime,
+        endTime: e.endTime,
+        timeDisplay: `${e.startTime} – ${e.endTime}`,
+        subjectCode: e.subject.code,
+        subjectName: e.subject.name,
+        room: e.room,
+        faculty: e.faculty || 'Department Faculty',
+        type: e.type || 'LECTURE',
+        section: e.section || 'A',
+      });
+
+      const todayWeekly = allEntries.filter((e) => e.day === queryDay).map(formatEntry);
+      const todaySpecific = specificDateEntries.map(formatEntry);
+      const todayClasses = todaySpecific.length > 0 ? todaySpecific : todayWeekly;
+
+      res.json({
+        success: true,
+        data: {
+          cohort: {
+            branchCode: student.branch.code,
+            branchName: student.branch.name,
+            year: student.year,
+          },
+          today: queryDay,
+          todayClasses,
+          weekly: allEntries.map(formatEntry),
         },
       });
     } catch (err) {

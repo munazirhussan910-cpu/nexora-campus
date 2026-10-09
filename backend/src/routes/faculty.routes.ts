@@ -45,25 +45,33 @@ async function checkSubjectAuthorization(user: any, subjectId: string): Promise<
     throw new AppError('Subject not found', 404);
   }
 
-  if (user.role === 'ADMIN') {
+  if (user.role === 'ADMIN' || user.role === 'ACADEMIC_OFFICER') {
     return subject;
   }
 
-  const staffName = getFacultyIdentifier(user);
+  const staffName = getFacultyIdentifier(user)?.trim();
 
   // Match faculty name substring, or timetable entry, or faculty demo keyword
-  const isDirectFaculty = subject.faculty && subject.faculty.toLowerCase().includes(staffName.toLowerCase());
-  const isTripathyDemo = staffName.includes('Tripathy') && (subject.faculty?.includes('Tripathy') || subject.code === 'CS201');
+  const isDirectFaculty = Boolean(
+    staffName && subject.faculty && subject.faculty.toLowerCase().includes(staffName.toLowerCase())
+  );
+  const isTripathyDemo = Boolean(
+    staffName &&
+    staffName.includes('Tripathy') &&
+    (subject.faculty?.includes('Tripathy') || subject.code === 'CS201')
+  );
 
   if (!isDirectFaculty && !isTripathyDemo) {
-    const timetableMatch = await prisma.timetableEntry.findFirst({
-      where: {
-        subjectId,
-        faculty: { contains: staffName },
-      },
-    });
+    const timetableMatch = staffName
+      ? await prisma.timetableEntry.findFirst({
+          where: {
+            subjectId,
+            faculty: { contains: staffName },
+          },
+        })
+      : null;
 
-    if (!timetableMatch && user.role !== 'STAFF' && user.role !== 'FACULTY') {
+    if (!timetableMatch) {
       throw new AppError('You are not authorized to mark attendance for this subject', 403);
     }
   }
@@ -131,7 +139,9 @@ async function syncAggregateAttendanceForStudent(tx: any, studentId: string, sub
     select: { status: true },
   });
 
-  const total = records.length;
+  const totalSessions = records.length;
+  const excused = records.filter((r: any) => r.status === 'EXCUSED').length;
+  const effectiveTotal = Math.max(0, totalSessions - excused);
   const present = records.filter((r: any) => ['PRESENT', 'LATE'].includes(r.status)).length;
 
   await tx.attendance.upsert({
@@ -141,8 +151,8 @@ async function syncAggregateAttendanceForStudent(tx: any, studentId: string, sub
         subjectId,
       },
     },
-    update: { present, total },
-    create: { studentId, subjectId, present, total },
+    update: { present, total: effectiveTotal },
+    create: { studentId, subjectId, present, total: effectiveTotal },
   });
 }
 
@@ -153,7 +163,7 @@ async function syncAggregateAttendanceForStudent(tx: any, studentId: string, sub
 router.get(
   '/dashboard',
   authenticate,
-  requireRole('STAFF', 'ADMIN', 'FACULTY'),
+  requireRole('STAFF', 'ADMIN', 'FACULTY', 'ACADEMIC_OFFICER'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const user = req.user!;
@@ -283,9 +293,11 @@ router.get(
       let totalStudentMarks = 0;
       for (const s of allTeacherSessions) {
         for (const r of s.records) {
-          totalStudentMarks++;
-          if (['PRESENT', 'LATE'].includes(r.status)) {
-            totalPresentMarks++;
+          if (r.status !== 'EXCUSED') {
+            totalStudentMarks++;
+            if (['PRESENT', 'LATE'].includes(r.status)) {
+              totalPresentMarks++;
+            }
           }
         }
       }
@@ -320,9 +332,11 @@ router.get(
 
       const formattedRecentSessions = recentSessionsList.map((s) => {
         const total = s.records.length;
+        const excused = s.records.filter((r) => r.status === 'EXCUSED').length;
+        const effectiveTotal = Math.max(0, total - excused);
         const present = s.records.filter((r) => ['PRESENT', 'LATE'].includes(r.status)).length;
         const absent = s.records.filter((r) => r.status === 'ABSENT').length;
-        const pct = total > 0 ? Number(((present / total) * 100).toFixed(1)) : 0;
+        const pct = effectiveTotal > 0 ? Number(((present / effectiveTotal) * 100).toFixed(1)) : 0;
 
         return {
           id: s.id,
@@ -415,7 +429,7 @@ router.get(
 router.get(
   '/subjects',
   authenticate,
-  requireRole('STAFF', 'ADMIN', 'FACULTY'),
+  requireRole('STAFF', 'ADMIN', 'FACULTY', 'ACADEMIC_OFFICER'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const user = req.user!;
@@ -488,7 +502,7 @@ router.get(
 router.get(
   '/classes',
   authenticate,
-  requireRole('STAFF', 'ADMIN', 'FACULTY'),
+  requireRole('STAFF', 'ADMIN', 'FACULTY', 'ACADEMIC_OFFICER'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const user = req.user!;
@@ -543,7 +557,7 @@ router.get(
 router.get(
   '/attendance/roster',
   authenticate,
-  requireRole('STAFF', 'ADMIN', 'FACULTY'),
+  requireRole('STAFF', 'ADMIN', 'FACULTY', 'ACADEMIC_OFFICER'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const subjectId = String(req.query.subjectId || '');
@@ -660,7 +674,7 @@ router.get(
 router.get(
   '/attendance/check-duplicate',
   authenticate,
-  requireRole('STAFF', 'ADMIN', 'FACULTY'),
+  requireRole('STAFF', 'ADMIN', 'FACULTY', 'ACADEMIC_OFFICER'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const subjectId = String(req.query.subjectId || '');
@@ -711,7 +725,7 @@ router.get(
 router.post(
   '/attendance/session',
   authenticate,
-  requireRole('STAFF', 'ADMIN', 'FACULTY'),
+  requireRole('STAFF', 'ADMIN', 'FACULTY', 'ACADEMIC_OFFICER'),
   validateBody(createSessionSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -843,7 +857,7 @@ router.post(
 router.get(
   '/attendance/session/:id',
   authenticate,
-  requireRole('STAFF', 'ADMIN', 'FACULTY'),
+  requireRole('STAFF', 'ADMIN', 'FACULTY', 'ACADEMIC_OFFICER'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const sessionId = String(req.params.id);
@@ -871,7 +885,8 @@ router.get(
       const absent = session.records.filter((r) => r.status === 'ABSENT').length;
       const late = session.records.filter((r) => r.status === 'LATE').length;
       const excused = session.records.filter((r) => r.status === 'EXCUSED').length;
-      const pct = total > 0 ? Number(((present / total) * 100).toFixed(1)) : 0;
+      const effectiveTotal = Math.max(0, total - excused);
+      const pct = effectiveTotal > 0 ? Number(((present / effectiveTotal) * 100).toFixed(1)) : 0;
 
       res.json({
         success: true,
@@ -924,7 +939,7 @@ router.get(
 router.put(
   '/attendance/session/:id',
   authenticate,
-  requireRole('STAFF', 'ADMIN', 'FACULTY'),
+  requireRole('STAFF', 'ADMIN', 'FACULTY', 'ACADEMIC_OFFICER'),
   validateBody(updateSessionSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -1006,7 +1021,7 @@ router.put(
 router.get(
   '/attendance/subject/:subjectId',
   authenticate,
-  requireRole('STAFF', 'ADMIN', 'FACULTY'),
+  requireRole('STAFF', 'ADMIN', 'FACULTY', 'ACADEMIC_OFFICER'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const subjectId = String(req.params.subjectId);
@@ -1056,11 +1071,12 @@ router.get(
         const present = studentRecords.filter((r) => ['PRESENT', 'LATE'].includes(r.status)).length;
         const late = studentRecords.filter((r) => r.status === 'LATE').length;
         const excused = studentRecords.filter((r) => r.status === 'EXCUSED').length;
-        const absent = Math.max(0, total - present - excused);
-        const percentage = total > 0 ? Number(((present / total) * 100).toFixed(1)) : 0;
+        const effectiveTotal = Math.max(0, total - excused);
+        const absent = Math.max(0, effectiveTotal - present);
+        const percentage = effectiveTotal > 0 ? Number(((present / effectiveTotal) * 100).toFixed(1)) : 0;
 
         overallPresentCount += present;
-        overallTotalMarks += total;
+        overallTotalMarks += effectiveTotal;
 
         return {
           studentId: s.id,
@@ -1071,7 +1087,7 @@ router.get(
           absent,
           late,
           excused,
-          total,
+          total: effectiveTotal,
           percentage,
           isAboveThreshold: percentage >= 75.0,
         };
@@ -1126,7 +1142,7 @@ router.get(
 router.get(
   '/attendance/day-wise',
   authenticate,
-  requireRole('STAFF', 'ADMIN', 'FACULTY'),
+  requireRole('STAFF', 'ADMIN', 'FACULTY', 'ACADEMIC_OFFICER'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dateStr = typeof req.query.date === 'string' ? req.query.date : new Date().toISOString().split('T')[0];
@@ -1166,7 +1182,8 @@ router.get(
         const absent = sess.records.filter((r) => r.status === 'ABSENT').length;
         const late = sess.records.filter((r) => r.status === 'LATE').length;
         const excused = sess.records.filter((r) => r.status === 'EXCUSED').length;
-        const pct = total > 0 ? Number(((present / total) * 100).toFixed(1)) : 0;
+        const effectiveTotal = Math.max(0, total - excused);
+        const pct = effectiveTotal > 0 ? Number(((present / effectiveTotal) * 100).toFixed(1)) : 0;
 
         totalPresent += present;
         totalAbsent += absent;
@@ -1213,7 +1230,7 @@ router.get(
 router.get(
   '/attendance/history',
   authenticate,
-  requireRole('STAFF', 'ADMIN', 'FACULTY'),
+  requireRole('STAFF', 'ADMIN', 'FACULTY', 'ACADEMIC_OFFICER'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const subjectId = req.query.subjectId ? String(req.query.subjectId) : undefined;
@@ -1265,9 +1282,11 @@ router.get(
 
       const formatted = sessions.map((sess) => {
         const total = sess.records.length;
+        const excused = sess.records.filter((r) => r.status === 'EXCUSED').length;
+        const effectiveTotal = Math.max(0, total - excused);
         const present = sess.records.filter((r) => ['PRESENT', 'LATE'].includes(r.status)).length;
         const absent = sess.records.filter((r) => r.status === 'ABSENT').length;
-        const pct = total > 0 ? Number(((present / total) * 100).toFixed(1)) : 0;
+        const pct = effectiveTotal > 0 ? Number(((present / effectiveTotal) * 100).toFixed(1)) : 0;
 
         return {
           id: sess.id,
@@ -1311,18 +1330,11 @@ router.get(
 router.get(
   '/subjects/:subjectId/students',
   authenticate,
-  requireRole('STAFF', 'ADMIN', 'FACULTY'),
+  requireRole('STAFF', 'ADMIN', 'FACULTY', 'ACADEMIC_OFFICER'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const subjectId = String(req.params.subjectId);
-      const subject = await prisma.subject.findUnique({
-        where: { id: subjectId },
-        include: { branch: true },
-      });
-
-      if (!subject) {
-        throw new AppError('Subject not found', 404);
-      }
+      const subject = await checkSubjectAuthorization(req.user!, subjectId);
 
       const students = await prisma.student.findMany({
         where: {
@@ -1384,7 +1396,7 @@ router.get(
 router.post(
   '/subjects/:subjectId/attendance',
   authenticate,
-  requireRole('STAFF', 'ADMIN', 'FACULTY'),
+  requireRole('STAFF', 'ADMIN', 'FACULTY', 'ACADEMIC_OFFICER'),
   requirePermission('attendance.create', 'attendance.update'),
   validateBody(legacyAttendanceSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
@@ -1430,33 +1442,7 @@ router.post(
       // Update student attendances in a transaction
       await prisma.$transaction(async (tx) => {
         for (const r of records) {
-          const existing = await tx.attendance.findUnique({
-            where: {
-              studentId_subjectId: {
-                studentId: r.studentId,
-                subjectId,
-              },
-            },
-          });
-
-          if (existing) {
-            await tx.attendance.update({
-              where: { id: existing.id },
-              data: {
-                present: r.present ? existing.present + 1 : existing.present,
-                total: existing.total + 1,
-              },
-            });
-          } else {
-            await tx.attendance.create({
-              data: {
-                studentId: r.studentId,
-                subjectId,
-                present: r.present ? 1 : 0,
-                total: 1,
-              },
-            });
-          }
+          await syncAggregateAttendanceForStudent(tx, r.studentId, subjectId);
         }
       });
 
@@ -1488,7 +1474,7 @@ router.post(
 router.post(
   '/class-updates',
   authenticate,
-  requireRole('STAFF', 'ADMIN', 'FACULTY'),
+  requireRole('STAFF', 'ADMIN', 'FACULTY', 'ACADEMIC_OFFICER'),
   requirePermission('academic.update.create', 'notices.create'),
   validateBody(classUpdateSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {

@@ -10,12 +10,19 @@ export interface AuthUser {
   studentId?: string;
   staffId?: string;
   rollNumber?: string;
+  employeeId?: string;
   fullName?: string;
   department?: string;
+  designation?: string;
+  specialization?: string;
   branch?: string;
   year?: number;
   hostelBlock?: string;
   roomNumber?: string;
+  phone?: string;
+  parentPhone?: string;
+  bio?: string;
+  profilePhotoUrl?: string;
 }
 
 export interface AuthenticatedRequest extends Request {

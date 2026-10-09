@@ -124,59 +124,59 @@ export default function StudentLeavePage() {
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-gray-300 font-semibold mb-1.5 text-xs">
-                Start Date <span className="text-[#d4af37]">*</span>
+              <label className="block text-slate-300 font-semibold mb-1.5 text-xs">
+                Start Date <span className="text-[#18C5D8]">*</span>
               </label>
               <input
                 type="date"
                 required
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-400 transition"
+                className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] transition"
               />
             </div>
 
             <div>
-              <label className="block text-gray-300 font-semibold mb-1.5 text-xs">
-                End Date <span className="text-[#d4af37]">*</span>
+              <label className="block text-slate-300 font-semibold mb-1.5 text-xs">
+                End Date <span className="text-[#18C5D8]">*</span>
               </label>
               <input
                 type="date"
                 required
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-400 transition"
+                className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] transition"
               />
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-gray-300 font-semibold mb-1.5 text-xs">
-                Emergency Parent / Guardian Contact <span className="text-[#d4af37]">*</span>
+              <label className="block text-slate-300 font-semibold mb-1.5 text-xs">
+                Emergency Parent / Guardian Contact <span className="text-[#18C5D8]">*</span>
               </label>
               <div className="relative">
-                <Phone size={15} className="absolute left-3.5 top-3.5 text-gray-500" />
+                <Phone size={15} className="absolute left-3.5 top-3.5 text-slate-500" />
                 <input
                   type="text"
                   required
                   value={emergencyContact}
                   onChange={(e) => setEmergencyContact(e.target.value)}
                   placeholder="e.g. +91 9876500001 (Father)"
-                  className="w-full bg-[#161a29] border border-[#283248] rounded-xl pl-10 pr-3.5 py-3 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-400 transition"
+                  className="w-full bg-[#161a29] border border-[#283248] rounded-xl pl-10 pr-3.5 py-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] transition"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-gray-300 font-semibold mb-1.5 text-xs">
-              Reason for Leave <span className="text-[#d4af37]">*</span>
+            <label className="block text-slate-300 font-semibold mb-1.5 text-xs">
+              Reason for Leave <span className="text-[#18C5D8]">*</span>
             </label>
             <textarea
               required
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="e.g. Attending family wedding / semester break travel home..."
-              className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-400 transition h-24"
+              className="w-full bg-[#161a29] border border-[#283248] rounded-xl p-3 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] transition h-24"
             />
           </div>
 
@@ -187,9 +187,9 @@ export default function StudentLeavePage() {
               id="consent"
               checked={parentConsent}
               onChange={(e) => setParentConsent(e.target.checked)}
-              className="w-4 h-4 mt-0.5 rounded border-[#38435d] bg-[#1a2031] text-[#d4af37] focus:ring-0 cursor-pointer"
+              className="w-4 h-4 mt-0.5 rounded border-[#38435d] bg-[#1a2031] text-[#18C5D8] focus:ring-0 cursor-pointer"
             />
-            <label htmlFor="consent" className="text-xs text-gray-300 font-medium cursor-pointer select-none leading-relaxed">
+            <label htmlFor="consent" className="text-xs text-slate-300 font-medium cursor-pointer select-none leading-relaxed">
               I confirm that my parent or legal guardian has provided explicit consent for this leave period and can be reached at the emergency phone number provided above.
             </label>
           </div>
@@ -198,7 +198,7 @@ export default function StudentLeavePage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md shadow-purple-950/30 transition-all active:scale-95 disabled:opacity-50"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#5B20A0] hover:bg-[#6c28be] text-white font-bold text-xs shadow-md shadow-[#5B20A0]/25 transition-all active:scale-95 disabled:opacity-50"
             >
               {submitting ? 'Submitting Application...' : 'Submit Leave Request'}
             </button>

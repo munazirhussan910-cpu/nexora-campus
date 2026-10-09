@@ -14,6 +14,7 @@ const request_service_1 = require("../services/request.service");
 const qr_service_1 = require("../services/qr.service");
 const notification_service_1 = require("../services/notification.service");
 const audit_service_1 = require("../services/audit.service");
+const warden_service_1 = require("../services/warden.service");
 const router = (0, express_1.Router)();
 const createGatePassSchema = zod_1.z.object({
     destination: zod_1.z.string().min(2, 'Destination is required'),
@@ -95,8 +96,59 @@ router.post('/', auth_middleware_1.authenticate, (0, rbac_middleware_1.requirePe
 // GET /api/gate-passes/pending - Warden review
 router.get('/pending', auth_middleware_1.authenticate, (0, rbac_middleware_1.requirePermission)('gatepass.approve'), async (req, res, next) => {
     try {
+        const whereClause = { gateStatus: 'PENDING_APPROVAL' };
+        if (req.user.role === 'WARDEN') {
+            const wardenBlock = await (0, warden_service_1.getWardenHostelBlock)(req.user);
+            if (!wardenBlock) {
+                res.json({
+                    success: true,
+                    data: [],
+                });
+                return;
+            }
+            whereClause.AND = [
+                {
+                    OR: [
+                        {
+                            request: {
+                                requester: {
+                                    student: {
+                                        hostelRoom: {
+                                            hostelBlockId: wardenBlock.id,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            AND: [
+                                {
+                                    request: {
+                                        requester: {
+                                            student: {
+                                                OR: [
+                                                    { hostelRoomId: null },
+                                                    { hostelRoom: null },
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                                {
+                                    request: {
+                                        location: {
+                                            contains: wardenBlock.name,
+                                        },
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ];
+        }
         const pendingPasses = await prisma_1.default.gatePass.findMany({
-            where: { gateStatus: 'PENDING_APPROVAL' },
+            where: whereClause,
             include: {
                 request: {
                     include: {

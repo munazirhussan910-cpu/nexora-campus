@@ -15,6 +15,7 @@ import {
   Bell,
   FileSpreadsheet,
   Settings,
+  User,
 } from 'lucide-react';
 
 const adminNavItems: NavItem[] = [
@@ -28,6 +29,7 @@ const adminNavItems: NavItem[] = [
   { label: 'Targeted Notices', href: '/admin/notices', icon: Bell },
   { label: 'Immutable Audit Logs', href: '/admin/audit', icon: FileSpreadsheet },
   { label: 'System Configuration', href: '/admin/configuration', icon: Settings },
+  { label: 'Admin Profile', href: '/admin/profile', icon: User },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

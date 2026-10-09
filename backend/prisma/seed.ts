@@ -72,6 +72,9 @@ async function main() {
     { code: 'attendance.read.own', description: 'View own attendance records' },
     { code: 'timetable.read.own', description: 'View own timetable' },
     { code: 'class-update.read', description: 'View own class updates' },
+    { code: 'academic.routine.manage', description: 'Manage academic routines and timetables' },
+    { code: 'academic.deadline.manage', description: 'Manage university and campus academic deadlines' },
+    { code: 'academic.guidance.manage', description: 'Manage student guidance workflows' },
   ];
 
   const permMap: Record<string, string> = {};
@@ -140,6 +143,12 @@ async function main() {
       'academic.attendance.read',
       'notices.view',
       'notices.create',
+      'bonafide.approve',
+      'bonafide.reject',
+      'requests.view.all',
+      'academic.routine.manage',
+      'academic.deadline.manage',
+      'academic.guidance.manage',
     ],
     ADMIN: Object.keys(permMap),
   };
@@ -352,6 +361,23 @@ async function main() {
         admissionYear: 2026 - s.year,
       },
     });
+  }
+
+  // Opt-in senior guides keep the mentorship directory ready for the demo.
+  const mentorSeeds = [
+    { username: 'priya', headline: 'Mechanical Engineering · internship and exam planning', bio: 'Happy to help juniors with core-subject preparation, project selection, and settling into campus life.', cgpa: 8.46, interests: 'Internships, CAD, exam planning, projects' },
+    { username: 'vikas', headline: 'Electrical Engineering · placements and practical labs', bio: 'I can share a structured approach to lab work, GATE preparation, and building a resume from second year onward.', cgpa: 8.71, interests: 'GATE, placements, circuits, resume review' },
+  ];
+  for (const mentor of mentorSeeds) {
+    const student = await prisma.student.findUnique({ where: { userId: studentUserMap[mentor.username] } });
+    if (student) {
+      const { username, ...profile } = mentor;
+      await prisma.mentorProfile.upsert({
+        where: { studentId: student.id },
+        update: profile,
+        create: { studentId: student.id, ...profile, isAvailable: true },
+      });
+    }
   }
 
   // DEMO PERSONA 2: Ramesh (STAFF - PLUMBING)
@@ -1162,14 +1188,331 @@ async function main() {
     }
   }
 
+  // 14. Academic Deadlines Seeding
+  console.log('⏰ Seeding Academic Deadlines...');
+  await prisma.academicDeadline.deleteMany({});
+  const deadlinesData = [
+    {
+      title: 'BPUT Mid-Semester Examination Form Submission',
+      description: 'Mandatory regular and backlog mid-semester examination registration. Late fee applies after deadline.',
+      deadline: new Date('2026-10-10T23:59:59Z'),
+      targetYear: 2,
+      targetSemester: 3,
+      targetBranchId: cseBranchId,
+      targetSection: 'A',
+      relatedForm: 'EXAM_FORM',
+      actionUrl: '/student/academics',
+      createdBy: academicUser.id,
+    },
+    {
+      title: 'State Post-Matric & Merit-Cum-Means Scholarship Verification',
+      description: 'Submit uploaded Bonafide Certificate and fee receipt for state scholarship portal verification.',
+      deadline: new Date('2026-10-25T17:00:00Z'),
+      targetYear: null,
+      targetSemester: null,
+      targetBranchId: null,
+      targetSection: null,
+      relatedForm: 'BONAFIDE',
+      actionUrl: '/student/documents?purpose=Scholarship',
+      createdBy: academicUser.id,
+    },
+    {
+      title: 'Summer Industrial Internship NOC Application Deadline',
+      description: 'Apply for university No Objection Certificate (NOC) and verify company offer letter with Academic Office.',
+      deadline: new Date('2026-11-15T18:00:00Z'),
+      targetYear: 2,
+      targetSemester: 3,
+      targetBranchId: null,
+      targetSection: null,
+      relatedForm: 'INTERNSHIP',
+      actionUrl: '/student/documents?purpose=Internship',
+      createdBy: academicUser.id,
+    },
+    {
+      title: 'Course Registration & Section Confirmation for Even Semester',
+      description: 'Complete core and elective subject selection for upcoming semester.',
+      deadline: new Date('2026-11-30T23:59:59Z'),
+      targetYear: null,
+      targetSemester: null,
+      targetBranchId: null,
+      targetSection: null,
+      relatedForm: 'REGISTRATION',
+      actionUrl: '/student/academics',
+      createdBy: academicUser.id,
+    },
+  ];
+
+  for (const d of deadlinesData) {
+    await prisma.academicDeadline.create({ data: d });
+  }
+
+  // 15. Guidance Items Seeding (Decision-Tree Knowledge Graph)
+  console.log('🎓 Seeding Structured Guidance Mode Content...');
+  await prisma.guidanceItem.deleteMany({});
+  const guidanceData = [
+    {
+      title: 'Official Bonafide Certificate',
+      category: 'CERTIFICATE',
+      subcategory: 'BONAFIDE',
+      description: 'Official institutional certificate certifying active student enrollment, course details, and conduct.',
+      requiredDocs: JSON.stringify([
+        'Student Roll Number & Full Name',
+        'Academic Year & Branch details',
+        'Specific purpose (Scholarship, Bank, Visa, Hackathon)',
+        'Hostel room & clearance status'
+      ]),
+      processSteps: JSON.stringify([
+        'Open Bonafide Application under Documents & Bonafide',
+        'Select your purpose (Scholarship, Bank, Internship, etc.)',
+        'Submit request to Academic Office',
+        'Academic Officer reviews student credentials and digitally certifies',
+        'Download cryptographically signed PDF with instant public QR verification'
+      ]),
+      responsibleRole: 'ACADEMIC_OFFICER',
+      relatedForm: 'BONAFIDE',
+      actionUrl: '/student/documents?purpose=Scholarship',
+      actionLabel: 'Start Bonafide Application',
+      createdBy: academicUser.id,
+    },
+    {
+      title: 'Summer Industrial Internship NOC',
+      category: 'INTERNSHIP',
+      subcategory: 'NOC',
+      description: 'Official institutional No-Objection Certificate (NOC) required by external organizations and companies.',
+      requiredDocs: JSON.stringify([
+        'Internship Offer Letter / Selection Email',
+        'Host Organization Name & Location',
+        'Exact Duration (Start Date to End Date)',
+        'Academic Standing & Attendance Verification (>75%)'
+      ]),
+      processSteps: JSON.stringify([
+        'Review class routine to ensure internship dates do not conflict with mandatory exams',
+        'Apply for Bonafide Certificate with purpose set to "Internship"',
+        'Academic Officer verifies student eligibility and absence clearance',
+        'Signed institutional NOC PDF is generated with tamper-evident seal',
+        'Submit PDF to employer and university Training & Placement Cell'
+      ]),
+      responsibleRole: 'ACADEMIC_OFFICER',
+      relatedForm: 'BONAFIDE',
+      actionUrl: '/student/documents?purpose=Internship',
+      actionLabel: 'Apply for Internship NOC',
+      createdBy: academicUser.id,
+    },
+    {
+      title: 'State & National Scholarship Verification',
+      category: 'SCHOLARSHIP',
+      subcategory: 'SCHOLARSHIP',
+      description: 'Institutional verification procedures and mandatory documents for NSP, Post-Matric, and Merit scholarships.',
+      requiredDocs: JSON.stringify([
+        'Scholarship Application ID / Registration Slip',
+        'Academic Year Bonafide Certificate',
+        'Annual Family Income Certificate',
+        'Previous Year Marksheet & Bank Passbook Copy'
+      ]),
+      processSteps: JSON.stringify([
+        'Apply for Bonafide Certificate with purpose "Scholarship"',
+        'Download approved digital Bonafide PDF from Nexora Documents',
+        'Upload certificate to National / State Scholarship Portal',
+        'Academic Office conducts digital backend verification against institutional roll ledger'
+      ]),
+      responsibleRole: 'ACADEMIC_OFFICER',
+      relatedForm: 'BONAFIDE',
+      actionUrl: '/student/documents?purpose=Scholarship',
+      actionLabel: 'Apply for Scholarship Bonafide',
+      createdBy: academicUser.id,
+    },
+    {
+      title: 'Mid-Semester & Final Examination Form',
+      category: 'EXAMINATION',
+      subcategory: 'EXAM_FORM',
+      description: 'Examination registration guidelines, subject code verification, backlog forms, and admit card tracking.',
+      requiredDocs: JSON.stringify([
+        'Student ID Card / Roll Number',
+        'Subject Code Verification Slip',
+        'Fee Clearance Confirmation',
+        'Minimum 75% Attendance Compliance'
+      ]),
+      processSteps: JSON.stringify([
+        'Check Examination Notice on Academic Hub for subject registration codes',
+        'Verify attendance eligibility in My Attendance (must meet 75% threshold)',
+        'Ensure exam form deadline compliance in Upcoming Deadlines',
+        'Download or collect stamped Admit Card before scheduled examination'
+      ]),
+      responsibleRole: 'ACADEMIC_OFFICER',
+      relatedForm: 'EXAMINATION',
+      actionUrl: '/student/academics',
+      actionLabel: 'View Exam Timetable & Hub',
+      createdBy: academicUser.id,
+    },
+    {
+      title: 'Hostel Leave Application (Outstation)',
+      category: 'HOSTEL',
+      subcategory: 'LEAVE',
+      description: 'Multi-day outstation leave authorization for family gatherings, festivals, or emergency home visits.',
+      requiredDocs: JSON.stringify([
+        'Travel Start & End Dates',
+        'Destination City & Address',
+        'Parent / Guardian Contact Number',
+        'Parental Consent Confirmation'
+      ]),
+      processSteps: JSON.stringify([
+        'Open Hostel Leave form in Student Portal',
+        'Enter travel dates, destination, and emergency contact details',
+        'Confirm parent consent',
+        'Hostel Warden reviews application and authorizes leave',
+        'Security verifies your departure at the campus gate'
+      ]),
+      responsibleRole: 'WARDEN',
+      relatedForm: 'LEAVE',
+      actionUrl: '/student/leave',
+      actionLabel: 'Apply for Hostel Leave',
+      createdBy: academicUser.id,
+    },
+    {
+      title: 'Hostel Maintenance & Room Repair',
+      category: 'HOSTEL',
+      subcategory: 'COMPLAINT',
+      description: 'Log issues regarding room plumbing leaks, broken electrical switches, carpentry, or WiFi.',
+      requiredDocs: JSON.stringify([
+        'Hostel Block & Room Number',
+        'Short summary of the malfunction',
+        'Detailed description of the issue'
+      ]),
+      processSteps: JSON.stringify([
+        'Click "+ New Complaint" on Student Dashboard',
+        'Describe the problem (Nexora keyword engine auto-routes to correct technician)',
+        'Technician is dispatched under an SLA timer (4h for urgent, 24h for normal)',
+        'Track live status from SUBMITTED to IN_PROGRESS and RESOLVED',
+        'Confirm resolution and rate service quality'
+      ]),
+      responsibleRole: 'STAFF',
+      relatedForm: 'COMPLAINT',
+      actionUrl: '/student/requests/new',
+      actionLabel: 'Log Maintenance Complaint',
+      createdBy: academicUser.id,
+    },
+    {
+      title: 'Campus Exit Gate Pass',
+      category: 'HOSTEL',
+      subcategory: 'GATE_PASS',
+      description: 'Day pass for market visits, coaching, library, or short errands outside campus.',
+      requiredDocs: JSON.stringify([
+        'Destination details',
+        'Reason for exit',
+        'Departure and expected return time'
+      ]),
+      processSteps: JSON.stringify([
+        'Apply for Gate Pass with destination and expected return time',
+        'Warden reviews and approves pass',
+        'System generates secure QR code and 4-digit offline PIN',
+        'Security Officer scans QR at Main Gate terminal upon departure and return'
+      ]),
+      responsibleRole: 'SECURITY',
+      relatedForm: 'GATE_PASS',
+      actionUrl: '/student/gate-pass',
+      actionLabel: 'Apply for Gate Pass',
+      createdBy: academicUser.id,
+    },
+    {
+      title: 'Daily Academic Routine & Room Schedule',
+      category: 'ROUTINE',
+      subcategory: 'ROUTINE',
+      description: 'Check daily lectures, laboratory timings, assigned faculty, and classroom numbers.',
+      requiredDocs: JSON.stringify([
+        'Current Year & Branch Cohort'
+      ]),
+      processSteps: JSON.stringify([
+        'Access Academic Hub -> Timetable tab',
+        'View personalized classes scheduled for today',
+        'Check classroom room numbers and faculty allocations',
+        'Review temporary classroom shifts in Class Updates'
+      ]),
+      responsibleRole: 'ACADEMIC_OFFICER',
+      relatedForm: 'ACADEMIC_ROUTINE',
+      actionUrl: '/student/academics',
+      actionLabel: 'View Academic Routine',
+      createdBy: academicUser.id,
+    },
+    {
+      title: 'Attendance Discrepancy & Condonation',
+      category: 'ACADEMIC_REQUEST',
+      subcategory: 'ATTENDANCE',
+      description: 'Inquire regarding low attendance warnings, attendance calculation errors, or medical exemptions.',
+      requiredDocs: JSON.stringify([
+        'Medical Prescription / Hospital Discharge Summary (if medical ground)',
+        'Subject Codes & Missed Date Ranges',
+        'Subject Faculty Verification Signature'
+      ]),
+      processSteps: JSON.stringify([
+        'Check subject attendance percentages in My Attendance',
+        'Review daily session history to locate missing session records',
+        'Consult subject teacher to rectify inadvertent absence marks',
+        'Submit written medical application to Academic Cell for condonation approval'
+      ]),
+      responsibleRole: 'ACADEMIC_OFFICER',
+      relatedForm: 'GENERAL',
+      actionUrl: '/student/attendance',
+      actionLabel: 'Check My Attendance',
+      createdBy: academicUser.id,
+    },
+    {
+      title: 'Official Academic Circulars & Notices',
+      category: 'NOTICE',
+      subcategory: 'NOTICE',
+      description: 'Official department notices, examination guidelines, holiday circulars, and university orders.',
+      requiredDocs: JSON.stringify([
+        'None required (Public / Targeted)'
+      ]),
+      processSteps: JSON.stringify([
+        'Check Academic Updates on Student Dashboard or Academic Hub',
+        'Filter notices by your branch and year cohort',
+        'Read priority notices (Normal, Urgent)',
+        'Check deadlines associated with notices'
+      ]),
+      responsibleRole: 'ACADEMIC_OFFICER',
+      relatedForm: 'ACADEMIC_NOTICE',
+      actionUrl: '/student/notices',
+      actionLabel: 'View Campus Notices',
+      createdBy: academicUser.id,
+    },
+    {
+      title: 'Academic Office Consultation & Support',
+      category: 'GENERAL',
+      subcategory: 'INQUIRY',
+      description: 'For unique circumstances, special permissions, migration, credit transfers, or direct officer consultation.',
+      requiredDocs: JSON.stringify([
+        'Student Identity Card',
+        'Written application detailing specific requirement',
+        'Supporting documents / proofs'
+      ]),
+      processSteps: JSON.stringify([
+        'Review if your request can be solved via Bonafide Certificate or Academic Hub',
+        'Visit Academic Cell (Administrative Block, Room 102)',
+        'Consult Academic Operations Officer Prof. Sanjeev Mohanty',
+        'Submit formal paper application if online process is not applicable'
+      ]),
+      responsibleRole: 'ACADEMIC_OFFICER',
+      relatedForm: 'GENERAL',
+      actionUrl: '/student/dashboard',
+      actionLabel: 'Return to Student Dashboard',
+      createdBy: academicUser.id,
+    }
+  ];
+
+  for (const g of guidanceData) {
+    await prisma.guidanceItem.create({ data: g });
+  }
+
   console.log('✅ Nexora Campus Database Seed Complete!');
   console.log('📊 Demo Accounts Prepared:');
-  console.log('   - Student:      aryan@nexora.edu / Password123! (Aryan Khan)');
-  console.log('   - Staff:        ramesh@nexora.edu / Password123! (Ramesh Kumar - Plumbing)');
-  console.log('   - Electrician:  suresh@nexora.edu / Password123! (Suresh Verma - Electrical)');
-  console.log('   - Warden:       warden.b@nexora.edu / Password123! (Dr. S. K. Mohapatra - Block B)');
-  console.log('   - Security:     security.gate1@nexora.edu / Password123! (Vikram Singh - Main Gate)');
-  console.log('   - Chief Admin:  admin@nexora.edu / Password123! (Dr. Ananya Ray)');
+  console.log('   - Student:           aryan@nexora.edu / Password123! (Aryan Khan)');
+  console.log('   - Academic Officer:  academic@nexora.edu / Password123! (Prof. Sanjeev Mohanty)');
+  console.log('   - Faculty:           faculty@nexora.edu / Password123! (Dr. P. K. Tripathy)');
+  console.log('   - Staff:             ramesh@nexora.edu / Password123! (Ramesh Kumar - Plumbing)');
+  console.log('   - Electrician:       suresh@nexora.edu / Password123! (Suresh Verma - Electrical)');
+  console.log('   - Warden:            warden.b@nexora.edu / Password123! (Dr. S. K. Mohapatra - Block B)');
+  console.log('   - Security:          security.gate1@nexora.edu / Password123! (Vikram Singh - Main Gate)');
+  console.log('   - Chief Admin:       admin@nexora.edu / Password123! (Dr. Ananya Ray)');
 }
 
 main()

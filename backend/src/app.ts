@@ -24,6 +24,9 @@ import studentRoutes from './routes/student.routes';
 import kioskRoutes from './routes/kiosk.routes';
 import integrationRoutes from './routes/integration.routes';
 import facultyRoutes from './routes/faculty.routes';
+import copilotRoutes from './routes/copilot.routes';
+import mentorRoutes from './routes/mentor.routes';
+import liteRoutes from './routes/lite.routes';
 
 const app: Express = express();
 
@@ -43,8 +46,8 @@ app.use(
   })
 );
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
 // Static storage folder for generated PDFs and uploaded files
@@ -64,6 +67,7 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/profile', authRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/gate-passes', gatepassRoutes);
@@ -78,6 +82,9 @@ app.use('/api/student', studentRoutes);
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/kiosk', kioskRoutes);
 app.use('/api/integrations', integrationRoutes);
+app.use('/api/copilot', copilotRoutes);
+app.use('/api/mentors', mentorRoutes);
+app.use('/api/lite', liteRoutes);
 
 // Centralized Error Handling
 app.use(errorHandler);

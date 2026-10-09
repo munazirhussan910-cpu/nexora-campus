@@ -5,8 +5,6 @@ import {
   Clock,
   X,
   AlertTriangle,
-  Radio,
-  ArrowRight,
 } from 'lucide-react';
 
 interface StatusBadgeProps {
@@ -24,27 +22,27 @@ export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
       case 'RESOLVED':
       case 'VALID':
         return {
-          style: 'bg-emerald-950/80 text-emerald-300 border-emerald-700/80 shadow-emerald-950/30',
-          icon: <Check size={size === 'sm' ? 10 : 12} className="text-emerald-400 stroke-[3]" />,
+          style: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
+          icon: <Check size={size === 'sm' ? 10 : 12} className="text-emerald-400 stroke-[2.5]" />,
         };
       case 'IN_PROGRESS':
       case 'ACCEPTED':
       case 'ROUTED':
       case 'DEPARTED':
         return {
-          style: 'bg-cyan-950/80 text-cyan-300 border-cyan-700/80 shadow-cyan-950/30',
+          style: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30',
           icon: <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />,
         };
       case 'ASSIGNED':
         return {
-          style: 'bg-blue-950/80 text-blue-300 border-blue-700/80 shadow-blue-950/30',
-          icon: <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />,
+          style: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30',
+          icon: <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />,
         };
       case 'PENDING_APPROVAL':
       case 'SUBMITTED':
       case 'PENDING':
         return {
-          style: 'bg-amber-950/80 text-amber-300 border-amber-700/80 shadow-amber-950/30',
+          style: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
           icon: <Clock size={size === 'sm' ? 10 : 12} className="text-amber-400" />,
         };
       case 'REJECTED':
@@ -52,25 +50,25 @@ export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
       case 'REVOKED':
       case 'CANCELLED':
         return {
-          style: 'bg-rose-950/80 text-rose-300 border-rose-700/80 shadow-rose-950/30',
-          icon: <X size={size === 'sm' ? 10 : 12} className="text-rose-400 stroke-[3]" />,
+          style: 'bg-rose-500/10 text-rose-300 border-rose-500/30',
+          icon: <X size={size === 'sm' ? 10 : 12} className="text-rose-400 stroke-[2.5]" />,
         };
       case 'OVERDUE':
       case 'BREACHED':
         return {
-          style: 'bg-rose-950/90 text-rose-200 border-rose-600 shadow-rose-950/40',
+          style: 'bg-rose-500/15 text-rose-200 border-rose-500/40',
           icon: <AlertTriangle size={size === 'sm' ? 10 : 12} className="text-rose-400" />,
         };
       case 'RETURNED':
       case 'CLOSED':
         return {
-          style: 'bg-[#1a2030] text-gray-300 border-[#2b354d]',
-          icon: <CheckCircle2 size={size === 'sm' ? 10 : 12} className="text-gray-400" />,
+          style: 'bg-slate-500/10 text-slate-300 border-slate-500/30',
+          icon: <CheckCircle2 size={size === 'sm' ? 10 : 12} className="text-slate-400" />,
         };
       default:
         return {
-          style: 'bg-[#181d2a] text-gray-300 border-[#283247]',
-          icon: <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />,
+          style: 'bg-slate-500/10 text-slate-300 border-slate-500/30',
+          icon: <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />,
         };
     }
   };
@@ -81,16 +79,16 @@ export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
   };
 
   const sizeClass = {
-    sm: 'text-[10px] px-2 py-0.5 gap-1 font-mono font-semibold',
-    md: 'text-xs px-2.5 py-0.5 gap-1.5 font-mono font-semibold',
-    lg: 'text-xs sm:text-sm px-3 py-1 gap-2 font-mono font-bold',
+    sm: 'text-[10px] px-2 py-0.5 gap-1 font-mono font-medium',
+    md: 'text-xs px-2.5 py-0.5 gap-1.5 font-mono font-medium',
+    lg: 'text-xs sm:text-sm px-3 py-1 gap-2 font-mono font-semibold',
   }[size];
 
   const { style, icon } = getStyleAndIcon();
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border shadow-xs tracking-wide uppercase transition-colors shrink-0 ${sizeClass} ${style}`}
+      className={`inline-flex items-center rounded-full border tracking-wide uppercase transition-colors shrink-0 ${sizeClass} ${style}`}
     >
       {icon}
       <span>{formatText(status)}</span>

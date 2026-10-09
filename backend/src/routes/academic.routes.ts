@@ -2,7 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import prisma from '../config/prisma';
 import { authenticate } from '../middleware/auth.middleware';
-import { requirePermission } from '../middleware/rbac.middleware';
+import { requireRole } from '../middleware/rbac.middleware';
 import { validateBody } from '../middleware/validate.middleware';
 import { AppError } from '../middleware/error.middleware';
 import { AuditService } from '../services/audit.service';
@@ -10,7 +10,9 @@ import { AuthenticatedRequest } from '../types/auth';
 
 const router = Router();
 
-// Validation Schemas
+// ==========================================
+// VALIDATION SCHEMAS
+// ==========================================
 const createSubjectSchema = z.object({
   code: z.string().trim().min(2, 'Subject code must be at least 2 characters').toUpperCase(),
   name: z.string().trim().min(2, 'Subject name must be at least 2 characters'),
@@ -23,7 +25,7 @@ const createSubjectSchema = z.object({
 
 const updateSubjectSchema = createSubjectSchema.partial();
 
-const createTimetableSchema = z.object({
+const createRoutineSchema = z.object({
   subjectId: z.string().min(1, 'Subject is required'),
   branchId: z.string().min(1, 'Branch is required'),
   year: z.coerce.number().int().min(1).max(4),
@@ -34,14 +36,18 @@ const createTimetableSchema = z.object({
   endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'End time must be in HH:MM format'),
   room: z.string().trim().min(1, 'Room is required'),
   faculty: z.string().trim().optional().nullable(),
+  type: z.enum(['LECTURE', 'LAB', 'TUTORIAL']).default('LECTURE'),
+  date: z.string().trim().optional().nullable(),
 });
 
-const updateTimetableSchema = createTimetableSchema.partial();
+const updateRoutineSchema = createRoutineSchema.partial();
 
-const createAcademicUpdateSchema = z.object({
-  title: z.string().trim().min(5, 'Title must be at least 5 characters'),
-  content: z.string().trim().min(10, 'Content must be at least 10 characters'),
+const createNoticeSchema = z.object({
+  title: z.string().trim().min(3, 'Title must be at least 3 characters'),
+  content: z.string().trim().min(5, 'Content must be at least 5 characters'),
   priority: z.enum(['LOW', 'NORMAL', 'URGENT']).default('NORMAL'),
+  status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).default('PUBLISHED'),
+  expiresAt: z.string().optional().nullable(),
   targets: z
     .array(
       z.object({
@@ -52,38 +58,133 @@ const createAcademicUpdateSchema = z.object({
     .min(1, 'At least one target filter is required'),
 });
 
-const updateAcademicUpdateSchema = z.object({
-  title: z.string().trim().min(5).optional(),
-  content: z.string().trim().min(10).optional(),
-  priority: z.enum(['LOW', 'NORMAL', 'URGENT']).optional(),
-  targets: z
-    .array(
-      z.object({
-        targetType: z.enum(['ALL', 'BRANCH', 'YEAR', 'SEMESTER', 'SECTION', 'SUBJECT']),
-        targetValue: z.string().trim().min(1),
-      })
-    )
-    .optional(),
+const updateNoticeSchema = createNoticeSchema.partial();
+
+const createDeadlineSchema = z.object({
+  title: z.string().trim().min(3, 'Title must be at least 3 characters'),
+  description: z.string().trim().min(5, 'Description must be at least 5 characters'),
+  deadline: z.string().min(1, 'Valid deadline date is required'),
+  targetYear: z.coerce.number().int().min(1).max(4).optional().nullable(),
+  targetSemester: z.coerce.number().int().min(1).max(8).optional().nullable(),
+  targetBranchId: z.string().optional().nullable(),
+  targetSection: z.string().trim().optional().nullable(),
+  relatedForm: z.string().trim().optional().nullable(),
+  actionUrl: z.string().trim().optional().nullable(),
 });
+
+const updateDeadlineSchema = createDeadlineSchema.partial();
+
+const createGuidanceSchema = z.object({
+  title: z.string().trim().min(3, 'Title must be at least 3 characters'),
+  category: z.string().trim().min(2, 'Category is required'),
+  subcategory: z.string().trim().optional().nullable(),
+  description: z.string().trim().min(5, 'Description is required'),
+  targetYear: z.coerce.number().int().min(1).max(4).optional().nullable(),
+  targetBranchId: z.string().optional().nullable(),
+  requiredDocs: z.union([z.string(), z.array(z.string())]),
+  processSteps: z.union([z.string(), z.array(z.string())]),
+  responsibleRole: z.string().default('ACADEMIC_OFFICER'),
+  relatedForm: z.string().trim().optional().nullable(),
+  actionUrl: z.string().trim().min(1, 'Action URL is required'),
+  actionLabel: z.string().trim().min(1, 'Action label is required'),
+  isActive: z.boolean().default(true),
+});
+
+const updateGuidanceSchema = createGuidanceSchema.partial();
 
 // ==========================================
 // 1. ACADEMIC OVERVIEW DASHBOARD
 // ==========================================
 /**
  * GET /api/academic/dashboard
- * Academic Officer Portal Overview
- * Metrics: Total Subjects, Active Faculty, Today's Classes, Recent Academic Updates
+ * Academic Operations Officer Dashboard
  */
 router.get(
   '/dashboard',
   authenticate,
-  requirePermission('academic.dashboard', 'academic.subject.read'),
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      // 1. Total Subjects
-      const totalSubjects = await prisma.subject.count();
+      const [
+        totalSubjects,
+        totalBonafides,
+        pendingBonafidesCount,
+        approvedBonafidesCount,
+        rejectedBonafidesCount,
+        activeDeadlinesCount,
+        activeGuidanceCount,
+        pendingBonafides,
+        recentlyApproved,
+        recentlyRejected,
+      ] = await Promise.all([
+        prisma.subject.count(),
+        prisma.bonafideRequest.count(),
+        prisma.bonafideRequest.count({
+          where: { certificateId: null, request: { status: 'PENDING_APPROVAL' } },
+        }),
+        prisma.bonafideRequest.count({
+          where: { request: { status: 'APPROVED' } },
+        }),
+        prisma.bonafideRequest.count({
+          where: { request: { status: 'REJECTED' } },
+        }),
+        prisma.academicDeadline.count({
+          where: { isActive: true, deadline: { gte: new Date() } },
+        }),
+        prisma.guidanceItem.count({
+          where: { isActive: true },
+        }),
+        prisma.bonafideRequest.findMany({
+          where: { certificateId: null, request: { status: 'PENDING_APPROVAL' } },
+          include: {
+            request: {
+              include: {
+                requester: {
+                  include: {
+                    student: { include: { branch: true } },
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+        }),
+        prisma.bonafideRequest.findMany({
+          where: { request: { status: 'APPROVED' } },
+          include: {
+            request: {
+              include: {
+                requester: {
+                  include: {
+                    student: { include: { branch: true } },
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { generatedAt: 'desc' },
+          take: 5,
+        }),
+        prisma.bonafideRequest.findMany({
+          where: { request: { status: 'REJECTED' } },
+          include: {
+            request: {
+              include: {
+                requester: {
+                  include: {
+                    student: { include: { branch: true } },
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { request: { updatedAt: 'desc' } },
+          take: 5,
+        }),
+      ]);
 
-      // 2. Active Faculty count (distinct faculty listed in subjects & timetable)
+      // Faculty calculation
       const [subjectFaculty, timetableFaculty, teachingStaff] = await Promise.all([
         prisma.subject.findMany({
           where: { faculty: { not: null } },
@@ -114,7 +215,7 @@ router.get(
       teachingStaff.forEach((st) => st.fullName && uniqueFacultyNames.add(st.fullName.trim()));
       const activeFacultyCount = Math.max(uniqueFacultyNames.size, 5);
 
-      // 3. Today's Classes
+      // Today's classes
       const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
       const todayDay = dayNames[new Date().getDay()];
       const queryDay = todayDay === 'SUNDAY' ? 'MONDAY' : todayDay;
@@ -122,22 +223,14 @@ router.get(
       const todayClasses = await prisma.timetableEntry.findMany({
         where: { day: queryDay },
         include: {
-          subject: { select: { code: true, name: true } },
+          subject: { select: { code: true, name: true, faculty: true } },
           branch: { select: { code: true, name: true } },
         },
         orderBy: { startTime: 'asc' },
       });
 
-      // 4. Recent Academic Updates (Notices with academic targets)
+      // Recent academic notices
       const recentUpdates = await prisma.notice.findMany({
-        where: {
-          status: 'PUBLISHED',
-          targets: {
-            some: {
-              targetType: { in: ['BRANCH', 'YEAR', 'SEMESTER', 'SECTION', 'SUBJECT', 'ALL'] },
-            },
-          },
-        },
         include: {
           targets: true,
           author: {
@@ -151,7 +244,23 @@ router.get(
         take: 6,
       });
 
-      // 5. Academic Structure Summary
+      // Upcoming deadlines
+      const upcomingDeadlines = await prisma.academicDeadline.findMany({
+        where: { isActive: true },
+        include: { branch: true },
+        orderBy: { deadline: 'asc' },
+        take: 5,
+      });
+
+      // Guidance items
+      const guidanceItems = await prisma.guidanceItem.findMany({
+        where: { isActive: true },
+        include: { branch: true },
+        orderBy: { updatedAt: 'desc' },
+        take: 8,
+      });
+
+      // Academic Structure Summary
       const branches = await prisma.branch.findMany({
         include: {
           _count: {
@@ -169,14 +278,25 @@ router.get(
         success: true,
         data: {
           metrics: {
+            pendingApprovals: pendingBonafidesCount,
+            approvedCount: approvedBonafidesCount,
+            rejectedCount: rejectedBonafidesCount,
+            totalRequests: totalBonafides,
             totalSubjects,
             activeFaculty: activeFacultyCount,
             todayClasses: todayClasses.length,
             recentUpdates: recentUpdates.length,
+            upcomingDeadlines: activeDeadlinesCount,
+            guidanceArticles: activeGuidanceCount,
           },
           todayDay: queryDay,
           todayClasses,
+          pendingRequests: pendingBonafides,
+          recentlyApproved,
+          recentlyRejected,
           recentUpdates,
+          deadlines: upcomingDeadlines,
+          guidanceItems,
           academicStructure: branches,
         },
       });
@@ -187,16 +307,990 @@ router.get(
 );
 
 // ==========================================
-// 2. SUBJECT MANAGEMENT
+// 2. DAILY ACADEMIC ROUTINE (TIMETABLE CRUD)
+// ==========================================
+/**
+ * GET /api/academic/routine
+ * View daily routine entries with flexible filtering
+ */
+router.get(
+  '/routine',
+  authenticate,
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { branchId, branchCode, year, semester, section, day, date, type } = req.query;
+
+      const where: any = {};
+      if (branchId) where.branchId = String(branchId);
+      if (branchCode) where.branch = { code: String(branchCode).toUpperCase() };
+      if (year) where.year = parseInt(String(year), 10);
+      if (semester) where.semester = parseInt(String(semester), 10);
+      if (section) where.section = String(section).toUpperCase();
+      if (day) where.day = String(day).toUpperCase();
+      if (date) where.date = String(date);
+      if (type) where.type = String(type).toUpperCase();
+
+      const entries = await prisma.timetableEntry.findMany({
+        where,
+        include: {
+          subject: { select: { id: true, code: true, name: true, faculty: true } },
+          branch: { select: { id: true, code: true, name: true } },
+        },
+        orderBy: [{ day: 'asc' }, { startTime: 'asc' }],
+      });
+
+      res.json({
+        success: true,
+        data: entries,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /api/academic/routine
+ * Create a routine entry (lecture, lab, tutorial)
+ */
+router.post(
+  '/routine',
+  authenticate,
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
+  validateBody(createRoutineSchema),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const {
+        subjectId,
+        branchId,
+        year,
+        semester,
+        section,
+        day,
+        startTime,
+        endTime,
+        room,
+        faculty,
+        type,
+        date,
+      } = req.body;
+
+      // Verify subject and branch
+      const subject = await prisma.subject.findUnique({ where: { id: subjectId } });
+      if (!subject) throw new AppError('Subject not found', 404);
+
+      const branch = await prisma.branch.findUnique({ where: { id: branchId } });
+      if (!branch) throw new AppError('Branch not found', 404);
+
+      const entry = await prisma.timetableEntry.create({
+        data: {
+          subjectId,
+          branchId,
+          year,
+          semester: semester || subject.semester || year * 2 - 1,
+          section: section ? section.toUpperCase() : subject.section || 'A',
+          day,
+          startTime,
+          endTime,
+          room,
+          faculty: faculty || subject.faculty || 'Department Faculty',
+          type: type || 'LECTURE',
+          date: date || null,
+        },
+        include: {
+          subject: true,
+          branch: true,
+        },
+      });
+
+      await AuditService.log({
+        actorId: req.user!.id,
+        action: 'ROUTINE_ENTRY_CREATED',
+        entityType: 'TIMETABLE_ENTRY',
+        entityId: entry.id,
+        newValues: {
+          subject: subject.code,
+          day,
+          startTime,
+          endTime,
+          room,
+          faculty,
+          type,
+          date,
+        },
+      });
+
+      res.status(201).json({
+        success: true,
+        message: `Routine entry scheduled: ${subject.name} (${startTime}-${endTime})`,
+        data: entry,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * PUT /api/academic/routine/:id
+ * Edit routine entry
+ */
+router.put(
+  '/routine/:id',
+  authenticate,
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
+  validateBody(updateRoutineSchema),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const existing = await prisma.timetableEntry.findUnique({ where: { id } });
+      if (!existing) throw new AppError('Routine entry not found', 404);
+
+      const {
+        subjectId,
+        branchId,
+        year,
+        semester,
+        section,
+        day,
+        startTime,
+        endTime,
+        room,
+        faculty,
+        type,
+        date,
+      } = req.body;
+
+      if (subjectId) {
+        const sub = await prisma.subject.findUnique({ where: { id: subjectId } });
+        if (!sub) throw new AppError('Subject not found', 404);
+      }
+
+      if (branchId) {
+        const br = await prisma.branch.findUnique({ where: { id: branchId } });
+        if (!br) throw new AppError('Branch not found', 404);
+      }
+
+      const updated = await prisma.timetableEntry.update({
+        where: { id },
+        data: {
+          ...(subjectId ? { subjectId } : {}),
+          ...(branchId ? { branchId } : {}),
+          ...(year ? { year } : {}),
+          ...(semester !== undefined ? { semester } : {}),
+          ...(section !== undefined ? { section: section ? section.toUpperCase() : null } : {}),
+          ...(day ? { day } : {}),
+          ...(startTime ? { startTime } : {}),
+          ...(endTime ? { endTime } : {}),
+          ...(room ? { room } : {}),
+          ...(faculty !== undefined ? { faculty } : {}),
+          ...(type ? { type } : {}),
+          ...(date !== undefined ? { date: date || null } : {}),
+        },
+        include: {
+          subject: true,
+          branch: true,
+        },
+      });
+
+      await AuditService.log({
+        actorId: req.user!.id,
+        action: 'ROUTINE_ENTRY_UPDATED',
+        entityType: 'TIMETABLE_ENTRY',
+        entityId: id,
+        oldValues: existing,
+        newValues: updated,
+      });
+
+      res.json({
+        success: true,
+        message: 'Routine entry updated successfully',
+        data: updated,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * DELETE /api/academic/routine/:id
+ * Delete routine entry
+ */
+router.delete(
+  '/routine/:id',
+  authenticate,
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const existing = await prisma.timetableEntry.findUnique({ where: { id } });
+      if (!existing) throw new AppError('Routine entry not found', 404);
+
+      await prisma.timetableEntry.delete({ where: { id } });
+
+      await AuditService.log({
+        actorId: req.user!.id,
+        action: 'ROUTINE_ENTRY_DELETED',
+        entityType: 'TIMETABLE_ENTRY',
+        entityId: id,
+        oldValues: existing,
+      });
+
+      res.json({
+        success: true,
+        message: 'Routine entry deleted successfully',
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// Backward-compatibility aliases for timetable
+router.get('/timetable', authenticate, async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { branchId, branchCode, year, semester, section, day, date, type } = req.query;
+
+    const where: any = {};
+    if (branchId) where.branchId = String(branchId);
+    if (branchCode) where.branch = { code: String(branchCode).toUpperCase() };
+    if (year) where.year = parseInt(String(year), 10);
+    if (semester) where.semester = parseInt(String(semester), 10);
+    if (section) where.section = String(section).toUpperCase();
+    if (day) where.day = String(day).toUpperCase();
+    if (date) where.date = String(date);
+    if (type) where.type = String(type).toUpperCase();
+
+    const entries = await prisma.timetableEntry.findMany({
+      where,
+      include: {
+        subject: { select: { id: true, code: true, name: true, faculty: true } },
+        branch: { select: { id: true, code: true, name: true } },
+      },
+      orderBy: [{ day: 'asc' }, { startTime: 'asc' }],
+    });
+
+    res.json({
+      success: true,
+      data: entries,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ==========================================
+// 3. ACADEMIC NOTICES MANAGEMENT
+// ==========================================
+/**
+ * GET /api/academic/notices
+ * View all notices managed by Academic Officer
+ */
+router.get(
+  '/notices',
+  authenticate,
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const notices = await prisma.notice.findMany({
+        include: {
+          targets: true,
+          author: {
+            select: {
+              username: true,
+              staff: { select: { fullName: true, designation: true } },
+            },
+          },
+        },
+        orderBy: { publishedAt: 'desc' },
+      });
+
+      res.json({
+        success: true,
+        data: notices,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /api/academic/notices
+ * Create & publish academic notice with targeting
+ */
+router.post(
+  '/notices',
+  authenticate,
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
+  validateBody(createNoticeSchema),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { title, content, priority, status, expiresAt, targets } = req.body;
+
+      const notice = await prisma.$transaction(async (tx) => {
+        const n = await tx.notice.create({
+          data: {
+            title,
+            content,
+            priority: priority || 'NORMAL',
+            status: status || 'PUBLISHED',
+            publishedAt: new Date(),
+            expiresAt: expiresAt ? new Date(expiresAt) : null,
+            createdBy: req.user!.id,
+          },
+        });
+
+        for (const t of targets) {
+          await tx.noticeTarget.create({
+            data: {
+              noticeId: n.id,
+              targetType: t.targetType,
+              targetValue: String(t.targetValue).trim(),
+            },
+          });
+        }
+
+        return n;
+      });
+
+      await AuditService.log({
+        actorId: req.user!.id,
+        action: 'ACADEMIC_NOTICE_CREATED',
+        entityType: 'NOTICE',
+        entityId: notice.id,
+        newValues: { title, priority, status, targets },
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Academic notice published successfully',
+        data: notice,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * PUT /api/academic/notices/:id
+ * Edit notice
+ */
+router.put(
+  '/notices/:id',
+  authenticate,
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
+  validateBody(updateNoticeSchema),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const existing = await prisma.notice.findUnique({
+        where: { id },
+        include: { targets: true },
+      });
+
+      if (!existing) throw new AppError('Notice not found', 404);
+
+      const { title, content, priority, status, expiresAt, targets } = req.body;
+
+      const updated = await prisma.$transaction(async (tx) => {
+        const n = await tx.notice.update({
+          where: { id },
+          data: {
+            ...(title ? { title } : {}),
+            ...(content ? { content } : {}),
+            ...(priority ? { priority } : {}),
+            ...(status ? { status } : {}),
+            ...(expiresAt !== undefined ? { expiresAt: expiresAt ? new Date(expiresAt) : null } : {}),
+          },
+        });
+
+        if (targets && targets.length > 0) {
+          await tx.noticeTarget.deleteMany({ where: { noticeId: id } });
+          for (const t of targets) {
+            await tx.noticeTarget.create({
+              data: {
+                noticeId: id,
+                targetType: t.targetType,
+                targetValue: String(t.targetValue).trim(),
+              },
+            });
+          }
+        }
+
+        return n;
+      });
+
+      await AuditService.log({
+        actorId: req.user!.id,
+        action: 'ACADEMIC_NOTICE_UPDATED',
+        entityType: 'NOTICE',
+        entityId: id,
+        oldValues: existing,
+        newValues: updated,
+      });
+
+      res.json({
+        success: true,
+        message: 'Notice updated successfully',
+        data: updated,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * PATCH /api/academic/notices/:id/publish
+ * Toggle publish / unpublish status
+ */
+router.patch(
+  '/notices/:id/publish',
+  authenticate,
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const existing = await prisma.notice.findUnique({ where: { id } });
+      if (!existing) throw new AppError('Notice not found', 404);
+
+      const newStatus = existing.status === 'PUBLISHED' ? 'DRAFT' : 'PUBLISHED';
+      const updated = await prisma.notice.update({
+        where: { id },
+        data: { status: newStatus },
+      });
+
+      res.json({
+        success: true,
+        message: `Notice status updated to ${newStatus}`,
+        data: updated,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * DELETE /api/academic/notices/:id
+ * Delete academic notice
+ */
+router.delete(
+  '/notices/:id',
+  authenticate,
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const existing = await prisma.notice.findUnique({ where: { id } });
+      if (!existing) throw new AppError('Notice not found', 404);
+
+      await prisma.notice.delete({ where: { id } });
+
+      await AuditService.log({
+        actorId: req.user!.id,
+        action: 'ACADEMIC_NOTICE_DELETED',
+        entityType: 'NOTICE',
+        entityId: id,
+        oldValues: existing,
+      });
+
+      res.json({
+        success: true,
+        message: 'Notice deleted successfully',
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// Backward-compatibility updates alias
+router.get('/updates', authenticate, async (req, res, next) => {
+  try {
+    const updates = await prisma.notice.findMany({
+      where: {
+        status: 'PUBLISHED',
+        targets: {
+          some: {
+            targetType: { in: ['BRANCH', 'YEAR', 'SEMESTER', 'SECTION', 'SUBJECT', 'ALL'] },
+          },
+        },
+      },
+      include: {
+        targets: true,
+        author: {
+          select: {
+            username: true,
+            staff: { select: { fullName: true, designation: true } },
+          },
+        },
+      },
+      orderBy: { publishedAt: 'desc' },
+    });
+
+    const formatted = updates.map((n) => ({
+      id: n.id,
+      title: n.title,
+      content: n.content,
+      priority: n.priority,
+      publishedAt: n.publishedAt,
+      authorName: n.author.staff?.fullName || n.author.username,
+      authorRole: n.author.staff?.designation || 'Academic Officer',
+      targets: n.targets.map((t) => ({
+        id: t.id,
+        targetType: t.targetType,
+        targetValue: t.targetValue,
+      })),
+    }));
+
+    res.json({ success: true, data: formatted });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ==========================================
+// 4. ACADEMIC DEADLINES MANAGEMENT
+// ==========================================
+/**
+ * GET /api/academic/deadlines
+ * List all academic deadlines
+ */
+router.get(
+  '/deadlines',
+  authenticate,
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const deadlines = await prisma.academicDeadline.findMany({
+        include: {
+          branch: { select: { id: true, code: true, name: true } },
+          creator: {
+            select: {
+              username: true,
+              staff: { select: { fullName: true, designation: true } },
+            },
+          },
+        },
+        orderBy: { deadline: 'asc' },
+      });
+
+      res.json({
+        success: true,
+        data: deadlines,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /api/academic/deadlines
+ * Create a new academic deadline
+ */
+router.post(
+  '/deadlines',
+  authenticate,
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
+  validateBody(createDeadlineSchema),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const {
+        title,
+        description,
+        deadline,
+        targetYear,
+        targetSemester,
+        targetBranchId,
+        targetSection,
+        relatedForm,
+        actionUrl,
+      } = req.body;
+
+      if (targetBranchId) {
+        const br = await prisma.branch.findUnique({ where: { id: targetBranchId } });
+        if (!br) throw new AppError('Target branch does not exist', 404);
+      }
+
+      const item = await prisma.academicDeadline.create({
+        data: {
+          title,
+          description,
+          deadline: new Date(deadline),
+          targetYear: targetYear || null,
+          targetSemester: targetSemester || null,
+          targetBranchId: targetBranchId || null,
+          targetSection: targetSection ? targetSection.toUpperCase() : null,
+          relatedForm: relatedForm || null,
+          actionUrl: actionUrl || null,
+          createdBy: req.user!.id,
+          isActive: true,
+        },
+        include: { branch: true },
+      });
+
+      await AuditService.log({
+        actorId: req.user!.id,
+        action: 'ACADEMIC_DEADLINE_CREATED',
+        entityType: 'ACADEMIC_DEADLINE',
+        entityId: item.id,
+        newValues: { title, deadline, targetYear, targetBranchId },
+      });
+
+      res.status(201).json({
+        success: true,
+        message: `Deadline created: ${title}`,
+        data: item,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * PUT /api/academic/deadlines/:id
+ * Edit deadline
+ */
+router.put(
+  '/deadlines/:id',
+  authenticate,
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
+  validateBody(updateDeadlineSchema),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const existing = await prisma.academicDeadline.findUnique({ where: { id } });
+      if (!existing) throw new AppError('Deadline not found', 404);
+
+      const {
+        title,
+        description,
+        deadline,
+        targetYear,
+        targetSemester,
+        targetBranchId,
+        targetSection,
+        relatedForm,
+        actionUrl,
+      } = req.body;
+
+      const updated = await prisma.academicDeadline.update({
+        where: { id },
+        data: {
+          ...(title ? { title } : {}),
+          ...(description ? { description } : {}),
+          ...(deadline ? { deadline: new Date(deadline) } : {}),
+          ...(targetYear !== undefined ? { targetYear } : {}),
+          ...(targetSemester !== undefined ? { targetSemester } : {}),
+          ...(targetBranchId !== undefined ? { targetBranchId } : {}),
+          ...(targetSection !== undefined ? { targetSection: targetSection ? targetSection.toUpperCase() : null } : {}),
+          ...(relatedForm !== undefined ? { relatedForm } : {}),
+          ...(actionUrl !== undefined ? { actionUrl } : {}),
+        },
+        include: { branch: true },
+      });
+
+      res.json({
+        success: true,
+        message: 'Deadline updated successfully',
+        data: updated,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * DELETE /api/academic/deadlines/:id
+ * Delete deadline
+ */
+router.delete(
+  '/deadlines/:id',
+  authenticate,
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const existing = await prisma.academicDeadline.findUnique({ where: { id } });
+      if (!existing) throw new AppError('Deadline not found', 404);
+
+      await prisma.academicDeadline.delete({ where: { id } });
+
+      res.json({
+        success: true,
+        message: 'Deadline deleted successfully',
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ==========================================
+// 5. GUIDANCE CONTENT MANAGEMENT
+// ==========================================
+/**
+ * GET /api/academic/guidance
+ * View all guidance items
+ */
+router.get(
+  '/guidance',
+  authenticate,
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { category, targetYear } = req.query;
+
+      const where: any = {};
+      if (category) where.category = String(category).toUpperCase();
+      if (targetYear) where.targetYear = parseInt(String(targetYear), 10);
+
+      const items = await prisma.guidanceItem.findMany({
+        where,
+        include: { branch: true },
+        orderBy: [{ category: 'asc' }, { updatedAt: 'desc' }],
+      });
+
+      res.json({
+        success: true,
+        data: items,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /api/academic/guidance
+ * Create guidance item
+ */
+router.post(
+  '/guidance',
+  authenticate,
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
+  validateBody(createGuidanceSchema),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const {
+        title,
+        category,
+        subcategory,
+        description,
+        targetYear,
+        targetBranchId,
+        requiredDocs,
+        processSteps,
+        responsibleRole,
+        relatedForm,
+        actionUrl,
+        actionLabel,
+        isActive,
+      } = req.body;
+
+      const item = await prisma.guidanceItem.create({
+        data: {
+          title,
+          category: category.toUpperCase(),
+          subcategory: subcategory ? subcategory.toUpperCase() : null,
+          description,
+          targetYear: targetYear || null,
+          targetBranchId: targetBranchId || null,
+          requiredDocs: typeof requiredDocs === 'string' ? requiredDocs : JSON.stringify(requiredDocs),
+          processSteps: typeof processSteps === 'string' ? processSteps : JSON.stringify(processSteps),
+          responsibleRole: responsibleRole || 'ACADEMIC_OFFICER',
+          relatedForm: relatedForm || null,
+          actionUrl,
+          actionLabel,
+          isActive: isActive !== undefined ? isActive : true,
+          createdBy: req.user!.id,
+        },
+        include: { branch: true },
+      });
+
+      await AuditService.log({
+        actorId: req.user!.id,
+        action: 'GUIDANCE_ITEM_CREATED',
+        entityType: 'GUIDANCE_ITEM',
+        entityId: item.id,
+        newValues: { title, category, actionUrl },
+      });
+
+      res.status(201).json({
+        success: true,
+        message: `Guidance item created: ${title}`,
+        data: item,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * PUT /api/academic/guidance/:id
+ * Edit guidance item
+ */
+router.put(
+  '/guidance/:id',
+  authenticate,
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
+  validateBody(updateGuidanceSchema),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const existing = await prisma.guidanceItem.findUnique({ where: { id } });
+      if (!existing) throw new AppError('Guidance item not found', 404);
+
+      const {
+        title,
+        category,
+        subcategory,
+        description,
+        targetYear,
+        targetBranchId,
+        requiredDocs,
+        processSteps,
+        responsibleRole,
+        relatedForm,
+        actionUrl,
+        actionLabel,
+        isActive,
+      } = req.body;
+
+      const updated = await prisma.guidanceItem.update({
+        where: { id },
+        data: {
+          ...(title ? { title } : {}),
+          ...(category ? { category: category.toUpperCase() } : {}),
+          ...(subcategory !== undefined ? { subcategory: subcategory ? subcategory.toUpperCase() : null } : {}),
+          ...(description ? { description } : {}),
+          ...(targetYear !== undefined ? { targetYear } : {}),
+          ...(targetBranchId !== undefined ? { targetBranchId } : {}),
+          ...(requiredDocs !== undefined
+            ? { requiredDocs: typeof requiredDocs === 'string' ? requiredDocs : JSON.stringify(requiredDocs) }
+            : {}),
+          ...(processSteps !== undefined
+            ? { processSteps: typeof processSteps === 'string' ? processSteps : JSON.stringify(processSteps) }
+            : {}),
+          ...(responsibleRole ? { responsibleRole } : {}),
+          ...(relatedForm !== undefined ? { relatedForm } : {}),
+          ...(actionUrl ? { actionUrl } : {}),
+          ...(actionLabel ? { actionLabel } : {}),
+          ...(isActive !== undefined ? { isActive } : {}),
+        },
+        include: { branch: true },
+      });
+
+      res.json({
+        success: true,
+        message: 'Guidance item updated successfully',
+        data: updated,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * DELETE /api/academic/guidance/:id
+ * Delete guidance item
+ */
+router.delete(
+  '/guidance/:id',
+  authenticate,
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const id = String(req.params.id);
+      const existing = await prisma.guidanceItem.findUnique({ where: { id } });
+      if (!existing) throw new AppError('Guidance item not found', 404);
+
+      await prisma.guidanceItem.delete({ where: { id } });
+
+      res.json({
+        success: true,
+        message: 'Guidance item deleted successfully',
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ==========================================
+// 6. ACADEMIC REQUEST MANAGEMENT & CERTIFICATES
+// ==========================================
+/**
+ * GET /api/academic/requests
+ * View all academic requests (Bonafide certificates, academic inquiries)
+ */
+router.get(
+  '/requests',
+  authenticate,
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { status } = req.query;
+
+      const where: any = {};
+      if (status && status !== 'ALL') {
+        where.request = { status: String(status).toUpperCase() };
+      }
+
+      const requests = await prisma.bonafideRequest.findMany({
+        where,
+        include: {
+          request: {
+            include: {
+              requestType: true,
+              requester: {
+                include: {
+                  student: {
+                    include: {
+                      branch: true,
+                      hostelRoom: { include: { hostelBlock: true } },
+                    },
+                  },
+                },
+              },
+              statusHistory: {
+                include: {
+                  changer: { select: { username: true } },
+                },
+                orderBy: { createdAt: 'desc' },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      res.json({
+        success: true,
+        data: requests,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ==========================================
+// 7. SUBJECTS, ATTENDANCE & METADATA
 // ==========================================
 /**
  * GET /api/academic/subjects
- * View all academic subjects with filtering
  */
 router.get(
   '/subjects',
   authenticate,
-  requirePermission('academic.subject.read'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { branchId, branchCode, year, semester, section } = req.query;
@@ -222,10 +1316,7 @@ router.get(
         orderBy: [{ branch: { code: 'asc' } }, { year: 'asc' }, { code: 'asc' }],
       });
 
-      res.json({
-        success: true,
-        data: subjects,
-      });
+      res.json({ success: true, data: subjects });
     } catch (err) {
       next(err);
     }
@@ -234,28 +1325,21 @@ router.get(
 
 /**
  * POST /api/academic/subjects
- * Create a new academic subject
  */
 router.post(
   '/subjects',
   authenticate,
-  requirePermission('academic.subject.create'),
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
   validateBody(createSubjectSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { code, name, branchId, year, semester, section, faculty } = req.body;
 
-      // Verify branch exists
       const branch = await prisma.branch.findUnique({ where: { id: branchId } });
-      if (!branch) {
-        throw new AppError('Specified academic branch does not exist', 404);
-      }
+      if (!branch) throw new AppError('Branch not found', 404);
 
-      // Check unique code
       const existing = await prisma.subject.findUnique({ where: { code } });
-      if (existing) {
-        throw new AppError(`Subject with code '${code}' already exists`, 409);
-      }
+      if (existing) throw new AppError(`Subject with code '${code}' already exists`, 409);
 
       const subject = await prisma.subject.create({
         data: {
@@ -268,14 +1352,6 @@ router.post(
           faculty: faculty || null,
         },
         include: { branch: true },
-      });
-
-      await AuditService.log({
-        actorId: req.user!.id,
-        action: 'SUBJECT_CREATED',
-        entityType: 'SUBJECT',
-        entityId: subject.id,
-        newValues: { code, name, branch: branch.code, year, semester, section, faculty },
       });
 
       res.status(201).json({
@@ -291,12 +1367,11 @@ router.post(
 
 /**
  * PUT /api/academic/subjects/:id
- * Edit an existing subject
  */
 router.put(
   '/subjects/:id',
   authenticate,
-  requirePermission('academic.subject.update'),
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
   validateBody(updateSubjectSchema),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -304,22 +1379,11 @@ router.put(
       const { code, name, branchId, year, semester, section, faculty } = req.body;
 
       const existing = await prisma.subject.findUnique({ where: { id } });
-      if (!existing) {
-        throw new AppError('Subject not found', 404);
-      }
+      if (!existing) throw new AppError('Subject not found', 404);
 
       if (code && code !== existing.code) {
-        const codeConflict = await prisma.subject.findUnique({ where: { code } });
-        if (codeConflict) {
-          throw new AppError(`Subject code '${code}' is already used by another subject`, 409);
-        }
-      }
-
-      if (branchId) {
-        const branch = await prisma.branch.findUnique({ where: { id: branchId } });
-        if (!branch) {
-          throw new AppError('Specified branch not found', 404);
-        }
+        const conflict = await prisma.subject.findUnique({ where: { code } });
+        if (conflict) throw new AppError(`Subject code '${code}' already exists`, 409);
       }
 
       const updated = await prisma.subject.update({
@@ -336,15 +1400,6 @@ router.put(
         include: { branch: true },
       });
 
-      await AuditService.log({
-        actorId: req.user!.id,
-        action: 'SUBJECT_UPDATED',
-        entityType: 'SUBJECT',
-        entityId: updated.id,
-        oldValues: existing,
-        newValues: updated,
-      });
-
       res.json({
         success: true,
         message: `Subject ${updated.code} updated successfully`,
@@ -358,30 +1413,18 @@ router.put(
 
 /**
  * DELETE /api/academic/subjects/:id
- * Delete a subject
  */
 router.delete(
   '/subjects/:id',
   authenticate,
-  requirePermission('academic.subject.delete'),
+  requireRole('ACADEMIC_OFFICER', 'ADMIN'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const id = String(req.params.id);
-
       const existing = await prisma.subject.findUnique({ where: { id } });
-      if (!existing) {
-        throw new AppError('Subject not found', 404);
-      }
+      if (!existing) throw new AppError('Subject not found', 404);
 
       await prisma.subject.delete({ where: { id } });
-
-      await AuditService.log({
-        actorId: req.user!.id,
-        action: 'SUBJECT_DELETED',
-        entityType: 'SUBJECT',
-        entityId: id,
-        oldValues: existing,
-      });
 
       res.json({
         success: true,
@@ -393,443 +1436,12 @@ router.delete(
   }
 );
 
-// ==========================================
-// 3. TIMETABLE MANAGEMENT
-// ==========================================
-/**
- * GET /api/academic/timetable
- * View timetable entries
- */
-router.get(
-  '/timetable',
-  authenticate,
-  requirePermission('academic.timetable.read'),
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { branchId, year, semester, section, day } = req.query;
-
-      const where: any = {};
-      if (branchId) where.branchId = String(branchId);
-      if (year) where.year = parseInt(String(year), 10);
-      if (semester) where.semester = parseInt(String(semester), 10);
-      if (section) where.section = String(section).toUpperCase();
-      if (day) where.day = String(day).toUpperCase();
-
-      const entries = await prisma.timetableEntry.findMany({
-        where,
-        include: {
-          subject: { select: { id: true, code: true, name: true, faculty: true } },
-          branch: { select: { id: true, code: true, name: true } },
-        },
-        orderBy: [{ day: 'asc' }, { startTime: 'asc' }],
-      });
-
-      res.json({
-        success: true,
-        data: entries,
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-/**
- * POST /api/academic/timetable
- * Create a new timetable entry
- */
-router.post(
-  '/timetable',
-  authenticate,
-  requirePermission('academic.timetable.create'),
-  validateBody(createTimetableSchema),
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { subjectId, branchId, year, semester, section, day, startTime, endTime, room, faculty } =
-        req.body;
-
-      // Verify subject and branch
-      const subject = await prisma.subject.findUnique({ where: { id: subjectId } });
-      if (!subject) {
-        throw new AppError('Subject not found', 404);
-      }
-
-      const branch = await prisma.branch.findUnique({ where: { id: branchId } });
-      if (!branch) {
-        throw new AppError('Branch not found', 404);
-      }
-
-      const entry = await prisma.timetableEntry.create({
-        data: {
-          subjectId,
-          branchId,
-          year,
-          semester: semester || subject.semester || year * 2 - 1,
-          section: section ? section.toUpperCase() : subject.section || null,
-          day,
-          startTime,
-          endTime,
-          room,
-          faculty: faculty || subject.faculty || 'Department Faculty',
-        },
-        include: {
-          subject: true,
-          branch: true,
-        },
-      });
-
-      await AuditService.log({
-        actorId: req.user!.id,
-        action: 'TIMETABLE_ENTRY_CREATED',
-        entityType: 'TIMETABLE_ENTRY',
-        entityId: entry.id,
-        newValues: { subjectCode: subject.code, day, startTime, endTime, room, faculty },
-      });
-
-      res.status(201).json({
-        success: true,
-        message: 'Timetable entry scheduled successfully',
-        data: entry,
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-/**
- * PUT /api/academic/timetable/:id
- * Edit timetable entry
- */
-router.put(
-  '/timetable/:id',
-  authenticate,
-  requirePermission('academic.timetable.update'),
-  validateBody(updateTimetableSchema),
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const id = String(req.params.id);
-      const existing = await prisma.timetableEntry.findUnique({ where: { id } });
-      if (!existing) {
-        throw new AppError('Timetable entry not found', 404);
-      }
-
-      const { subjectId, branchId, year, semester, section, day, startTime, endTime, room, faculty } =
-        req.body;
-
-      if (subjectId) {
-        const sub = await prisma.subject.findUnique({ where: { id: subjectId } });
-        if (!sub) throw new AppError('Subject not found', 404);
-      }
-
-      const updated = await prisma.timetableEntry.update({
-        where: { id },
-        data: {
-          ...(subjectId ? { subjectId } : {}),
-          ...(branchId ? { branchId } : {}),
-          ...(year ? { year } : {}),
-          ...(semester !== undefined ? { semester } : {}),
-          ...(section !== undefined ? { section: section ? section.toUpperCase() : null } : {}),
-          ...(day ? { day } : {}),
-          ...(startTime ? { startTime } : {}),
-          ...(endTime ? { endTime } : {}),
-          ...(room ? { room } : {}),
-          ...(faculty !== undefined ? { faculty } : {}),
-        },
-        include: {
-          subject: true,
-          branch: true,
-        },
-      });
-
-      await AuditService.log({
-        actorId: req.user!.id,
-        action: 'TIMETABLE_ENTRY_UPDATED',
-        entityType: 'TIMETABLE_ENTRY',
-        entityId: id,
-        oldValues: existing,
-        newValues: updated,
-      });
-
-      res.json({
-        success: true,
-        message: 'Timetable entry updated successfully',
-        data: updated,
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-/**
- * DELETE /api/academic/timetable/:id
- * Delete timetable entry
- */
-router.delete(
-  '/timetable/:id',
-  authenticate,
-  requirePermission('academic.timetable.delete'),
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const id = String(req.params.id);
-      const existing = await prisma.timetableEntry.findUnique({ where: { id } });
-      if (!existing) {
-        throw new AppError('Timetable entry not found', 404);
-      }
-
-      await prisma.timetableEntry.delete({ where: { id } });
-
-      await AuditService.log({
-        actorId: req.user!.id,
-        action: 'TIMETABLE_ENTRY_DELETED',
-        entityType: 'TIMETABLE_ENTRY',
-        entityId: id,
-        oldValues: existing,
-      });
-
-      res.json({
-        success: true,
-        message: 'Timetable entry deleted successfully',
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-// ==========================================
-// 4. ACADEMIC CLASS UPDATES (Notice Integration)
-// ==========================================
-/**
- * GET /api/academic/updates
- * View all published academic / class updates
- */
-router.get(
-  '/updates',
-  authenticate,
-  requirePermission('academic.update.read', 'notices.view'),
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const updates = await prisma.notice.findMany({
-        where: {
-          status: 'PUBLISHED',
-          targets: {
-            some: {
-              targetType: { in: ['BRANCH', 'YEAR', 'SEMESTER', 'SECTION', 'SUBJECT', 'ALL'] },
-            },
-          },
-        },
-        include: {
-          targets: true,
-          author: {
-            select: {
-              username: true,
-              staff: { select: { fullName: true, designation: true } },
-            },
-          },
-        },
-        orderBy: { publishedAt: 'desc' },
-      });
-
-      const formatted = updates.map((n) => ({
-        id: n.id,
-        title: n.title,
-        content: n.content,
-        priority: n.priority,
-        publishedAt: n.publishedAt,
-        authorName: n.author.staff?.fullName || n.author.username,
-        authorRole: n.author.staff?.designation || 'Academic Officer',
-        targets: n.targets.map((t) => ({
-          id: t.id,
-          targetType: t.targetType,
-          targetValue: t.targetValue,
-        })),
-      }));
-
-      res.json({
-        success: true,
-        data: formatted,
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-/**
- * POST /api/academic/updates
- * Publish official academic / class update targeted to branch, year, semester, section, subject
- */
-router.post(
-  '/updates',
-  authenticate,
-  requirePermission('academic.update.create', 'notices.create'),
-  validateBody(createAcademicUpdateSchema),
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { title, content, priority, targets } = req.body;
-
-      const notice = await prisma.$transaction(async (tx) => {
-        const n = await tx.notice.create({
-          data: {
-            title,
-            content,
-            priority,
-            createdBy: req.user!.id,
-            publishedAt: new Date(),
-            status: 'PUBLISHED',
-          },
-        });
-
-        for (const t of targets) {
-          await tx.noticeTarget.create({
-            data: {
-              noticeId: n.id,
-              targetType: t.targetType,
-              targetValue: String(t.targetValue).trim(),
-            },
-          });
-        }
-
-        return n;
-      });
-
-      await AuditService.log({
-        actorId: req.user!.id,
-        action: 'ACADEMIC_UPDATE_PUBLISHED',
-        entityType: 'NOTICE',
-        entityId: notice.id,
-        newValues: { title, priority, targets },
-      });
-
-      res.status(201).json({
-        success: true,
-        message: 'Official academic class update published successfully',
-        data: notice,
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-/**
- * PUT /api/academic/updates/:id
- * Edit an existing academic class update
- */
-router.put(
-  '/updates/:id',
-  authenticate,
-  requirePermission('academic.update.update'),
-  validateBody(updateAcademicUpdateSchema),
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const id = String(req.params.id);
-      const { title, content, priority, targets } = req.body;
-
-      const existing = await prisma.notice.findUnique({
-        where: { id },
-        include: { targets: true },
-      });
-
-      if (!existing) {
-        throw new AppError('Academic update notice not found', 404);
-      }
-
-      const updated = await prisma.$transaction(async (tx) => {
-        const n = await tx.notice.update({
-          where: { id },
-          data: {
-            ...(title ? { title } : {}),
-            ...(content ? { content } : {}),
-            ...(priority ? { priority } : {}),
-          },
-        });
-
-        if (targets && targets.length > 0) {
-          await tx.noticeTarget.deleteMany({ where: { noticeId: id } });
-          for (const t of targets) {
-            await tx.noticeTarget.create({
-              data: {
-                noticeId: id,
-                targetType: t.targetType,
-                targetValue: String(t.targetValue).trim(),
-              },
-            });
-          }
-        }
-
-        return n;
-      });
-
-      await AuditService.log({
-        actorId: req.user!.id,
-        action: 'ACADEMIC_UPDATE_MODIFIED',
-        entityType: 'NOTICE',
-        entityId: id,
-        oldValues: existing,
-        newValues: updated,
-      });
-
-      res.json({
-        success: true,
-        message: 'Academic update updated successfully',
-        data: updated,
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-/**
- * DELETE /api/academic/updates/:id
- * Delete an academic update notice
- */
-router.delete(
-  '/updates/:id',
-  authenticate,
-  requirePermission('academic.update.delete'),
-  async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const id = String(req.params.id);
-      const existing = await prisma.notice.findUnique({ where: { id } });
-      if (!existing) {
-        throw new AppError('Academic update notice not found', 404);
-      }
-
-      await prisma.notice.delete({ where: { id } });
-
-      await AuditService.log({
-        actorId: req.user!.id,
-        action: 'ACADEMIC_UPDATE_DELETED',
-        entityType: 'NOTICE',
-        entityId: id,
-        oldValues: existing,
-      });
-
-      res.json({
-        success: true,
-        message: 'Academic update deleted successfully',
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-// ==========================================
-// 5. ATTENDANCE OVERVIEW (READ-ONLY FOR ACADEMIC OFFICER)
-// ==========================================
 /**
  * GET /api/academic/attendance
- * Read-only attendance overview for Academic Officer
  */
 router.get(
   '/attendance',
   authenticate,
-  requirePermission('academic.attendance.read'),
   async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { branchId, year, subjectId } = req.query;
@@ -881,27 +1493,19 @@ router.get(
         };
       });
 
-      res.json({
-        success: true,
-        data: formatted,
-      });
+      res.json({ success: true, data: formatted });
     } catch (err) {
       next(err);
     }
   }
 );
 
-// ==========================================
-// 6. HELPER DATA (BRANCHES & FACULTY)
-// ==========================================
 /**
  * GET /api/academic/branches
- * List all branches for subject & timetable selectors
  */
 router.get(
   '/branches',
   authenticate,
-  requirePermission('academic.subject.read'),
   async (_req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const branches = await prisma.branch.findMany({
@@ -916,12 +1520,10 @@ router.get(
 
 /**
  * GET /api/academic/faculty
- * List all available teaching faculty
  */
 router.get(
   '/faculty',
   authenticate,
-  requirePermission('academic.subject.read'),
   async (_req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const staffFaculty = await prisma.staff.findMany({
@@ -939,7 +1541,6 @@ router.get(
         orderBy: { fullName: 'asc' },
       });
 
-      // Also grab any custom faculty names from timetable/subject seeds
       const [subjectFaculty, timetableFaculty] = await Promise.all([
         prisma.subject.findMany({
           where: { faculty: { not: null } },

@@ -145,8 +145,8 @@ export default function StudentAcademicHubPage() {
       <div className="relative overflow-hidden bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-xl shadow-black/20">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#1b2234] border border-[#d4af37]/40 text-[#d4af37] text-[10px] font-mono font-bold uppercase tracking-wider mb-2.5 shadow-xs">
-              <GraduationCap size={13} className="text-[#d4af37]" />
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#5B20A0]/20 border border-[#7A3DB8]/40 text-[#18C5D8] text-[10px] font-mono font-bold uppercase tracking-wider mb-2.5 shadow-xs">
+              <GraduationCap size={13} className="text-[#18C5D8]" />
               <span>BPUT PS07 • Academic Hub</span>
             </div>
 
@@ -154,15 +154,15 @@ export default function StudentAcademicHubPage() {
               Student Academic Overview
             </h1>
 
-            <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-gray-400 mt-2 font-mono">
-              <span className="text-gray-300">
+            <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-slate-400 mt-2 font-mono">
+              <span className="text-slate-300">
                 Cohort: <strong className="text-white font-bold">{attendance?.student.branch || 'CSE'} — Year {attendance?.student.year || 2}</strong>
               </span>
-              <span className="text-gray-600">•</span>
+              <span className="text-slate-600">•</span>
               <span>
-                Roll: <strong className="text-gray-300">{attendance?.student.rollNumber || '220101048'}</strong>
+                Roll: <strong className="text-slate-300">{attendance?.student.rollNumber || '220101048'}</strong>
               </span>
-              <span className="text-gray-600">•</span>
+              <span className="text-slate-600">•</span>
               <span className="text-emerald-400 font-semibold">Active Semester</span>
             </div>
           </div>
@@ -171,10 +171,10 @@ export default function StudentAcademicHubPage() {
             <button
               onClick={() => fetchData(true)}
               disabled={refreshing}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#171d2b] hover:bg-[#202738] border border-[#2b364d] text-gray-300 hover:text-white text-xs font-semibold active:scale-95 transition-all disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#171d2b] hover:bg-[#202738] border border-[#2b364d] text-slate-300 hover:text-white text-xs font-semibold active:scale-95 transition-all disabled:opacity-50"
               title="Refresh academic data"
             >
-              <RefreshCw size={13} className={refreshing ? 'animate-spin text-[#d4af37]' : ''} />
+              <RefreshCw size={13} className={refreshing ? 'animate-spin text-[#18C5D8]' : ''} />
               <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
             </button>
           </div>
@@ -186,8 +186,8 @@ export default function StudentAcademicHubPage() {
             onClick={() => setActiveTab('attendance')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'attendance'
-                ? 'bg-[#d4af37] text-black shadow-md shadow-[#d4af37]/20'
-                : 'bg-[#161b29] text-gray-300 hover:text-white hover:bg-[#1c2233] border border-[#232b3d]'
+                ? 'bg-[#5B20A0] text-white shadow-md shadow-[#5B20A0]/25 border border-[#7A3DB8]/50'
+                : 'bg-[#161b29] text-slate-300 hover:text-white hover:bg-[#1c2233] border border-[#232b3d]'
             }`}
           >
             <TrendingUp size={14} />
@@ -196,8 +196,8 @@ export default function StudentAcademicHubPage() {
               <span
                 className={`ml-1 text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
                   activeTab === 'attendance'
-                    ? 'bg-black/20 text-black'
-                    : 'bg-[#222b3f] text-[#d4af37]'
+                    ? 'bg-black/30 text-white'
+                    : 'bg-[#222b3f] text-[#18C5D8]'
                 }`}
               >
                 {attendance.overall.percentage}%
@@ -209,8 +209,8 @@ export default function StudentAcademicHubPage() {
             onClick={() => setActiveTab('timetable')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'timetable'
-                ? 'bg-[#d4af37] text-black shadow-md shadow-[#d4af37]/20'
-                : 'bg-[#161b29] text-gray-300 hover:text-white hover:bg-[#1c2233] border border-[#232b3d]'
+                ? 'bg-[#5B20A0] text-white shadow-md shadow-[#5B20A0]/25 border border-[#7A3DB8]/50'
+                : 'bg-[#161b29] text-slate-300 hover:text-white hover:bg-[#1c2233] border border-[#232b3d]'
             }`}
           >
             <Calendar size={14} />
@@ -219,7 +219,7 @@ export default function StudentAcademicHubPage() {
               <span
                 className={`ml-1 text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
                   activeTab === 'timetable'
-                    ? 'bg-black/20 text-black'
+                    ? 'bg-black/30 text-white'
                     : 'bg-[#222b3f] text-cyan-300'
                 }`}
               >
@@ -232,8 +232,8 @@ export default function StudentAcademicHubPage() {
             onClick={() => setActiveTab('updates')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               activeTab === 'updates'
-                ? 'bg-[#d4af37] text-black shadow-md shadow-[#d4af37]/20'
-                : 'bg-[#161b29] text-gray-300 hover:text-white hover:bg-[#1c2233] border border-[#232b3d]'
+                ? 'bg-[#5B20A0] text-white shadow-md shadow-[#5B20A0]/25 border border-[#7A3DB8]/50'
+                : 'bg-[#161b29] text-slate-300 hover:text-white hover:bg-[#1c2233] border border-[#232b3d]'
             }`}
           >
             <Bell size={14} />

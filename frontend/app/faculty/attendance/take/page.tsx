@@ -243,7 +243,8 @@ function TakeAttendanceContent() {
     const excused = students.filter((s) => s.status === 'EXCUSED').length;
     const total = students.length;
     const effectivePresent = present + late;
-    const rate = total > 0 ? Number(((effectivePresent / total) * 100).toFixed(1)) : 0;
+    const effectiveTotal = Math.max(0, total - excused);
+    const rate = effectiveTotal > 0 ? Number(((effectivePresent / effectiveTotal) * 100).toFixed(1)) : 0;
     return { present, absent, late, excused, total, rate };
   }, [students]);
 

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiRequest } from '@/lib/api';
-import { Wrench, ArrowLeft, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Wrench, ArrowLeft, Sparkles, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function NewComplaintPage() {
   const router = useRouter();
@@ -30,7 +30,7 @@ export default function NewComplaintPage() {
     if (/wifi|internet|lan|router|network|speed/.test(text)) {
       return { category: 'Network / IT', spec: 'IT', staff: 'Campus Network Team' };
     }
-    return { category: 'General Maintenance', spec: 'GENERAL', staff: 'Maintenance Team' };
+    return { category: 'General Maintenance', spec: 'GENERAL', staff: 'Campus Facilities Team' };
   };
 
   const preview = getRoutingPreview(title, description);
@@ -53,118 +53,146 @@ export default function NewComplaintPage() {
     if (res.success && res.data) {
       router.push(`/student/requests/${res.data.id}`);
     } else {
-      setError(res.error?.message || 'Failed to submit complaint');
+      setError(res.error?.message || 'Failed to submit complaint. Please check your network connection and try again.');
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6 pb-12 animate-tab-fade">
       <Link
         href="/student/requests"
-        className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition"
+        className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition group"
       >
-        <ArrowLeft size={14} /> Back to Requests
+        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+        <span>Back to My Requests</span>
       </Link>
 
-      <div className="bg-[#141722] border border-[#282f42] rounded-2xl p-6 sm:p-8 shadow-xl">
-        <div className="flex items-center gap-3 border-b border-[#282f42] pb-4 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center">
-            <Wrench size={20} />
+      <div className="bg-[#121624] border border-[#232b3f] rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xl shadow-black/25">
+        <div className="flex items-center gap-3.5 border-b border-[#21273a] pb-5 mb-6">
+          <div className="w-12 h-12 rounded-2xl bg-[#5B20A0]/20 border border-[#7A3DB8]/40 text-[#18C5D8] flex items-center justify-center shrink-0 shadow-md">
+            <Wrench size={22} />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-white">Log Campus Maintenance Complaint</h1>
-            <p className="text-xs text-gray-400">
-              Powered by deterministic keyword routing into the Nexora Request Engine.
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1b2234] text-[#18C5D8] text-[10px] font-mono font-bold uppercase mb-1">
+              <span>Campus Service Desk</span>
+            </div>
+            <h1 className="text-lg sm:text-xl font-extrabold text-white tracking-tight">
+              Log Campus Maintenance Ticket
+            </h1>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Submit your maintenance or repair request. It will be automatically routed to the right technician.
             </p>
           </div>
         </div>
 
         {error && (
-          <div className="mb-5 p-3 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">
-            <AlertCircle size={16} />
+          <div className="mb-6 p-4 rounded-xl bg-rose-950/50 border border-rose-800/60 text-rose-300 text-xs flex items-center gap-3">
+            <AlertCircle size={18} className="shrink-0 text-rose-400" />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="space-y-5 text-xs">
           <div>
-            <label className="block text-gray-300 font-medium mb-1">Issue Title</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-slate-200 font-semibold">
+                Issue Summary <span className="text-rose-400">*</span>
+              </label>
+              <span className="text-[11px] text-slate-500 font-mono">Brief headline</span>
+            </div>
             <input
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Tap Leakage in bathroom"
-              className="w-full bg-[#1c2130] border border-[#2e3447] rounded-lg p-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-gold"
+              placeholder="e.g., Washbasin tap leaking continuously in Bathroom 2"
+              className="w-full bg-[#161a29] border border-[#232b3f] focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] rounded-xl p-3 text-xs text-white placeholder-slate-500 outline-none transition"
             />
           </div>
 
           {/* Real-time Deterministic Routing Indicator */}
           {title.trim().length > 2 && (
-            <div className="p-3 rounded-xl bg-[#1a2130] border border-gold/30 text-[11px] flex items-center justify-between gap-2">
+            <div className="p-3.5 rounded-xl bg-[#161f30] border border-[#18C5D8]/40 text-[11px] flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-tab-fade">
               <div className="flex items-center gap-2">
-                <Sparkles size={14} className="text-gold shrink-0" />
-                <span>
-                  Auto-routing category: <strong className="text-gold">{preview.category}</strong>
+                <Sparkles size={15} className="text-[#18C5D8] shrink-0" />
+                <span className="text-slate-200">
+                  Detected Category: <strong className="text-[#18C5D8] font-bold">{preview.category}</strong>
                 </span>
               </div>
-              <span className="text-gray-400">Assigned: {preview.staff}</span>
+              <span className="text-slate-400 font-mono text-[10px]">
+                Target Specialist: <span className="text-slate-200 font-semibold">{preview.staff}</span>
+              </span>
             </div>
           )}
 
           <div>
-            <label className="block text-gray-300 font-medium mb-1">Detailed Description</label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-slate-200 font-semibold">
+                Detailed Description <span className="text-rose-400">*</span>
+              </label>
+              <span className="text-[11px] text-slate-500 font-mono">Include room fixtures or specifics</span>
+            </div>
             <textarea
               required
+              rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the issue in detail (e.g. Bathroom washbasin tap is continuously leaking and overflowing)..."
-              className="w-full bg-[#1c2130] border border-[#2e3447] rounded-lg p-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-gold h-24"
+              placeholder="Provide more context so the technician can bring appropriate tools (e.g., Water is pooling on the floor; tap handle appears loose)..."
+              className="w-full bg-[#161a29] border border-[#232b3f] focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] rounded-xl p-3 text-xs text-white placeholder-slate-500 outline-none transition"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-gray-300 font-medium mb-1">Location / Room</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-slate-200 font-semibold">
+                  Location / Room <span className="text-rose-400">*</span>
+                </label>
+              </div>
               <input
                 type="text"
                 required
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="e.g. Hostel B / Room 204"
-                className="w-full bg-[#1c2130] border border-[#2e3447] rounded-lg p-2.5 text-xs text-white"
+                className="w-full bg-[#161a29] border border-[#232b3f] focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] rounded-xl p-3 text-xs text-white outline-none transition"
               />
             </div>
 
             <div>
-              <label className="block text-gray-300 font-medium mb-1">Priority</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-slate-200 font-semibold">
+                  Urgency / Priority <span className="text-rose-400">*</span>
+                </label>
+              </div>
               <select
                 value={priority}
                 onChange={(e: any) => setPriority(e.target.value)}
-                className="w-full bg-[#1c2130] border border-[#2e3447] rounded-lg p-2.5 text-xs text-white"
+                className="w-full bg-[#161a29] border border-[#232b3f] focus:border-[#18C5D8] focus:ring-1 focus:ring-[#18C5D8] rounded-xl p-3 text-xs text-white outline-none transition"
               >
-                <option value="LOW">LOW (48h SLA)</option>
-                <option value="NORMAL">NORMAL (24h SLA)</option>
-                <option value="HIGH">HIGH (8h SLA)</option>
-                <option value="URGENT">URGENT (4h SLA)</option>
+                <option value="LOW">LOW (Standard 48-Hour SLA)</option>
+                <option value="NORMAL">NORMAL (Regular 24-Hour SLA)</option>
+                <option value="HIGH">HIGH (Urgent 8-Hour SLA)</option>
+                <option value="URGENT">URGENT (Critical 4-Hour SLA)</option>
               </select>
             </div>
           </div>
 
-          <div className="pt-4 flex justify-end gap-3">
+          <div className="pt-4 border-t border-[#21273a] flex items-center justify-end gap-3">
             <Link
               href="/student/requests"
-              className="px-4 py-2 rounded-lg bg-[#1f2434] text-gray-300 hover:text-white"
+              className="px-4 py-2.5 rounded-xl bg-[#161a29] hover:bg-[#1d2336] border border-[#232b3f] text-slate-300 hover:text-white font-medium transition"
             >
               Cancel
             </Link>
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 rounded-lg bg-gold text-black font-bold hover:bg-[#c49f2e] transition shadow disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#5B20A0] hover:bg-[#6c28be] text-white font-bold text-xs shadow-lg shadow-[#5B20A0]/25 transition-all duration-150 active:scale-95 disabled:opacity-50"
             >
-              {loading ? 'Submitting & Routing...' : 'Submit Complaint'}
+              {loading && <Loader2 size={14} className="animate-spin" />}
+              <span>{loading ? 'Submitting Ticket...' : 'Submit Maintenance Request'}</span>
             </button>
           </div>
         </form>

@@ -14,6 +14,8 @@ model User {
   passwordHash  String
   roleId        String
   isActive      Boolean   @default(true)
+  bio           String?
+  profilePhotoUrl String?
   lastLoginAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -38,6 +40,7 @@ model User {
   notifications      Notification[]
   auditLogs          AuditLog[]              @relation("AuditActor")
   attendanceSessions AttendanceSession[]     @relation("TeacherAttendanceSessions")
+  createdDeadlines   AcademicDeadline[]      @relation("DeadlineCreator")
 
   @@index([roleId])
   @@index([email])
@@ -86,6 +89,8 @@ model Branch {
   subjects         Subject[]
   timetableEntries TimetableEntry[]
   attendanceSessions AttendanceSession[]
+  deadlines        AcademicDeadline[]
+  guidanceItems    GuidanceItem[]
 }
 
 model HostelBlock {
@@ -134,10 +139,48 @@ model Student {
   documents     Document[]
   attendances   Attendance[]
   attendanceRecords AttendanceRecord[]
+  mentorProfile MentorProfile?
+  mentorshipRequestsSent     MentorshipRequest[] @relation("MentorshipRequester")
+  mentorshipRequestsReceived MentorshipRequest[] @relation("MentorshipMentor")
 
   @@index([rollNumber])
   @@index([branchId])
   @@index([hostelRoomId])
+}
+
+model MentorProfile {
+  id          String   @id @default(uuid())
+  studentId   String   @unique
+  headline    String?
+  bio         String?
+  linkedinUrl String?
+  cgpa        Float?
+  interests   String?
+  isAvailable Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([isAvailable])
+}
+
+model MentorshipRequest {
+  id          String   @id @default(uuid())
+  requesterId String
+  mentorId    String
+  message     String
+  status      String   @default("PENDING")
+  response    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  requester   Student  @relation("MentorshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  mentor      Student  @relation("MentorshipMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@index([requesterId])
+  @@index([mentorId])
+  @@index([status])
 }
 
 model Staff {
@@ -547,13 +590,17 @@ model TimetableEntry {
   endTime   String   // "10:00"
   room      String   // "CSE-204"
   faculty   String?  // "Dr. P. K. Tripathy"
+  type      String   @default("LECTURE") // LECTURE, LAB, TUTORIAL
+  date      String?  // e.g. "2026-10-08" or null for recurring weekly timetable
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
   @@index([branchId, year, day])
   @@index([subjectId])
+  @@index([date])
 }
 
 model AttendanceSession {
@@ -600,3 +647,52 @@ model AttendanceRecord {
   @@index([status])
 }
 
+model AcademicDeadline {
+  id             String    @id @default(uuid())
+  title          String
+  description    String
+  deadline       DateTime
+  targetYear     Int?
+  targetSemester Int?
+  targetBranchId String?
+  targetSection  String?
+  relatedForm    String?   // BONAFIDE, EXAM_FORM, INTERNSHIP, SCHOLARSHIP, GENERAL
+  actionUrl      String?   // e.g. /student/documents, /student/academics
+  createdBy      String
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  branch         Branch?   @relation(fields: [targetBranchId], references: [id], onDelete: SetNull)
+  creator        User      @relation("DeadlineCreator", fields: [createdBy], references: [id])
+
+  @@index([deadline])
+  @@index([targetBranchId, targetYear])
+  @@index([isActive])
+}
+
+model GuidanceItem {
+  id              String    @id @default(uuid())
+  title           String
+  category        String    // CERTIFICATE, ACADEMIC_REQUEST, INTERNSHIP, SCHOLARSHIP, EXAMINATION, HOSTEL, ROUTINE, NOTICE, GENERAL
+  subcategory     String?
+  description     String
+  targetYear      Int?
+  targetBranchId  String?
+  requiredDocs    String    // JSON array or text list of required docs/info
+  processSteps    String    // JSON array of process steps
+  responsibleRole String    @default("ACADEMIC_OFFICER")
+  relatedForm     String?
+  actionUrl       String
+  actionLabel     String
+  isActive        Boolean   @default(true)
+  createdBy       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  branch          Branch?   @relation(fields: [targetBranchId], references: [id], onDelete: SetNull)
+
+  @@index([category])
+  @@index([isActive])
+  @@index([targetYear])
+}

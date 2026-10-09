@@ -1,6 +1,6 @@
 {
   "name": "nexora-campus",
-  "version": "1.0.0",
+  "version": "4.0.0",
   "description": "Nexora Campus - Centralized Campus Operations Platform (BPUT Hackathon 2026)",
   "private": true,
   "workspaces": [

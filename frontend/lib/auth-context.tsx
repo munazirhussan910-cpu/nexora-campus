@@ -14,11 +14,16 @@ export interface UserProfile {
   rollNumber?: string;
   employeeId?: string;
   department?: string;
+  designation?: string;
   specialization?: string;
   branch?: string;
   year?: number;
   hostelBlock?: string;
   roomNumber?: string;
+  phone?: string;
+  parentPhone?: string;
+  bio?: string;
+  profilePhotoUrl?: string | null;
 }
 
 export interface RegisterStudentData {
@@ -44,6 +49,9 @@ interface AuthContextType {
   logout: () => Promise<void>;
   switchPersona: (persona: string) => Promise<void>;
   refreshUser: () => Promise<void>;
+  updateProfile: (data: Partial<UserProfile>) => Promise<{ success: boolean; error?: string; message?: string }>;
+  uploadPhoto: (photoData: string) => Promise<{ success: boolean; error?: string; photoUrl?: string }>;
+  removePhoto: () => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -188,6 +196,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateProfile = async (
+    data: Partial<UserProfile>
+  ): Promise<{ success: boolean; error?: string; message?: string }> => {
+    const res = await apiRequest<{ user: UserProfile }>('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+
+    if (res.success && res.data?.user) {
+      setUser(res.data.user);
+      return { success: true, message: 'Profile updated successfully.' };
+    }
+
+    return {
+      success: false,
+      error: res.error?.message || 'Failed to update profile.',
+    };
+  };
+
+  const uploadPhoto = async (
+    photoData: string
+  ): Promise<{ success: boolean; error?: string; photoUrl?: string }> => {
+    const res = await apiRequest<{ profilePhotoUrl: string; user: UserProfile }>('/auth/profile/photo', {
+      method: 'POST',
+      body: JSON.stringify({ photoData }),
+    });
+
+    if (res.success && res.data) {
+      if (res.data.user) {
+        setUser(res.data.user);
+      } else if (user) {
+        setUser({ ...user, profilePhotoUrl: res.data.profilePhotoUrl });
+      }
+      return { success: true, photoUrl: res.data.profilePhotoUrl };
+    }
+
+    return {
+      success: false,
+      error: res.error?.message || 'Failed to upload profile photo.',
+    };
+  };
+
+  const removePhoto = async (): Promise<{ success: boolean; error?: string }> => {
+    const res = await apiRequest<{ profilePhotoUrl: null; user: UserProfile }>('/auth/profile/photo', {
+      method: 'DELETE',
+    });
+
+    if (res.success && res.data) {
+      if (res.data.user) {
+        setUser(res.data.user);
+      } else if (user) {
+        setUser({ ...user, profilePhotoUrl: null });
+      }
+      return { success: true };
+    }
+
+    return {
+      success: false,
+      error: res.error?.message || 'Failed to remove profile photo.',
+    };
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -199,6 +269,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         switchPersona,
         refreshUser,
+        updateProfile,
+        uploadPhoto,
+        removePhoto,
       }}
     >
       {children}
