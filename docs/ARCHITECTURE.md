@@ -65,6 +65,8 @@ The platform unifies student requests, facility maintenance, gate perimeter secu
 
 ## 3. High-Level System Topology
 
+![Nexora Campus System Architecture](images/nexora-architecture.png)
+
 ```mermaid
 flowchart TB
     subgraph ClientTier ["Client Tier"]
@@ -222,7 +224,7 @@ sequenceDiagram
 
 ## 6. Database Architecture & Entity Relationships
 
-The data layer uses Prisma ORM 5.22.0. The schema defines **37 models** representing identity, campus infrastructure, operations, academics, mentorship, and system logs.
+The data layer uses Prisma ORM 5.22.0. The schema defines **38 models** representing identity, campus infrastructure, operations, academics, mentorship, and system logs.
 
 ### 6.1 Complete Model Taxonomy
 
@@ -231,7 +233,7 @@ The data layer uses Prisma ORM 5.22.0. The schema defines **37 models** represen
 | **Identity & Security** | `User`, `Role`, `Permission`, `RolePermission` |
 | **Campus Infrastructure**| `Branch`, `HostelBlock`, `Room`, `Student`, `Staff` |
 | **Operational Requests** | `RequestType`, `Request`, `RequestStatusHistory`, `RequestAssignment`, `SlaRule`, `RoutingRule` |
-| **Request Sub-Domains** | `Complaint`, `GatePass`, `GateEvent`, `LeaveRequest`, `BonafideRequest`, `Document` |
+| **Request Sub-Domains & Hostel** | `Complaint`, `GatePass`, `GateEvent`, `LeaveRequest`, `BonafideRequest`, `Document`, `MessMenu` |
 | **Academics & Rosters** | `Subject`, `Attendance`, `TimetableEntry`, `AttendanceSession`, `AttendanceRecord`, `AcademicDeadline`, `GuidanceItem` |
 | **Peer Mentorship** | `MentorProfile`, `MentorshipRequest` |
 | **Alerts & Integrations**| `Notice`, `NoticeTarget`, `NoticeRead`, `Notification`, `AuditLog`, `IntegrationEvent`, `IssueAlert` |
@@ -635,28 +637,29 @@ flowchart LR
 
 ---
 
-## 19. Technical Debt Analysis
+## 19. Technical Debt & Resolved Improvements Analysis
 
-### 19.1 Critical Priority
-1. **Emergency Route Mount Missing**:
-   - *Impact*: Emergency SOS endpoints return HTTP 404 because `emergency.routes.ts` is not mounted in `backend/src/app.ts`.
-   - *Remediation*: Add `import emergencyRoutes from './routes/emergency.routes';` and `app.use('/api/emergency', emergencyRoutes);` in `app.ts`.
+### 19.1 Resolved in Latest Build
+1. **Emergency Route & Mess Menu Mounted**:
+   - *Status:* **RESOLVED**. `backend/src/app.ts` imports and mounts `emergencyRoutes` on `/api/emergency` and `messRoutes` on `/api/mess-menu`.
+2. **Hostel Mess Menu Persistence**:
+   - *Status:* **RESOLVED**. `MessMenu` model added to Prisma schema and seeded for residential hostel blocks.
 
 ### 19.2 High Priority
-2. **Local Socket Listeners in Test Suites**:
-   - *Impact*: Tests calling `server.listen(0, '127.0.0.1')` fail in restricted sandbox environments with `listen EPERM`.
-   - *Remediation*: Refactor tests to invoke `supertest(app)` directly without binding to physical network sockets.
-3. **Unconnected Lite Views**:
-   - *Impact*: Staff, Warden, Security, and Admin views exist in `frontend/app/lite/components/` but are unmounted in `/lite/page.tsx`.
-   - *Remediation*: Mount role-specific lite views in `app/lite/page.tsx` based on authenticated user role.
+1. **Local Socket Listeners in Test Suites**:
+   - *Impact*: Legacy tests calling `server.listen(0, '127.0.0.1')` encounter `listen EPERM` in network-restricted sandbox environments.
+   - *Remediation*: Refactor remaining legacy tests to use the in-memory request pattern established in `mess_menu.test.ts`.
+2. **Unconnected Lite Views for Staff/Warden/Security/Admin**:
+   - *Impact*: Staff, Warden, Security, and Admin views exist in `frontend/app/lite/components/` but `/lite/page.tsx` currently mounts the student cockpit view.
+   - *Remediation*: Dynamically mount role-specific lite views in `app/lite/page.tsx` based on `user.role`.
 
 ### 19.3 Medium Priority
-4. **Direct Base64 Data URL Persistence in Database**:
-   - *Impact*: Storing 1–5MB avatar data URLs directly in the `User.profilePhotoUrl` column increases database backup sizes.
+3. **Direct Base64 Data URL Persistence in Database**:
+   - *Impact*: Storing 1–5MB avatar data URLs directly in `User.profilePhotoUrl` increases database backup file sizes.
    - *Remediation*: Connect an S3/R2 storage adapter and store only CDN URLs in the database.
 
 ### 19.4 Low Priority
-5. **Absence of Native SQLite Enums**:
+4. **Absence of Native SQLite Enums**:
    - *Impact*: SQLite relies on application-level Zod strings rather than native database ENUM constraints.
    - *Remediation*: Transition to PostgreSQL in production to enforce native database enum types.
 
@@ -665,9 +668,18 @@ flowchart LR
 ## 20. Architectural Recommendations
 
 ### Must Do
-1. Mount `emergency.routes.ts` in `backend/src/app.ts` to activate live SOS distress broadcast.
-2. Update test suites to use pure in-memory `supertest(app)` calls.
-3. Migrate production environment to managed PostgreSQL via `render.yaml`.
+1. Migrate production database to managed PostgreSQL with connection pooling (e.g. Neon or Supabase) as specified in `render.yaml`.
+2. Refactor older test suites to use the `invokeApp` in-memory pattern so all tests pass in restricted sandboxes.
+
+### Should Do
+1. Integrate AWS S3 or Cloudflare R2 for persistent PDF certificate and avatar storage.
+2. Introduce a Redis cache to replace in-memory session and deduplication maps across clustered nodes.
+3. Connect an outbound cellular SMS provider (Twilio / AWS SNS) to dispatch gate pass PINs.
+
+### Nice to Have
+1. Add WebSockets (Socket.io) for real-time sentry gate scan feeds and technician dispatch.
+2. Integrate OpenTelemetry for distributed tracing between frontend SSR calls and backend endpoints.
+3. Implement automated weekly database backups and Point-In-Time Recovery (PITR).
 
 ### Should Do
 1. Integrate AWS S3 or Cloudflare R2 for persistent PDF certificate and avatar storage.
